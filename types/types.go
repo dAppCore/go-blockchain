@@ -57,6 +57,9 @@ func (pk PublicKey) String() string {
 	return hex.EncodeToString(pk[:])
 }
 
+// IsZero reports whether the public key is all zeroes.
+func (pk PublicKey) IsZero() bool { return pk == PublicKey{} }
+
 // PublicKeyFromHex parses a 64-character hexadecimal string into a PublicKey.
 func PublicKeyFromHex(s string) (PublicKey, error) {
 	var pk PublicKey
