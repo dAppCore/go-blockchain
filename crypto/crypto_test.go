@@ -201,3 +201,100 @@ func TestKeyImage_Bad_Invalid(t *testing.T) {
 		t.Fatal("0xFF...FF should fail ValidateKeyImage")
 	}
 }
+
+// ── Standard Signatures ──────────────────────────────────
+
+func TestSignature_Good_Roundtrip(t *testing.T) {
+	pub, sec, _ := crypto.GenerateKeys()
+
+	// Sign a message hash.
+	msg := crypto.FastHash([]byte("test message"))
+	sig, err := crypto.GenerateSignature(msg, pub, sec)
+	if err != nil {
+		t.Fatalf("GenerateSignature: %v", err)
+	}
+
+	// Verify with correct key.
+	if !crypto.CheckSignature(msg, pub, sig) {
+		t.Fatal("valid signature failed verification")
+	}
+}
+
+func TestSignature_Bad_WrongKey(t *testing.T) {
+	pub, sec, _ := crypto.GenerateKeys()
+	pub2, _, _ := crypto.GenerateKeys()
+
+	msg := crypto.FastHash([]byte("test"))
+	sig, _ := crypto.GenerateSignature(msg, pub, sec)
+
+	// Verify with wrong public key should fail.
+	if crypto.CheckSignature(msg, pub2, sig) {
+		t.Fatal("signature verified with wrong public key")
+	}
+}
+
+func TestSignature_Bad_WrongMessage(t *testing.T) {
+	pub, sec, _ := crypto.GenerateKeys()
+
+	msg1 := crypto.FastHash([]byte("message 1"))
+	msg2 := crypto.FastHash([]byte("message 2"))
+	sig, _ := crypto.GenerateSignature(msg1, pub, sec)
+
+	if crypto.CheckSignature(msg2, pub, sig) {
+		t.Fatal("signature verified with wrong message")
+	}
+}
+
+// ── Ring Signatures (NLSAG) ─────────────────────────────
+
+func TestRingSignature_Good_Roundtrip(t *testing.T) {
+	// Create a ring of 4 public keys. The real signer is at index 1.
+	ringSize := 4
+	realIndex := 1
+
+	pubs := make([][32]byte, ringSize)
+	var realSec [32]byte
+	for i := 0; i < ringSize; i++ {
+		pub, sec, _ := crypto.GenerateKeys()
+		pubs[i] = pub
+		if i == realIndex {
+			realSec = sec
+		}
+	}
+
+	// Generate key image for the real key.
+	ki, _ := crypto.GenerateKeyImage(pubs[realIndex], realSec)
+
+	// Sign.
+	msg := crypto.FastHash([]byte("ring sig test"))
+	sigs, err := crypto.GenerateRingSignature(msg, ki, pubs, realSec, realIndex)
+	if err != nil {
+		t.Fatalf("GenerateRingSignature: %v", err)
+	}
+
+	// Verify.
+	if !crypto.CheckRingSignature(msg, ki, pubs, sigs) {
+		t.Fatal("valid ring signature failed verification")
+	}
+}
+
+func TestRingSignature_Bad_WrongMessage(t *testing.T) {
+	pubs := make([][32]byte, 3)
+	var sec [32]byte
+	for i := range pubs {
+		pub, s, _ := crypto.GenerateKeys()
+		pubs[i] = pub
+		if i == 0 {
+			sec = s
+		}
+	}
+	ki, _ := crypto.GenerateKeyImage(pubs[0], sec)
+
+	msg1 := crypto.FastHash([]byte("msg1"))
+	msg2 := crypto.FastHash([]byte("msg2"))
+	sigs, _ := crypto.GenerateRingSignature(msg1, ki, pubs, sec, 0)
+
+	if crypto.CheckRingSignature(msg2, ki, pubs, sigs) {
+		t.Fatal("ring signature verified with wrong message")
+	}
+}

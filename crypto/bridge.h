@@ -32,6 +32,21 @@ int cn_generate_key_image(const uint8_t pub[32], const uint8_t sec[32],
                           uint8_t image[32]);
 int cn_validate_key_image(const uint8_t image[32]);
 
+// ── Standard Signatures ───────────────────────────────────
+int cn_generate_signature(const uint8_t hash[32], const uint8_t pub[32],
+                          const uint8_t sec[32], uint8_t sig[64]);
+int cn_check_signature(const uint8_t hash[32], const uint8_t pub[32],
+                       const uint8_t sig[64]);
+
+// ── Ring Signatures (NLSAG) ──────────────────────────────
+int cn_generate_ring_signature(const uint8_t hash[32], const uint8_t image[32],
+                               const uint8_t *pubs, size_t pubs_count,
+                               const uint8_t sec[32], size_t sec_index,
+                               uint8_t *sigs);
+int cn_check_ring_signature(const uint8_t hash[32], const uint8_t image[32],
+                            const uint8_t *pubs, size_t pubs_count,
+                            const uint8_t *sigs);
+
 #ifdef __cplusplus
 }
 #endif
