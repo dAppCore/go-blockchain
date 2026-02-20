@@ -28,3 +28,41 @@ func TestFastHash_Good_HelloWorld(t *testing.T) {
 		t.Fatal("FastHash returned zero hash")
 	}
 }
+
+func TestGenerateKeys_Good_Roundtrip(t *testing.T) {
+	pub, sec, err := crypto.GenerateKeys()
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+
+	if !crypto.CheckKey(pub) {
+		t.Fatal("generated public key failed CheckKey")
+	}
+
+	pub2, err := crypto.SecretToPublic(sec)
+	if err != nil {
+		t.Fatalf("SecretToPublic: %v", err)
+	}
+	if pub != pub2 {
+		t.Fatalf("SecretToPublic mismatch:\n  GenerateKeys: %x\n  SecretToPublic: %x", pub, pub2)
+	}
+}
+
+func TestCheckKey_Bad_Invalid(t *testing.T) {
+	// A random 32-byte value is overwhelmingly unlikely to be a valid curve point.
+	bad := [32]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	if crypto.CheckKey(bad) {
+		t.Fatal("0xFF...FF should fail CheckKey")
+	}
+}
+
+func TestGenerateKeys_Good_Unique(t *testing.T) {
+	pub1, _, _ := crypto.GenerateKeys()
+	pub2, _, _ := crypto.GenerateKeys()
+	if pub1 == pub2 {
+		t.Fatal("two GenerateKeys calls returned identical public keys")
+	}
+}
