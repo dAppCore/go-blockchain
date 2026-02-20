@@ -97,6 +97,68 @@ func (c *Chain) GetBlockByHash(hash types.Hash) (*types.Block, *BlockMeta, error
 	return c.GetBlockByHeight(height)
 }
 
+// txRecord is the JSON value stored in the transactions group.
+type txRecord struct {
+	Meta TxMeta `json:"meta"`
+	Blob string `json:"blob"` // hex-encoded wire format
+}
+
+// PutTransaction stores a transaction with metadata.
+func (c *Chain) PutTransaction(hash types.Hash, tx *types.Transaction, meta *TxMeta) error {
+	var buf bytes.Buffer
+	enc := wire.NewEncoder(&buf)
+	wire.EncodeTransaction(enc, tx)
+	if err := enc.Err(); err != nil {
+		return fmt.Errorf("chain: encode tx %s: %w", hash, err)
+	}
+
+	rec := txRecord{
+		Meta: *meta,
+		Blob: hex.EncodeToString(buf.Bytes()),
+	}
+	val, err := json.Marshal(rec)
+	if err != nil {
+		return fmt.Errorf("chain: marshal tx %s: %w", hash, err)
+	}
+
+	if err := c.store.Set(groupTx, hash.String(), string(val)); err != nil {
+		return fmt.Errorf("chain: store tx %s: %w", hash, err)
+	}
+	return nil
+}
+
+// GetTransaction retrieves a transaction by hash.
+func (c *Chain) GetTransaction(hash types.Hash) (*types.Transaction, *TxMeta, error) {
+	val, err := c.store.Get(groupTx, hash.String())
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, nil, fmt.Errorf("chain: tx %s not found", hash)
+		}
+		return nil, nil, fmt.Errorf("chain: get tx %s: %w", hash, err)
+	}
+
+	var rec txRecord
+	if err := json.Unmarshal([]byte(val), &rec); err != nil {
+		return nil, nil, fmt.Errorf("chain: unmarshal tx: %w", err)
+	}
+	blob, err := hex.DecodeString(rec.Blob)
+	if err != nil {
+		return nil, nil, fmt.Errorf("chain: decode tx hex: %w", err)
+	}
+	dec := wire.NewDecoder(bytes.NewReader(blob))
+	tx := wire.DecodeTransaction(dec)
+	if err := dec.Err(); err != nil {
+		return nil, nil, fmt.Errorf("chain: decode tx wire: %w", err)
+	}
+	return &tx, &rec.Meta, nil
+}
+
+// HasTransaction checks whether a transaction exists in the store.
+func (c *Chain) HasTransaction(hash types.Hash) bool {
+	_, err := c.store.Get(groupTx, hash.String())
+	return err == nil
+}
+
 func decodeBlockRecord(val string) (*types.Block, *BlockMeta, error) {
 	var rec blockRecord
 	if err := json.Unmarshal([]byte(val), &rec); err != nil {

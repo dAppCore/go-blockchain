@@ -129,3 +129,117 @@ func TestChain_TopBlock_Good(t *testing.T) {
 		t.Errorf("top height: got %d, want 2", topMeta.Height)
 	}
 }
+
+func TestChain_PutGetTransaction_Good(t *testing.T) {
+	c := newTestChain(t)
+
+	tx := &types.Transaction{
+		Version: 1,
+		Vin: []types.TxInput{
+			types.TxInputToKey{
+				Amount:     1000000000000,
+				KeyImage:   types.KeyImage{0x01},
+				EtcDetails: wire.EncodeVarint(0),
+			},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 900000000000,
+				Target: types.TxOutToKey{Key: types.PublicKey{0x02}},
+			},
+		},
+		Extra:      wire.EncodeVarint(0),
+		Attachment: wire.EncodeVarint(0),
+	}
+	meta := &TxMeta{
+		KeeperBlock:         5,
+		GlobalOutputIndexes: []uint64{42},
+	}
+
+	txHash := types.Hash{0xde, 0xad}
+	if err := c.PutTransaction(txHash, tx, meta); err != nil {
+		t.Fatalf("PutTransaction: %v", err)
+	}
+
+	if !c.HasTransaction(txHash) {
+		t.Error("HasTransaction: got false, want true")
+	}
+
+	gotTx, gotMeta, err := c.GetTransaction(txHash)
+	if err != nil {
+		t.Fatalf("GetTransaction: %v", err)
+	}
+	if gotTx.Version != 1 {
+		t.Errorf("version: got %d, want 1", gotTx.Version)
+	}
+	if gotMeta.KeeperBlock != 5 {
+		t.Errorf("keeper_block: got %d, want 5", gotMeta.KeeperBlock)
+	}
+}
+
+func TestChain_KeyImage_Good(t *testing.T) {
+	c := newTestChain(t)
+
+	ki := types.KeyImage{0xaa, 0xbb}
+
+	spent, err := c.IsSpent(ki)
+	if err != nil {
+		t.Fatalf("IsSpent: %v", err)
+	}
+	if spent {
+		t.Error("IsSpent: got true before marking")
+	}
+
+	if err := c.MarkSpent(ki, 10); err != nil {
+		t.Fatalf("MarkSpent: %v", err)
+	}
+
+	spent, err = c.IsSpent(ki)
+	if err != nil {
+		t.Fatalf("IsSpent: %v", err)
+	}
+	if !spent {
+		t.Error("IsSpent: got false after marking")
+	}
+}
+
+func TestChain_OutputIndex_Good(t *testing.T) {
+	c := newTestChain(t)
+
+	txID := types.Hash{0x01}
+
+	gidx0, err := c.PutOutput(1000000000000, txID, 0)
+	if err != nil {
+		t.Fatalf("PutOutput(0): %v", err)
+	}
+	if gidx0 != 0 {
+		t.Errorf("gindex: got %d, want 0", gidx0)
+	}
+
+	gidx1, err := c.PutOutput(1000000000000, txID, 1)
+	if err != nil {
+		t.Fatalf("PutOutput(1): %v", err)
+	}
+	if gidx1 != 1 {
+		t.Errorf("gindex: got %d, want 1", gidx1)
+	}
+
+	count, err := c.OutputCount(1000000000000)
+	if err != nil {
+		t.Fatalf("OutputCount: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("count: got %d, want 2", count)
+	}
+
+	gotTxID, gotOutNo, err := c.GetOutput(1000000000000, 0)
+	if err != nil {
+		t.Fatalf("GetOutput: %v", err)
+	}
+	if gotTxID != txID {
+		t.Errorf("tx_id mismatch")
+	}
+	if gotOutNo != 0 {
+		t.Errorf("out_no: got %d, want 0", gotOutNo)
+	}
+}
