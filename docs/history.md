@@ -345,11 +345,34 @@ All passing with `-race` and `go vet`.
   field outside the JSON-RPC result envelope. The client checks this after
   successful JSON-RPC decode and returns an error for non-OK status values.
 
-## Phase 5 -- Chain Storage and Validation (Planned)
+## Phase 5 -- Chain Storage and Sync Client
 
-Implement `chain/` with blockchain storage (using `go-store` for persistence),
-block validation, transaction verification, and mempool management. UTXO set
-tracking with output index.
+Commit range: `8cb5cb4`..`23d337e`
+
+Added `chain/` package implementing blockchain storage and RPC sync client.
+Uses go-store (pure-Go SQLite) as the persistence backend with five storage
+groups mapping to the C++ daemon's core containers.
+
+**Files added:**
+- `chain/meta.go` -- `BlockMeta`, `TxMeta`, `outputEntry` types
+- `chain/chain.go` -- `Chain` struct, `New()`, `Height()`, `TopBlock()`
+- `chain/store.go` -- Block and transaction storage/retrieval
+- `chain/index.go` -- Key image and output index operations
+- `chain/validate.go` -- Header validation (linkage, height, size)
+- `chain/sync.go` -- RPC sync loop with block processing and indexing
+- `chain/chain_test.go` -- Storage round-trip tests (6 tests)
+- `chain/validate_test.go` -- Validation tests (5 tests)
+- `chain/sync_test.go` -- Sync loop tests with mock RPC (2 tests)
+- `chain/integration_test.go` -- C++ testnet integration test
+
+**Storage schema:**
+- `blocks` -- by height (zero-padded), JSON meta + hex blob
+- `block_index` -- hash to height
+- `transactions` -- tx hash to meta + blob
+- `spent_keys` -- key image to height
+- `outputs:{amount}` -- per-amount global output index
+
+**Dependencies added:** `forge.lthn.ai/core/go-store` (local replace).
 
 ## Phase 6 -- Wallet Core (Planned)
 

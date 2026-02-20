@@ -19,6 +19,7 @@ difficulty/   PoW + PoS difficulty adjustment (LWMA variant)
 crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs)
 p2p/          CryptoNote P2P command types (handshake, sync, relay)
 rpc/          Daemon JSON-RPC 2.0 client (10 endpoints)
+chain/        Chain storage, indexing, and sync client (go-store backed)
 ```
 
 ### config/
@@ -143,6 +144,36 @@ rather than `MAP_JON_RPC`.
 - Build-tagged integration test (`//go:build integration`) against C++ testnet
   daemon on `localhost:46941`. Verifies genesis block hash matches Phase 1
   result (`cb9d5455...`).
+
+### chain/
+
+Stores and indexes the Lethean blockchain by syncing from a C++ daemon via RPC.
+Uses go-store (pure-Go SQLite) for persistence with five storage groups mapping
+to the C++ daemon's core containers.
+
+**Storage schema:**
+- `blocks` -- blocks by height (zero-padded key), JSON metadata + hex blob.
+- `block_index` -- hash-to-height reverse index.
+- `transactions` -- tx hash to JSON metadata + hex blob.
+- `spent_keys` -- key image to block height (double-spend index).
+- `outputs:{amount}` -- global output index per amount.
+
+**Core operations:**
+- `chain.go` -- `Chain` struct with `New()`, `Height()`, `TopBlock()`.
+- `store.go` -- `PutBlock`, `GetBlockByHeight/Hash`, `PutTransaction`,
+  `GetTransaction`, `HasTransaction`.
+- `index.go` -- `MarkSpent`, `IsSpent`, `PutOutput`, `GetOutput`, `OutputCount`.
+- `validate.go` -- Header validation (previous block linkage, height sequence,
+  block size).
+- `sync.go` -- `Sync(client)` blocking RPC poll loop. Fetches blocks in batches
+  of 10, decodes wire blobs, validates headers, indexes transactions/outputs/
+  key images, verifies block hashes.
+
+**Testing:**
+- Unit tests with go-store `:memory:` for all CRUD operations and validation.
+- Mock RPC server sync tests.
+- Build-tagged integration test (`//go:build integration`) syncing first 10
+  blocks from C++ testnet daemon on `localhost:46941`.
 
 ---
 
