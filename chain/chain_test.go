@@ -203,6 +203,113 @@ func TestChain_KeyImage_Good(t *testing.T) {
 	}
 }
 
+func TestChain_TopBlock_Empty(t *testing.T) {
+	c := newTestChain(t)
+
+	_, _, err := c.TopBlock()
+	if err == nil {
+		t.Fatal("TopBlock on empty chain: expected error, got nil")
+	}
+}
+
+func TestChain_GetBlockByHeight_NotFound(t *testing.T) {
+	c := newTestChain(t)
+
+	_, _, err := c.GetBlockByHeight(99)
+	if err == nil {
+		t.Fatal("GetBlockByHeight(99): expected error, got nil")
+	}
+	if got := err.Error(); got != "chain: block 99 not found" {
+		t.Errorf("error message: got %q, want %q", got, "chain: block 99 not found")
+	}
+}
+
+func TestChain_GetBlockByHash_NotFound(t *testing.T) {
+	c := newTestChain(t)
+
+	bogus := types.Hash{0xff, 0xfe, 0xfd}
+	_, _, err := c.GetBlockByHash(bogus)
+	if err == nil {
+		t.Fatal("GetBlockByHash(bogus): expected error, got nil")
+	}
+}
+
+func TestChain_GetTransaction_NotFound(t *testing.T) {
+	c := newTestChain(t)
+
+	bogus := types.Hash{0xde, 0xad, 0xbe, 0xef}
+
+	if c.HasTransaction(bogus) {
+		t.Error("HasTransaction(bogus): got true, want false")
+	}
+
+	_, _, err := c.GetTransaction(bogus)
+	if err == nil {
+		t.Fatal("GetTransaction(bogus): expected error, got nil")
+	}
+}
+
+func TestChain_GetOutput_NotFound(t *testing.T) {
+	c := newTestChain(t)
+
+	_, _, err := c.GetOutput(1000000, 42)
+	if err == nil {
+		t.Fatal("GetOutput(nonexistent): expected error, got nil")
+	}
+}
+
+func TestChain_OutputCount_Empty(t *testing.T) {
+	c := newTestChain(t)
+
+	count, err := c.OutputCount(999)
+	if err != nil {
+		t.Fatalf("OutputCount: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("output count for unindexed amount: got %d, want 0", count)
+	}
+}
+
+func TestChain_IndexOutputs_Zarcanum(t *testing.T) {
+	c := newTestChain(t)
+
+	// Transaction with a Zarcanum output (hidden amount, indexed at amount 0).
+	tx := &types.Transaction{
+		Version: 1,
+		Vout: []types.TxOutput{
+			types.TxOutputZarcanum{
+				StealthAddress:   types.PublicKey{0x01},
+				ConcealingPoint:  types.PublicKey{0x02},
+				AmountCommitment: types.PublicKey{0x03},
+				BlindedAssetID:   types.PublicKey{0x04},
+				EncryptedAmount:  42,
+				MixAttr:          0,
+			},
+		},
+	}
+	txHash := types.Hash{0xaa}
+
+	gindexes, err := c.indexOutputs(txHash, tx)
+	if err != nil {
+		t.Fatalf("indexOutputs: %v", err)
+	}
+	if len(gindexes) != 1 {
+		t.Fatalf("gindexes length: got %d, want 1", len(gindexes))
+	}
+	if gindexes[0] != 0 {
+		t.Errorf("gindex: got %d, want 0", gindexes[0])
+	}
+
+	// Zarcanum outputs are indexed with amount=0.
+	count, err := c.OutputCount(0)
+	if err != nil {
+		t.Fatalf("OutputCount(0): %v", err)
+	}
+	if count != 1 {
+		t.Errorf("output count for amount 0: got %d, want 1", count)
+	}
+}
+
 func TestChain_OutputIndex_Good(t *testing.T) {
 	c := newTestChain(t)
 
