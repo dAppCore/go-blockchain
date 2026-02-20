@@ -228,11 +228,72 @@ CryptoNote crypto library. The upstream code (37 files from Zano commit
 
 All passing with `-race` and `go vet`.
 
-## Phase 3 -- P2P Levin Protocol (Planned)
+## Phase 3 -- P2P Levin Protocol
 
-Implement the Levin binary protocol in `p2p/` for peer-to-peer communication.
-Handshake, ping, timed sync, and block/transaction relay. Integrate with
-`go-p2p` for connection management.
+Phase 3 implemented the CryptoNote Levin binary protocol for peer-to-peer
+communication across two repositories. The go-p2p package gained a `node/levin/`
+sub-package with the wire format (header, portable storage, framed TCP
+connection). The go-blockchain package gained a `p2p/` package with command
+handlers for handshake, timed sync, ping, and block/transaction relay.
+
+### Files added (go-p2p)
+
+| File | Purpose |
+|------|---------|
+| `node/levin/header.go` | 33-byte Levin header encode/decode |
+| `node/levin/header_test.go` | Header tests (9 tests) |
+| `node/levin/varint.go` | Portable storage varint (2-bit size mark) |
+| `node/levin/varint_test.go` | Varint tests (14 tests) |
+| `node/levin/storage.go` | Portable storage section encode/decode |
+| `node/levin/storage_test.go` | Storage tests (14 tests) |
+| `node/levin/connection.go` | Framed TCP connection |
+| `node/levin/connection_test.go` | Connection tests (7 tests) |
+
+### Files added/modified (go-blockchain)
+
+| File | Purpose |
+|------|---------|
+| `config/config.go` | Added NetworkID constants and ClientVersion |
+| `config/config_test.go` | NetworkID validation test |
+| `p2p/commands.go` | Command ID re-exports |
+| `p2p/sync.go` | CoreSyncData type |
+| `p2p/sync_test.go` | CoreSyncData roundtrip test |
+| `p2p/ping.go` | Ping encode/decode |
+| `p2p/ping_test.go` | Ping tests (2 tests) |
+| `p2p/handshake.go` | Handshake command + NodeData + peerlist decoding |
+| `p2p/handshake_test.go` | Handshake tests (4 tests) |
+| `p2p/timedsync.go` | Timed sync request/response |
+| `p2p/relay.go` | Block/tx relay + chain request/response |
+| `p2p/relay_test.go` | Relay tests (6 tests) |
+| `p2p/integration_test.go` | C++ testnet integration test |
+
+### Key findings
+
+- **Portable storage varint differs from CryptoNote varint.** CryptoNote uses
+  7-bit LEB128 (implemented in wire/varint.go). Portable storage uses a 2-bit
+  size mark in the low bits of the first byte (1/2/4/8 byte encoding). Both
+  implementations exist in separate packages.
+
+- **POD-as-blob serialisation.** Hashes, network IDs, and other fixed-size types
+  are encoded as STRING values containing raw bytes, not as typed fields. The
+  peerlist is a single STRING blob containing packed 24-byte entries
+  (ip:4 + port:4 + id:8 + last_seen:8).
+
+- **Network ID bytes from net_node.inl.** Mainnet: byte 10 = 0x00 (not testnet),
+  byte 15 = 0x54 (84 = formation version). Testnet: byte 10 = 0x01, byte 15 =
+  0x64 (100). These are validated during handshake.
+
+- **P2P port is 46942, not 46941.** The testnet ports are: 46940 (stratum),
+  46941 (RPC), 46942 (P2P).
+
+- **No Transport interface extraction.** The existing go-p2p WebSocket transport
+  is tightly coupled to WebSocket semantics. The Levin code lives in
+  `node/levin/` as a standalone sub-package rather than sharing an interface.
+
+### Tests added
+
+44 go-p2p tests + 13 go-blockchain p2p tests + 1 integration test = 58 total.
+All passing with `-race` and `go vet`.
 
 ## Phase 4 -- RPC Layer (Planned)
 

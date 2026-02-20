@@ -17,6 +17,7 @@ types/        Core data types: Hash, PublicKey, Address, Block, Transaction
 wire/         Binary serialisation (CryptoNote varint encoding)
 difficulty/   PoW + PoS difficulty adjustment (LWMA variant)
 crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs)
+p2p/          CryptoNote P2P command types (handshake, sync, relay)
 ```
 
 ### config/
@@ -80,6 +81,39 @@ primitives. All encoding is bit-identical to the C++ reference implementation.
 LWMA (Linear Weighted Moving Average) difficulty adjustment algorithm for both
 PoW and PoS blocks. Examines a window of recent block timestamps and cumulative
 difficulties to calculate the next target difficulty.
+
+### p2p/
+
+CryptoNote P2P protocol command types for peer-to-peer communication. This
+package provides encode/decode for all Levin protocol commands, built on the
+`node/levin/` sub-package in go-p2p.
+
+The package depends on `forge.lthn.ai/core/go-p2p/node/levin` for the Levin
+wire format (33-byte header, portable storage serialisation, framed TCP
+connections) and defines the application-level command semantics:
+
+- **handshake.go** -- COMMAND_HANDSHAKE (1001): NodeData (network ID, peer ID,
+  local time, port) + CoreSyncData exchange. Peerlist decoding from packed
+  24-byte entries.
+- **timedsync.go** -- COMMAND_TIMED_SYNC (1002): periodic blockchain state sync.
+- **ping.go** -- COMMAND_PING (1003): simple liveness check.
+- **relay.go** -- Block relay (2001), transaction relay (2002), chain
+  request/response (2006/2007).
+- **sync.go** -- CoreSyncData type (current_height, top_id, checkpoint,
+  core_time, client_version, pruning mode).
+- **commands.go** -- Command ID re-exports from the levin package.
+- **integration_test.go** -- Build-tagged (`//go:build integration`) test that
+  TCP-connects to the C++ testnet daemon on localhost:46942 and performs a full
+  handshake + ping exchange.
+
+The Levin wire format in go-p2p includes:
+- **node/levin/header.go** -- 33-byte packed header with signature validation.
+- **node/levin/varint.go** -- Portable storage varint (2-bit size mark, NOT the
+  same as CryptoNote LEB128 varints in wire/).
+- **node/levin/storage.go** -- Portable storage section encode/decode (epee KV
+  format with 12 type tags).
+- **node/levin/connection.go** -- Framed TCP connection with header + payload
+  read/write.
 
 ---
 
