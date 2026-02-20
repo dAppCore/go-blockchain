@@ -16,6 +16,7 @@ config/       Chain parameters (mainnet/testnet), hardfork schedule
 types/        Core data types: Hash, PublicKey, Address, Block, Transaction
 wire/         Binary serialisation (CryptoNote varint encoding)
 difficulty/   PoW + PoS difficulty adjustment (LWMA variant)
+crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs)
 ```
 
 ### config/
@@ -294,11 +295,55 @@ are available (early chain), the algorithm uses whatever data exists. Division
 by zero is prevented by clamping the time span to a minimum of 1 second.
 `StarterDifficulty` (value 1) is returned when insufficient data is available.
 
+### crypto/ -- CGo Bridge to libcryptonote
+
+Bridges Go to the upstream CryptoNote C++ crypto library via CGo. The C++ code
+is vendored in `crypto/upstream/` (37 files from Zano commit `fa1608cf`) and
+built as a static library (`libcryptonote.a`) via CMake.
+
+**Build flow:** `CMakeLists.txt` → `cmake --build` → `libcryptonote.a` → CGo links.
+
+**C API contract:** `bridge.h` defines the stable C boundary. Go code calls ONLY
+these functions -- no C++ types cross the boundary. All parameters are raw
+`uint8_t*` pointers with explicit sizes. This is the same CGo pattern used by
+`core/go-ai` for the MLX backend.
+
+**Compat layer:** `crypto/compat/` provides minimal stubs replacing epee/Boost
+dependencies (logging macros, warnings pragmas, zero-init, profile tools). The
+upstream files are unmodified copies; all adaptation lives in the compat headers.
+
+**Provenance:** `crypto/PROVENANCE.md` maps each vendored file to its upstream
+origin path and modification status, with an update workflow for tracking Zano
+upstream changes.
+
+**Exposed operations:**
+
+| Category | Functions |
+|----------|-----------|
+| Hashing | `FastHash` (Keccak-256) |
+| Key ops | `GenerateKeys`, `SecretToPublic`, `CheckKey` |
+| Key derivation | `GenerateKeyDerivation`, `DerivePublicKey`, `DeriveSecretKey` |
+| Key images | `GenerateKeyImage`, `ValidateKeyImage` |
+| Standard sigs | `GenerateSignature`, `CheckSignature` |
+| Ring sigs (NLSAG) | `GenerateRingSignature`, `CheckRingSignature` |
+| CLSAG (HF4+) | `GenerateCLSAGGG`, `VerifyCLSAGGG`, `VerifyCLSAGGGX`, `VerifyCLSAGGGXXG` |
+| Point helpers | `PointMul8`, `PointDiv8` (cofactor 1/8 premultiplication) |
+| Proof verification | `VerifyBPPE`, `VerifyBGE`, `VerifyZarcanum` (stubs -- Phase 4) |
+
+**Ring buffer convention:** Ring entries are flat byte arrays. CLSAG ring entries
+pack 32-byte public keys per dimension (GG=64B, GGX=96B, GGXXG=128B per entry).
+Signatures are serialised as flat buffers with documented layouts in `bridge.h`.
+
+**1/8 premultiplication:** On-chain commitments are stored premultiplied by the
+cofactor inverse (1/8). The `PointMul8`/`PointDiv8` helpers convert between
+representations. CLSAG generate takes full points; CLSAG verify takes
+premultiplied values.
+
 ### ADR-001: Go Shell + C++ Crypto Library
 
 This package follows ADR-001. All protocol logic, data types, serialisation,
-and configuration live in pure Go. Only the mathematically complex cryptographic
-primitives (ring signatures, bulletproofs, Zarcanum proofs) will be delegated to
-a cleaned C++ library via CGo in later phases. This boundary keeps the Go code
-testable without a C toolchain while preserving access to battle-tested
+and configuration live in pure Go. The mathematically complex cryptographic
+primitives (ring signatures, bulletproofs, Zarcanum proofs) are delegated to
+the vendored C++ library in `crypto/` via CGo. This boundary keeps the pure Go
+code testable without a C toolchain while preserving access to battle-tested
 cryptographic implementations.

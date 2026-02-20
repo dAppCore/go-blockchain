@@ -1,8 +1,20 @@
 # CLAUDE.md
 
-Pure Go implementation of the Lethean blockchain protocol (config, types, wire, difficulty).
+Go implementation of the Lethean blockchain protocol with CGo crypto bridge.
 
 Module: `forge.lthn.ai/core/go-blockchain`
+
+## Build
+
+```bash
+# First time: build the crypto C++ library (requires cmake, g++, libssl-dev, libboost-dev)
+cmake -S crypto -B crypto/build -DCMAKE_BUILD_TYPE=Release
+cmake --build crypto/build --parallel
+
+# Then: run tests
+go test -race ./...
+go vet ./...
+```
 
 ## Commands
 
@@ -11,6 +23,7 @@ go test ./...               # run all tests
 go test -race ./...         # race detector (required before commit)
 go test -v -run Name ./...  # single test
 go vet ./...                # vet check
+cmake --build crypto/build --parallel  # rebuild C++ after bridge.cpp changes
 ```
 
 ## Standards

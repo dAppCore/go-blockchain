@@ -160,12 +160,73 @@ Phase 0 types had several mismatches with the C++ wire format, corrected here:
 Wire coverage is reduced by v2+ code paths (0% -- Phase 2 scope). Excluding
 v2+ stubs, the v0/v1 serialisation code exceeds 85% coverage.
 
-## Phase 2 -- Crypto Bridge (Planned)
+## Phase 2 -- Crypto Bridge
 
-Create `crypto/` package with CGo bridge to the cleaned C++ `libcryptonote`
-library. Implement key derivation (`generate_key_derivation`,
-`derive_public_key`), one-time address generation, and key image computation.
-Follow the same CGo pattern used by the MLX backend in `go-ai`.
+Phase 2 created the `crypto/` package with a CGo bridge to the vendored C++
+CryptoNote crypto library. The upstream code (37 files from Zano commit
+`fa1608cf`) is built as a static library via CMake, with a thin C API
+(`bridge.h`) separating Go from C++ types.
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `crypto/upstream/` | 37 vendored C++ files (unmodified copies) |
+| `crypto/compat/` | 11 compatibility stubs replacing epee/Boost |
+| `crypto/build/` | CMake build output (libcryptonote.a, ~680KB) |
+| `crypto/CMakeLists.txt` | C11/C++17 static library build |
+| `crypto/bridge.h` | Stable C API contract (29 functions) |
+| `crypto/bridge.cpp` | C→C++ wrappers with memcpy marshalling |
+| `crypto/doc.go` | Package documentation + build instructions |
+| `crypto/crypto.go` | CGo flags + FastHash binding |
+| `crypto/keygen.go` | Key generation, derivation, DerivePublicKey/SecretKey |
+| `crypto/keyimage.go` | Key image generation and validation |
+| `crypto/signature.go` | Standard + NLSAG ring signatures |
+| `crypto/clsag.go` | CLSAG (GG/GGX/GGXXG) + cofactor helpers |
+| `crypto/proof.go` | BPPE, BGE, Zarcanum verification stubs |
+| `crypto/PROVENANCE.md` | Upstream origin mapping + update workflow |
+| `crypto/crypto_test.go` | 22 tests (19 pass, 3 skipped proof stubs) |
+
+### Key findings
+
+- **CMake build required 5 iterations** to resolve all include paths. The
+  upstream files use relative includes (`../currency_core/`, `crypto/crypto-ops.h`)
+  that assume the full Zano source tree. Solved with symlinks, additional include
+  paths, and compat stubs.
+
+- **eth_signature.cpp excluded** from build -- requires Bitcoin's secp256k1
+  library which is not needed for CryptoNote consensus crypto.
+
+- **cn_fast_hash name collision** between bridge.h and hash-ops.h. Resolved by
+  renaming the bridge wrapper to `bridge_fast_hash`.
+
+- **Zero key is valid on Ed25519** -- it represents the identity element. Tests
+  use `0xFF...FF` for invalid key checks instead.
+
+- **1/8 premultiplication** is critical for CLSAG correctness. On-chain
+  commitments are stored as `(1/8)*P`. Generate takes full points; verify takes
+  premultiplied values. `PointMul8`/`PointDiv8` helpers convert between forms.
+
+- **Proof verification stubs** return "not implemented" -- the serialisation
+  format for BPPE/BGE/Zarcanum proofs requires matching the exact on-chain binary
+  layout, which needs real chain data via RPC (Phase 4).
+
+### Tests added
+
+22 test cases in `crypto/crypto_test.go`:
+
+- **Hashing (2):** Known Keccak-256 vector (empty input), non-zero hash
+- **Key ops (3):** GenerateKeys round-trip, CheckKey negative, uniqueness
+- **Key derivation (2):** ECDH commutativity, output scanning round-trip
+  (send → receive → derive ephemeral secret → verify public key match)
+- **Key images (3):** Generation, determinism, invalid input rejection
+- **Standard sigs (3):** Round-trip, wrong key, wrong message
+- **Ring sigs NLSAG (2):** 4-member ring round-trip, wrong message
+- **CLSAG GG (2):** Generate+verify round-trip with cofactor handling, wrong message
+- **CLSAG size (2):** GGX and GGXXG signature size calculations
+- **Proof stubs (3):** Skipped -- pending Phase 4 chain data
+
+All passing with `-race` and `go vet`.
 
 ## Phase 3 -- P2P Levin Protocol (Planned)
 
@@ -210,9 +271,17 @@ hash computation and coinstake transaction construction.
 and verified. The v2+ (Zarcanum) code paths compile but are untested -- they
 will be validated in Phase 2 when post-HF4 transactions appear on-chain.
 
-**No cryptographic operations.** Key derivation, ring signatures, bulletproofs,
-and all other cryptographic primitives are deferred to Phase 2. Address
-encoding/decoding works but key generation and output scanning are not possible.
+**Proof verification not yet wired.** Key generation, derivation, signatures
+(standard, NLSAG, CLSAG GG) are fully operational. BPPE, BGE, and Zarcanum
+proof verification stubs exist but return "not implemented" -- the deserialisation
+of on-chain proof blobs requires matching the exact binary format from chain data
+(Phase 4). CLSAG GGX/GGXXG verify functions are wired but untested without real
+ring data.
+
+**CGo toolchain required.** The `crypto/` package requires CMake, GCC/Clang,
+OpenSSL, and Boost headers to build `libcryptonote.a`. Pure Go packages
+(`config/`, `types/`, `wire/`, `difficulty/`) remain buildable without a C
+toolchain.
 
 **Base58 uses math/big.** The CryptoNote base58 implementation converts each
 8-byte block via `big.Int` arithmetic. This is correct but not optimised for
