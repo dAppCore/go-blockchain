@@ -295,11 +295,55 @@ handlers for handshake, timed sync, ping, and block/transaction relay.
 44 go-p2p tests + 13 go-blockchain p2p tests + 1 integration test = 58 total.
 All passing with `-race` and `go vet`.
 
-## Phase 4 -- RPC Layer (Planned)
+## Phase 4 -- RPC Client
 
-Implement `rpc/` with daemon JSON-RPC (get_block, get_transaction, submit_block)
-and wallet JSON-RPC (transfer, get_balance, get_address). Provide both client
-and server implementations.
+Phase 4 implemented a typed JSON-RPC 2.0 client for querying the Lethean C++
+daemon. The `rpc/` package provides Go methods for 10 core daemon endpoints
+covering chain info, block headers, block details, transactions, and mining.
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `rpc/client.go` | Client struct, JSON-RPC 2.0 `call()` + legacy `legacyCall()` |
+| `rpc/client_test.go` | Client transport tests (7 tests) |
+| `rpc/types.go` | BlockHeader, DaemonInfo, BlockDetails, TxInfo types |
+| `rpc/info.go` | GetInfo, GetHeight (legacy), GetBlockCount |
+| `rpc/info_test.go` | Info endpoint tests (3 tests) |
+| `rpc/blocks.go` | GetLastBlockHeader, GetBlockHeaderByHeight/ByHash, GetBlocksDetails |
+| `rpc/blocks_test.go` | Block endpoint tests (5 tests) |
+| `rpc/transactions.go` | GetTxDetails, GetTransactions (legacy) |
+| `rpc/transactions_test.go` | Transaction endpoint tests (4 tests) |
+| `rpc/mining.go` | SubmitBlock |
+| `rpc/mining_test.go` | Mining endpoint tests (2 tests) |
+| `rpc/integration_test.go` | Build-tagged integration test against C++ testnet |
+
+### Tests added
+
+21 mock tests + 1 integration test = 22 total.
+
+Mock tests use `httptest.Server` with canned JSON responses to verify all
+10 endpoints and their error paths. The integration test (`//go:build integration`)
+connects to the C++ testnet daemon on `localhost:46941` and verifies the genesis
+block hash matches the Phase 1 result (`cb9d5455...`).
+
+All passing with `-race` and `go vet`.
+
+### Key findings
+
+- **Legacy vs JSON-RPC.** Two endpoints (`GetHeight`, `GetTransactions`) use
+  plain JSON POST to dedicated URI paths rather than JSON-RPC 2.0. The C++
+  daemon registers these with `MAP_URI_AUTO_JON2` (not `MAP_JON_RPC`), so
+  they are not accessible via `/json_rpc`. The client provides `legacyCall()`
+  for these paths alongside `call()` for standard JSON-RPC.
+
+- **SubmitBlock array params.** The `submitblock` method takes a JSON array
+  `["hexblob"]` as its params, not a named object. This is one of the few
+  JSON-RPC 2.0 endpoints in the daemon that uses positional parameters.
+
+- **Status field convention.** All daemon responses include a `"status": "OK"`
+  field outside the JSON-RPC result envelope. The client checks this after
+  successful JSON-RPC decode and returns an error for non-OK status values.
 
 ## Phase 5 -- Chain Storage and Validation (Planned)
 

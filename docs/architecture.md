@@ -18,6 +18,7 @@ wire/         Binary serialisation (CryptoNote varint encoding)
 difficulty/   PoW + PoS difficulty adjustment (LWMA variant)
 crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs)
 p2p/          CryptoNote P2P command types (handshake, sync, relay)
+rpc/          Daemon JSON-RPC 2.0 client (10 endpoints)
 ```
 
 ### config/
@@ -114,6 +115,34 @@ The Levin wire format in go-p2p includes:
   format with 12 type tags).
 - **node/levin/connection.go** -- Framed TCP connection with header + payload
   read/write.
+
+### rpc/
+
+Typed JSON-RPC 2.0 client for querying the Lethean daemon. The `Client` struct
+wraps `net/http` and provides Go methods for 10 core daemon endpoints.
+
+Eight endpoints use JSON-RPC 2.0 via `/json_rpc`. Two endpoints (`GetHeight`,
+`GetTransactions`) use legacy JSON POST to dedicated URI paths (`/getheight`,
+`/gettransactions`), as the C++ daemon registers these with `MAP_URI_AUTO_JON2`
+rather than `MAP_JON_RPC`.
+
+**Client transport:**
+- `client.go` -- `Client` struct with `call()` (JSON-RPC 2.0) and `legacyCall()`
+  (plain JSON POST). `RPCError` type for daemon error codes.
+- `types.go` -- `BlockHeader`, `DaemonInfo`, `BlockDetails`, `TxInfo` shared types.
+
+**Endpoints:**
+- `info.go` -- `GetInfo`, `GetHeight` (legacy), `GetBlockCount`.
+- `blocks.go` -- `GetLastBlockHeader`, `GetBlockHeaderByHeight`,
+  `GetBlockHeaderByHash`, `GetBlocksDetails`.
+- `transactions.go` -- `GetTxDetails`, `GetTransactions` (legacy).
+- `mining.go` -- `SubmitBlock`.
+
+**Testing:**
+- Mock HTTP server tests for all endpoints and error paths.
+- Build-tagged integration test (`//go:build integration`) against C++ testnet
+  daemon on `localhost:46941`. Verifies genesis block hash matches Phase 1
+  result (`cb9d5455...`).
 
 ---
 
