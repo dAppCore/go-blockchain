@@ -374,11 +374,70 @@ groups mapping to the C++ daemon's core containers.
 
 **Dependencies added:** `forge.lthn.ai/core/go-store` (local replace).
 
-## Phase 6 -- Wallet Core (Planned)
+## Phase 6 -- Wallet Core
 
-Implement `wallet/` with key management, output scanning, transaction
-construction, and balance calculation. Deterministic key derivation from seed
-phrases. Support for all address types.
+Commit range: `5b677d1`..`11b50d0`
+
+Added `wallet/` package implementing full send+receive wallet functionality
+with interface-driven design for v1/v2+ extensibility.
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `wallet/wordlist.go` | 1626-word Electrum mnemonic dictionary |
+| `wallet/mnemonic.go` | 25-word seed phrase encode/decode with CRC32 checksum |
+| `wallet/mnemonic_test.go` | Mnemonic tests (9 tests) |
+| `wallet/extra.go` | TX extra parser for tags 22/14/11 |
+| `wallet/extra_test.go` | Extra parsing tests (10 tests) |
+| `wallet/account.go` | Account key management with Argon2id+AES-256-GCM encryption |
+| `wallet/account_test.go` | Account tests (6 tests) |
+| `wallet/transfer.go` | Transfer type and go-store persistence |
+| `wallet/transfer_test.go` | Transfer tests (15 tests) |
+| `wallet/scanner.go` | Scanner interface + V1Scanner (ECDH output detection) |
+| `wallet/scanner_test.go` | Scanner tests (7 tests) |
+| `wallet/signer.go` | Signer interface + NLSAGSigner (CGo ring signatures) |
+| `wallet/signer_test.go` | Signer tests (4 tests) |
+| `wallet/ring.go` | RingSelector interface + RPCRingSelector |
+| `wallet/ring_test.go` | Ring selection tests (3 tests) |
+| `wallet/builder.go` | Builder interface + V1Builder (TX construction) |
+| `wallet/builder_test.go` | Builder tests (3 tests) |
+| `wallet/wallet.go` | Wallet orchestrator (sync, balance, send) |
+| `wallet/wallet_test.go` | Wallet orchestrator tests (2 tests) |
+| `wallet/integration_test.go` | C++ testnet integration test |
+| `rpc/wallet.go` | GetRandomOutputs + SendRawTransaction RPC endpoints |
+| `rpc/wallet_test.go` | RPC wallet endpoint tests (4 tests) |
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `types/types.go` | Added `PublicKey.IsZero()` method |
+| `crypto/bridge.h` | Added `cn_sc_reduce32()` declaration |
+| `crypto/bridge.cpp` | Added `cn_sc_reduce32()` implementation |
+| `crypto/crypto.go` | Added `ScReduce32()` Go wrapper |
+
+### Key findings
+
+- **View key derivation requires sc_reduce32.** The raw Keccak-256 of the
+  spend secret key must be reduced modulo the Ed25519 group order before it is
+  a valid scalar. Added `cn_sc_reduce32` to the CGo bridge.
+
+- **Interface-driven design.** Four core interfaces (Scanner, Signer, Builder,
+  RingSelector) decouple v1 implementations from the orchestrator. Future v2+
+  (Zarcanum/CLSAG) implementations slot in by implementing the same interfaces.
+
+- **go-store GetAll.** Transfer listing uses `store.GetAll(group)` which returns
+  all key-value pairs in a group, rather than iterating with individual Gets.
+
+- **CryptoNote mnemonic encoding.** The 1626-word Electrum dictionary encodes
+  4 bytes into 3 words using modular arithmetic: `val = w1 + n*((n-w1+w2)%n) +
+  n*n*((n-w2+w3)%n)` where n=1626. The 25th word is a CRC32 checksum.
+
+### Tests added
+
+63 unit tests + 1 integration test = 64 total across wallet/ and rpc/wallet.
+All passing with `-race` and `go vet`.
 
 ## Phase 7 -- Consensus Rules (Planned)
 

@@ -18,8 +18,9 @@ wire/         Binary serialisation (CryptoNote varint encoding)
 difficulty/   PoW + PoS difficulty adjustment (LWMA variant)
 crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs)
 p2p/          CryptoNote P2P command types (handshake, sync, relay)
-rpc/          Daemon JSON-RPC 2.0 client (10 endpoints)
+rpc/          Daemon JSON-RPC 2.0 client (12 endpoints)
 chain/        Chain storage, indexing, and sync client (go-store backed)
+wallet/       Wallet core: key management, scanning, signing, TX construction
 ```
 
 ### config/
@@ -139,6 +140,10 @@ rather than `MAP_JON_RPC`.
 - `transactions.go` -- `GetTxDetails`, `GetTransactions` (legacy).
 - `mining.go` -- `SubmitBlock`.
 
+**Wallet endpoints:**
+- `wallet.go` -- `GetRandomOutputs` (for ring decoy selection via `/getrandom_outs1`)
+  and `SendRawTransaction` (for transaction submission via `/sendrawtransaction`).
+
 **Testing:**
 - Mock HTTP server tests for all endpoints and error paths.
 - Build-tagged integration test (`//go:build integration`) against C++ testnet
@@ -174,6 +179,54 @@ to the C++ daemon's core containers.
 - Mock RPC server sync tests.
 - Build-tagged integration test (`//go:build integration`) syncing first 10
   blocks from C++ testnet daemon on `localhost:46941`.
+
+### wallet/
+
+Full send+receive wallet for the Lethean blockchain. Uses interface-driven design
+with four core abstractions so v1 (NLSAG) implementations ship now and v2+
+(Zarcanum/CLSAG) slot in later without changing callers.
+
+**Core interfaces:**
+- `Scanner` -- detects outputs belonging to a wallet using ECDH derivation.
+  `V1Scanner` implements v0/v1 output detection.
+- `Signer` -- produces ring signatures for transaction inputs. `NLSAGSigner`
+  wraps the CGo NLSAG ring signature primitives.
+- `Builder` -- constructs signed transactions. `V1Builder` handles v1
+  transactions with decoy ring selection and ECDH output derivation.
+- `RingSelector` -- picks decoy outputs for ring signatures.
+  `RPCRingSelector` fetches random outputs from the daemon via RPC.
+
+**Account management:**
+- `account.go` -- `Account` struct with spend and view key pairs. Key
+  derivation: `viewSecret = sc_reduce32(Keccak256(spendSecret))`, matching
+  the C++ `account_base::generate()` pattern. Three creation methods:
+  `GenerateAccount()`, `RestoreFromSeed()`, `RestoreViewOnly()`.
+- `mnemonic.go` -- 25-word CryptoNote mnemonic encoding/decoding using the
+  Electrum 1626-word dictionary. CRC32 checksum word.
+- Persistence with Argon2id (time=3, mem=64MB, threads=4) + AES-256-GCM
+  encryption via go-store.
+
+**Transaction extra:**
+- `extra.go` -- minimal parser for three wallet-critical variant tags: tx
+  public key (tag 22), unlock time (tag 14), derivation hint (tag 11).
+  Unknown tags skipped. Raw bytes preserved for round-tripping.
+
+**Wallet orchestrator:**
+- `wallet.go` -- `Wallet` struct tying scanning, building, and sending.
+  `Sync()` scans from last checkpoint to chain tip, detecting owned outputs
+  and spent key images. `Balance()` returns confirmed vs locked amounts.
+  `Send()` performs largest-first coin selection, builds, signs, and submits
+  transactions via RPC. `Transfers()` lists all tracked outputs.
+
+**Transfer storage:**
+- `transfer.go` -- `Transfer` struct persisted as JSON in go-store group
+  `transfers`, keyed by key image hex. `IsSpendable()` checks spend status,
+  coinbase maturity (MinedMoneyUnlockWindow=10), and unlock time.
+
+**Testing:**
+- Unit tests with go-store `:memory:` for all components.
+- Build-tagged integration test (`//go:build integration`) syncing from
+  C++ testnet daemon and verifying balance/transfers.
 
 ---
 
