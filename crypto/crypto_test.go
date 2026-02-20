@@ -298,3 +298,131 @@ func TestRingSignature_Bad_WrongMessage(t *testing.T) {
 		t.Fatal("ring signature verified with wrong message")
 	}
 }
+
+// ── CLSAG ────────────────────────────────────────────────
+
+func TestCLSAG_GG_Good_Roundtrip(t *testing.T) {
+	// CLSAG_GG is a 2-dimensional linkable ring signature:
+	//   Layer 0: stealth addresses (P_i), secret_x for real signer
+	//   Layer 1: commitment difference (A_i - pseudo_out), secret_f
+	//
+	// Ring commitments are stored premultiplied by 1/8 (on-chain form).
+	// generate takes pseudo_out as the FULL point (not premultiplied).
+	// verify takes pseudo_out as the PREMULTIPLIED form.
+	//
+	// When pseudo_out matches the real commitment: secret_f = 0.
+	// generate pseudo_out = 8 * ring_commitment (full point).
+	// verify pseudo_out = ring_commitment (premultiplied form, as stored).
+	ringSize := 4
+	realIndex := 2
+
+	ring := make([]byte, ringSize*64)
+	var realStealthSec [32]byte
+	var secretF [32]byte // zero — pseudo_out matches real commitment
+	var ki [32]byte
+
+	for i := 0; i < ringSize; i++ {
+		pub, sec, _ := crypto.GenerateKeys()
+		copy(ring[i*64:], pub[:])
+
+		cPub, _, _ := crypto.GenerateKeys()
+		// Store commitment as-is. CLSAG treats this as premultiplied by 1/8.
+		copy(ring[i*64+32:], cPub[:])
+
+		if i == realIndex {
+			realStealthSec = sec
+			var err error
+			ki, err = crypto.GenerateKeyImage(pub, sec)
+			if err != nil {
+				t.Fatalf("GenerateKeyImage: %v", err)
+			}
+		}
+	}
+
+	// For generate: pseudo_out = 8 * commitment (full point).
+	var commitmentPremul [32]byte
+	copy(commitmentPremul[:], ring[realIndex*64+32:realIndex*64+64])
+	pseudoOutFull, err := crypto.PointMul8(commitmentPremul)
+	if err != nil {
+		t.Fatalf("PointMul8: %v", err)
+	}
+
+	msg := crypto.FastHash([]byte("clsag gg test"))
+	sig, err := crypto.GenerateCLSAGGG(msg, ring, ringSize, pseudoOutFull, ki,
+		realStealthSec, secretF, realIndex)
+	if err != nil {
+		t.Fatalf("GenerateCLSAGGG: %v", err)
+	}
+
+	expectedSize := crypto.CLSAGGGSigSize(ringSize)
+	if len(sig) != expectedSize {
+		t.Fatalf("sig size: got %d, want %d", len(sig), expectedSize)
+	}
+
+	// For verify: pseudo_out = commitment (premultiplied form).
+	if !crypto.VerifyCLSAGGG(msg, ring, ringSize, commitmentPremul, ki, sig) {
+		t.Fatal("valid CLSAG_GG signature failed verification")
+	}
+}
+
+func TestCLSAG_GG_Bad_WrongMessage(t *testing.T) {
+	ringSize := 3
+	realIndex := 0
+
+	ring := make([]byte, ringSize*64)
+	var realStealthSec [32]byte
+	var secretF [32]byte
+	var ki [32]byte
+
+	for i := 0; i < ringSize; i++ {
+		pub, sec, _ := crypto.GenerateKeys()
+		copy(ring[i*64:], pub[:])
+		cPub, _, _ := crypto.GenerateKeys()
+		copy(ring[i*64+32:], cPub[:])
+		if i == realIndex {
+			realStealthSec = sec
+			ki, _ = crypto.GenerateKeyImage(pub, sec)
+		}
+	}
+
+	var commitmentPremul [32]byte
+	copy(commitmentPremul[:], ring[realIndex*64+32:realIndex*64+64])
+	pseudoOutFull, _ := crypto.PointMul8(commitmentPremul)
+
+	msg1 := crypto.FastHash([]byte("msg1"))
+	msg2 := crypto.FastHash([]byte("msg2"))
+	sig, _ := crypto.GenerateCLSAGGG(msg1, ring, ringSize, pseudoOutFull, ki,
+		realStealthSec, secretF, realIndex)
+
+	if crypto.VerifyCLSAGGG(msg2, ring, ringSize, commitmentPremul, ki, sig) {
+		t.Fatal("CLSAG_GG verified with wrong message")
+	}
+}
+
+func TestCLSAG_GGX_Good_SigSize(t *testing.T) {
+	// Verify sig size calculation is consistent.
+	if crypto.CLSAGGGXSigSize(4) != 32+4*64+64 {
+		t.Fatalf("GGX sig size for ring=4: got %d, want %d", crypto.CLSAGGGXSigSize(4), 32+4*64+64)
+	}
+}
+
+func TestCLSAG_GGXXG_Good_SigSize(t *testing.T) {
+	// Verify sig size calculation is consistent.
+	if crypto.CLSAGGGXXGSigSize(4) != 32+4*64+128 {
+		t.Fatalf("GGXXG sig size for ring=4: got %d, want %d", crypto.CLSAGGGXXGSigSize(4), 32+4*64+128)
+	}
+}
+
+// ── Range Proofs / Zarcanum (stubs) ──────────────────────
+
+func TestBPPE_Stub_NotImplemented(t *testing.T) {
+	t.Skip("BPPE verification needs on-chain proof data — Phase 4")
+}
+
+func TestBGE_Stub_NotImplemented(t *testing.T) {
+	t.Skip("BGE verification needs on-chain proof data — Phase 4")
+}
+
+func TestZarcanum_Stub_NotImplemented(t *testing.T) {
+	t.Skip("Zarcanum verification needs on-chain proof data — Phase 4")
+}
