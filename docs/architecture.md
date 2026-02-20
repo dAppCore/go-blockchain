@@ -47,9 +47,32 @@ transaction types across versions 0 through 3.
 
 ### wire/
 
-Consensus-critical binary serialisation primitives. Currently implements
-CryptoNote varint encoding (7-bit LEB128 with MSB continuation). All encoding
-must be bit-identical to the C++ reference implementation.
+Consensus-critical binary serialisation for blocks, transactions, and all wire
+primitives. All encoding is bit-identical to the C++ reference implementation.
+
+**Primitives:**
+- `Encoder` / `Decoder` -- sticky-error streaming codec (call `Err()` once)
+- `EncodeVarint` / `DecodeVarint` -- 7-bit LEB128 with MSB continuation
+- `Keccak256` -- pre-NIST Keccak-256 (CryptoNote's `cn_fast_hash`)
+
+**Block serialisation:**
+- `EncodeBlockHeader` / `DecodeBlockHeader` -- wire order: major, nonce(LE64),
+  prev_id, minor(varint), timestamp(varint), flags
+- `EncodeBlock` / `DecodeBlock` -- header + miner_tx + tx_hashes
+- `BlockHashingBlob` -- serialised header || tree_root || varint(tx_count)
+- `BlockHash` -- Keccak-256 of varint(len) + block hashing blob
+
+**Transaction serialisation (v0/v1):**
+- `EncodeTransactionPrefix` / `DecodeTransactionPrefix` -- version-dependent
+  field ordering (v0/v1: version, vin, vout, extra; v2+: version, vin, extra, vout)
+- `EncodeTransaction` / `DecodeTransaction` -- prefix + signatures + attachment
+- All variant tags match `SET_VARIANT_TAGS` from `currency_basic.h`
+- Extra/attachment stored as raw wire bytes for bit-identical round-tripping
+
+**Hashing:**
+- `TreeHash` -- CryptoNote Merkle tree (direct port of `crypto/tree-hash.c`)
+- `TransactionPrefixHash` -- Keccak-256 of serialised prefix
+- `TransactionHash` -- Keccak-256 of full serialised transaction
 
 ### difficulty/
 
@@ -142,10 +165,11 @@ Four address types are supported via distinct prefixes:
 ```go
 type BlockHeader struct {
     MajorVersion uint8
-    MinorVersion uint8
-    Timestamp    uint64
-    PrevID       Hash
     Nonce        uint64
+    PrevID       Hash
+    MinorVersion uint64   // varint on wire
+    Timestamp    uint64   // varint on wire
+    Flags        uint8
 }
 
 type Block struct {
@@ -155,11 +179,14 @@ type Block struct {
 }
 
 type Transaction struct {
-    Version    uint8
-    UnlockTime uint64
+    Version    uint64   // varint on wire
     Vin        []TxInput
     Vout       []TxOutput
-    Extra      []byte
+    Extra      []byte   // raw wire bytes (variant vector)
+    Signatures [][]Signature  // v0/v1 only
+    Attachment []byte         // raw wire bytes (variant vector)
+    Proofs     []byte         // raw wire bytes (v2+ only)
+    HardforkID uint8          // v3+ only
 }
 ```
 
@@ -172,11 +199,14 @@ Transaction versions progress through the hardfork schedule:
 | 2 | Post-HF4 | Zarcanum confidential transactions (CLSAG) |
 | 3 | Post-HF5 | Confidential assets with surjection proofs |
 
-Input types: `TxInputGenesis` (coinbase, tag `0xFF`) and `TxInputToKey` (standard
-spend with ring signature, tag `0x02`).
+Input types: `TxInputGenesis` (coinbase, tag `0x00`) and `TxInputToKey` (standard
+spend with ring signature, tag `0x01`).
 
-Output types: `TxOutputBare` (transparent, tag `0x02`) and `TxOutputZarcanum`
-(confidential with Pedersen commitments, tag `0x03`).
+Output types: `TxOutputBare` (transparent, tag `0x24`) and `TxOutputZarcanum`
+(confidential with Pedersen commitments, tag `0x26`).
+
+Additional types: `TxOutToKey` (public key + mix_attr, 33 bytes on wire),
+`TxOutRef` (variant: global index or ref_by_id).
 
 ---
 
@@ -215,6 +245,23 @@ different checksums and break address compatibility with the C++ node.
 
 Decoding reverses this process: base58 decode, extract and validate the varint
 prefix, verify the Keccak-256 checksum, then extract the two keys and flags.
+
+### Block Hash Length Prefix
+
+The C++ code computes block hashes via `get_object_hash(get_block_hashing_blob(b))`.
+Because `get_block_hashing_blob` returns a `blobdata` (std::string) and
+`get_object_hash` serialises its argument through `binary_archive` before hashing,
+the actual hash input is `varint(len(blob)) || blob` -- the binary archive
+prepends a varint length when serialising a string. This CryptoNote convention is
+replicated in Go's `BlockHash` function.
+
+### Extra as Raw Bytes
+
+Transaction extra, attachment, and proofs fields are stored as opaque raw wire
+bytes rather than being fully parsed into Go structures. The `decodeRawVariantVector`
+function reads variant vectors at the tag level to determine element boundaries but
+preserves all bytes verbatim. This enables bit-identical round-tripping without
+implementing every extra variant type (there are 20+ defined in the C++ code).
 
 ### Varint Encoding
 

@@ -17,7 +17,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/wire"
 )
 
 // FlagAuditable marks an address as auditable. When set, the address was
@@ -63,7 +62,7 @@ func IsIntegratedPrefix(prefix uint64) bool {
 // The checksum is the first 4 bytes of Keccak-256 over the preceding data.
 func (a *Address) Encode(prefix uint64) string {
 	// Build the raw data: prefix (varint) + keys + flags.
-	prefixBytes := wire.EncodeVarint(prefix)
+	prefixBytes := encodeVarint(prefix)
 	raw := make([]byte, 0, len(prefixBytes)+32+32+1+4)
 	raw = append(raw, prefixBytes...)
 	raw = append(raw, a.SpendPublicKey[:]...)
@@ -91,7 +90,7 @@ func DecodeAddress(s string) (*Address, uint64, error) {
 	}
 
 	// Decode the prefix varint.
-	prefix, prefixLen, err := wire.DecodeVarint(raw)
+	prefix, prefixLen, err := decodeVarint(raw)
 	if err != nil {
 		return nil, 0, fmt.Errorf("types: invalid address prefix varint: %w", err)
 	}
@@ -286,4 +285,39 @@ func base58CharIndex(c byte) int {
 		}
 	}
 	return -1
+}
+
+// ---------------------------------------------------------------------------
+// Varint helpers (inlined from wire package to avoid import cycle)
+// ---------------------------------------------------------------------------
+
+func encodeVarint(v uint64) []byte {
+	if v == 0 {
+		return []byte{0x00}
+	}
+	var buf [10]byte
+	n := 0
+	for v > 0 {
+		buf[n] = byte(v & 0x7f)
+		v >>= 7
+		if v > 0 {
+			buf[n] |= 0x80
+		}
+		n++
+	}
+	return append([]byte(nil), buf[:n]...)
+}
+
+func decodeVarint(data []byte) (uint64, int, error) {
+	if len(data) == 0 {
+		return 0, 0, errors.New("types: cannot decode varint from empty data")
+	}
+	var v uint64
+	for i := 0; i < len(data) && i < 10; i++ {
+		v |= uint64(data[i]&0x7f) << (7 * uint(i))
+		if data[i]&0x80 == 0 {
+			return v, i + 1, nil
+		}
+	}
+	return 0, 0, errors.New("types: varint overflow")
 }

@@ -94,12 +94,71 @@ and full coverage of the consensus-critical configuration surface.
 
 ---
 
-## Phase 1 -- Wire Serialisation (Planned)
+## Phase 1 -- Wire Serialisation
 
-Extend `wire/` with full block and transaction binary serialisation matching the
-C++ `binary_archive` format. Add `Serialise()` and `Deserialise()` methods to
-`Block`, `Transaction`, and all input/output types. Validate against real
-mainnet block blobs.
+Phase 1 added consensus-critical binary serialisation for blocks and transactions,
+verified to be bit-identical to the C++ daemon output. The definitive proof is
+the genesis block hash test: serialising the testnet genesis block and computing
+its Keccak-256 hash produces the exact value returned by the C++ daemon
+(`cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963`).
+
+### Type corrections from Phase 0
+
+Phase 0 types had several mismatches with the C++ wire format, corrected here:
+
+- `BlockHeader.MinorVersion` changed from `uint8` to `uint64` (varint on wire)
+- `BlockHeader.Flags` added (`uint8`, 1 byte fixed)
+- `Transaction.Version` changed from `uint8` to `uint64` (varint on wire)
+- `Transaction.UnlockTime` removed (lives in extra variants, not top-level)
+- All variant tags corrected to match `SET_VARIANT_TAGS` from `currency_basic.h`:
+  `InputTypeGenesis=0`, `InputTypeToKey=1`, `OutputTypeBare=36`, `OutputTypeZarcanum=38`
+- `TxOutToKey` struct added (public key + mix_attr, 33 bytes packed)
+- `TxOutRef` variant type added (global index or ref_by_id)
+- `Transaction.Signatures`, `Transaction.Attachment`, `Transaction.Proofs` fields added
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `wire/encoder.go` | Sticky-error streaming encoder |
+| `wire/decoder.go` | Sticky-error streaming decoder |
+| `wire/block.go` | Block/BlockHeader encode/decode |
+| `wire/transaction.go` | Transaction encode/decode (v0/v1 + v2+ stubs) |
+| `wire/treehash.go` | Keccak-256 + CryptoNote Merkle tree hash |
+| `wire/hash.go` | BlockHash, TransactionPrefixHash, TransactionHash |
+| `wire/encoder_test.go` | Encoder round-trip tests |
+| `wire/decoder_test.go` | Decoder round-trip tests |
+| `wire/block_test.go` | Block header + full block round-trip tests |
+| `wire/transaction_test.go` | Coinbase, ToKey, signatures, variant tag tests |
+| `wire/treehash_test.go` | Tree hash for 0-8 hashes |
+| `wire/hash_test.go` | Genesis block hash verification |
+
+### Key findings
+
+- **Block hash length prefix**: The C++ `get_object_hash(blobdata)` serialises
+  the string through `binary_archive` before hashing, prepending `varint(length)`.
+  The actual block hash input is `varint(len) || block_hashing_blob`, not just
+  the blob itself.
+
+- **Genesis data sources**: The `_genesis_tn.cpp.gen` uint64 array is the
+  canonical genesis transaction data, not the `.genesis_tn.txt` hex dump (which
+  was stale from a different wallet generation).
+
+- **Extra as raw bytes**: Transaction extra, attachment, and proofs are stored
+  as opaque raw wire bytes with tag-level boundary detection. This enables
+  bit-identical round-tripping without implementing all 20+ extra variant types.
+
+### Coverage
+
+| Package | Coverage |
+|---------|----------|
+| config | 100.0% |
+| difficulty | 81.0% |
+| types | 73.4% |
+| wire | 76.8% |
+
+Wire coverage is reduced by v2+ code paths (0% -- Phase 2 scope). Excluding
+v2+ stubs, the v0/v1 serialisation code exceeds 85% coverage.
 
 ## Phase 2 -- Crypto Bridge (Planned)
 
@@ -147,10 +206,9 @@ hash computation and coinstake transaction construction.
 
 ## Known Limitations
 
-**No wire serialisation.** Block and transaction types are defined as Go structs
-but cannot yet be serialised to or deserialised from the CryptoNote binary
-format. This means the types cannot be used to parse real chain data until
-Phase 1 is complete.
+**v2+ transaction serialisation is stubbed.** The v0/v1 wire format is complete
+and verified. The v2+ (Zarcanum) code paths compile but are untested -- they
+will be validated in Phase 2 when post-HF4 transactions appear on-chain.
 
 **No cryptographic operations.** Key derivation, ring signatures, bulletproofs,
 and all other cryptographic primitives are deferred to Phase 2. Address
