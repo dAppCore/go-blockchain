@@ -23,3 +23,9 @@ func FastHash(data []byte) [32]byte {
 	}
 	return hash
 }
+
+// ScReduce32 reduces a 32-byte value modulo the Ed25519 group order l.
+// This is required when converting a hash output to a valid secret key scalar.
+func ScReduce32(key *[32]byte) {
+	C.cn_sc_reduce32((*C.uint8_t)(unsafe.Pointer(&key[0])))
+}

@@ -8,6 +8,7 @@
 #include <vector>
 #include "crypto.h"
 #include "crypto-sugar.h"
+#include "crypto-ops.h"
 #include "clsag.h"
 #include "hash-ops.h"
 
@@ -15,6 +16,12 @@ extern "C" {
 
 void bridge_fast_hash(const uint8_t *data, size_t len, uint8_t hash[32]) {
     crypto::cn_fast_hash(data, len, reinterpret_cast<char*>(hash));
+}
+
+// ── Scalar Operations ────────────────────────────────────
+
+void cn_sc_reduce32(uint8_t key[32]) {
+    crypto::sc_reduce32(key);
 }
 
 int cn_generate_keys(uint8_t pub[32], uint8_t sec[32]) {

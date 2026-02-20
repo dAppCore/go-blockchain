@@ -14,6 +14,10 @@ extern "C" {
 // ── Hashing ───────────────────────────────────────────────
 void bridge_fast_hash(const uint8_t *data, size_t len, uint8_t hash[32]);
 
+// ── Scalar Operations ────────────────────────────────────
+// Reduce a 32-byte scalar modulo the Ed25519 group order l.
+void cn_sc_reduce32(uint8_t key[32]);
+
 // ── Key Operations ────────────────────────────────────────
 int cn_generate_keys(uint8_t pub[32], uint8_t sec[32]);
 int cn_secret_to_public(const uint8_t sec[32], uint8_t pub[32]);
