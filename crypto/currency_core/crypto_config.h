@@ -1,0 +1,1 @@
+../compat/currency_core/crypto_config.h
