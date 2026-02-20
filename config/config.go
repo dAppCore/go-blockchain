@@ -270,6 +270,25 @@ const (
 	P2PNetworkIDVer uint64 = CurrencyFormationVersion + 0
 )
 
+// NetworkIDMainnet is the 16-byte network UUID for mainnet P2P handshake.
+// From net_node.inl: bytes 0-9 are fixed, byte 10 = testnet flag (0),
+// bytes 11-14 fixed, byte 15 = formation version (84 = 0x54).
+var NetworkIDMainnet = [16]byte{
+	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
+	0x10, 0x11, 0x00, 0x11, 0x01, 0x11, 0x21, 0x54,
+}
+
+// NetworkIDTestnet is the 16-byte network UUID for testnet P2P handshake.
+// Byte 10 = testnet flag (1), byte 15 = formation version (100 = 0x64).
+var NetworkIDTestnet = [16]byte{
+	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
+	0x10, 0x11, 0x01, 0x11, 0x01, 0x11, 0x21, 0x64,
+}
+
+// ClientVersion is the version string sent in CORE_SYNC_DATA.
+const ClientVersion = "Lethean/go-blockchain 0.1.0"
+
+
 // ---------------------------------------------------------------------------
 // Currency identity
 // ---------------------------------------------------------------------------
@@ -392,6 +411,9 @@ type ChainConfig struct {
 
 	// P2PMaintainersPubKey is the hex-encoded maintainers public key.
 	P2PMaintainersPubKey string
+
+	// NetworkID is the 16-byte network UUID for P2P handshake.
+	NetworkID [16]byte
 }
 
 // Mainnet holds the chain configuration for the Lethean mainnet.
@@ -427,6 +449,7 @@ var Mainnet = ChainConfig{
 	HF4MandatoryDecoySetSize:         HF4MandatoryDecoySetSize,
 	MinedMoneyUnlockWindow:           MinedMoneyUnlockWindow,
 	P2PMaintainersPubKey:             "8f138bb73f6d663a3746a542770781a09579a7b84cb4125249e95530824ee607",
+	NetworkID:                       NetworkIDMainnet,
 }
 
 // Testnet holds the chain configuration for the Lethean testnet.
@@ -462,4 +485,5 @@ var Testnet = ChainConfig{
 	HF4MandatoryDecoySetSize:         HF4MandatoryDecoySetSize,
 	MinedMoneyUnlockWindow:           MinedMoneyUnlockWindow,
 	P2PMaintainersPubKey:             "8f138bb73f6d663a3746a542770781a09579a7b84cb4125249e95530824ee607",
+	NetworkID:                       NetworkIDTestnet,
 }
