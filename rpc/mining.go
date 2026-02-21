@@ -24,3 +24,30 @@ func (c *Client) SubmitBlock(hexBlob string) error {
 	}
 	return nil
 }
+
+// BlockTemplateResponse is the daemon's response to getblocktemplate.
+type BlockTemplateResponse struct {
+	Difficulty            string `json:"difficulty"`
+	Height                uint64 `json:"height"`
+	BlockTemplateBlob     string `json:"blocktemplate_blob"`
+	PrevHash              string `json:"prev_hash"`
+	BlockRewardWithoutFee uint64 `json:"block_reward_without_fee"`
+	BlockReward           uint64 `json:"block_reward"`
+	TxsFee                uint64 `json:"txs_fee"`
+	Status                string `json:"status"`
+}
+
+// GetBlockTemplate requests a block template from the daemon for mining.
+func (c *Client) GetBlockTemplate(walletAddr string) (*BlockTemplateResponse, error) {
+	params := struct {
+		WalletAddress string `json:"wallet_address"`
+	}{WalletAddress: walletAddr}
+	var resp BlockTemplateResponse
+	if err := c.call("getblocktemplate", params, &resp); err != nil {
+		return nil, err
+	}
+	if resp.Status != "OK" {
+		return nil, fmt.Errorf("getblocktemplate: status %q", resp.Status)
+	}
+	return &resp, nil
+}
