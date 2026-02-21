@@ -13,10 +13,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
+	"github.com/stretchr/testify/assert"
+
+	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
 	"forge.lthn.ai/core/go-blockchain/wire"
+
+	store "forge.lthn.ai/core/go-store"
 )
 
 // makeGenesisBlockBlob creates a minimal genesis block and returns its hex blob and hash.
@@ -46,6 +50,12 @@ func makeGenesisBlockBlob() (hexBlob string, hash types.Hash) {
 	hexBlob = hex.EncodeToString(buf.Bytes())
 	hash = wire.BlockHash(&blk)
 	return
+}
+
+func TestSyncOptions_Default(t *testing.T) {
+	opts := DefaultSyncOptions()
+	assert.False(t, opts.VerifySignatures)
+	assert.Equal(t, config.MainnetForks, opts.Forks)
 }
 
 func TestSync_Good_SingleBlock(t *testing.T) {
@@ -106,7 +116,7 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 
 	client := rpc.NewClient(srv.URL)
 
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -272,7 +282,7 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 
 	client := rpc.NewClient(srv.URL)
 
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -377,7 +387,7 @@ func TestSync_Good_AlreadySynced(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync on empty: %v", err)
 	}
@@ -400,7 +410,7 @@ func TestSync_Bad_GetHeightError(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from bad getheight, got nil")
 	}
@@ -436,7 +446,7 @@ func TestSync_Bad_FetchBlocksError(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from bad get_blocks_details, got nil")
 	}
@@ -495,7 +505,7 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected genesis hash mismatch error, got nil")
 	}
@@ -557,7 +567,7 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected block hash mismatch error, got nil")
 	}
@@ -658,7 +668,7 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from invalid tx blob, got nil")
 	}
@@ -718,7 +728,7 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client)
+	err := c.Sync(client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from invalid block blob, got nil")
 	}

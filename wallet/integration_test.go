@@ -31,7 +31,7 @@ func TestWalletIntegration(t *testing.T) {
 	c := chain.New(s)
 
 	// Sync chain first.
-	if err := c.Sync(client); err != nil {
+	if err := c.Sync(client, chain.DefaultSyncOptions()); err != nil {
 		t.Fatalf("chain sync: %v", err)
 	}
 

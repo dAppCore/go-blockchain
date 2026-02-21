@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"forge.lthn.ai/core/go-blockchain/config"
+	"forge.lthn.ai/core/go-blockchain/consensus"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
 	"forge.lthn.ai/core/go-blockchain/wire"
@@ -21,9 +23,27 @@ const syncBatchSize = 10
 // GenesisHash is the expected genesis block hash.
 var GenesisHash = "cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963"
 
+// SyncOptions controls sync behaviour.
+type SyncOptions struct {
+	// VerifySignatures enables cryptographic signature verification
+	// during sync. Default false for fast sync.
+	VerifySignatures bool
+
+	// Forks is the hardfork schedule to use for validation.
+	Forks []config.HardFork
+}
+
+// DefaultSyncOptions returns sync options for fast sync (no signature verification).
+func DefaultSyncOptions() SyncOptions {
+	return SyncOptions{
+		VerifySignatures: false,
+		Forks:            config.MainnetForks,
+	}
+}
+
 // Sync fetches blocks from the daemon and stores them locally.
 // It is a blocking function — the caller controls retry and scheduling.
-func (c *Chain) Sync(client *rpc.Client) error {
+func (c *Chain) Sync(client *rpc.Client, opts SyncOptions) error {
 	localHeight, err := c.Height()
 	if err != nil {
 		return fmt.Errorf("sync: get local height: %w", err)
@@ -47,7 +67,7 @@ func (c *Chain) Sync(client *rpc.Client) error {
 		}
 
 		for _, bd := range blocks {
-			if err := c.processBlock(bd); err != nil {
+			if err := c.processBlock(bd, opts); err != nil {
 				return fmt.Errorf("sync: process block %d: %w", bd.Height, err)
 			}
 		}
@@ -61,7 +81,7 @@ func (c *Chain) Sync(client *rpc.Client) error {
 	return nil
 }
 
-func (c *Chain) processBlock(bd rpc.BlockDetails) error {
+func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 	// Decode block blob.
 	blockBlob, err := hex.DecodeString(bd.Blob)
 	if err != nil {
@@ -95,6 +115,11 @@ func (c *Chain) processBlock(bd rpc.BlockDetails) error {
 	// Validate header.
 	if err := c.ValidateHeader(&blk, bd.Height); err != nil {
 		return err
+	}
+
+	// Validate miner transaction structure.
+	if err := consensus.ValidateMinerTx(&blk.MinerTx, bd.Height, opts.Forks); err != nil {
+		return fmt.Errorf("validate miner tx: %w", err)
 	}
 
 	// Parse difficulty from string.
@@ -135,6 +160,18 @@ func (c *Chain) processBlock(bd rpc.BlockDetails) error {
 		tx := wire.DecodeTransaction(txDec)
 		if err := txDec.Err(); err != nil {
 			return fmt.Errorf("decode tx wire %s: %w", txInfo.ID, err)
+		}
+
+		// Validate transaction semantics.
+		if err := consensus.ValidateTransaction(&tx, txBlob, opts.Forks, bd.Height); err != nil {
+			return fmt.Errorf("validate tx %s: %w", txInfo.ID, err)
+		}
+
+		// Optionally verify signatures (structural check only — nil getRingOutputs).
+		if opts.VerifySignatures {
+			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, bd.Height, nil); err != nil {
+				return fmt.Errorf("verify tx signatures %s: %w", txInfo.ID, err)
+			}
 		}
 
 		txHash, err := types.HashFromHex(txInfo.ID)

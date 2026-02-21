@@ -49,7 +49,7 @@ func TestIntegration_SyncFirst10Blocks(t *testing.T) {
 		if h >= targetHeight {
 			break
 		}
-		if err := c.Sync(client); err != nil {
+		if err := c.Sync(client, DefaultSyncOptions()); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 	}
