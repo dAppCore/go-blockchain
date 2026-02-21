@@ -17,8 +17,9 @@ func TestSparseChainHistory_Empty(t *testing.T) {
 
 	history, err := c.SparseChainHistory()
 	require.NoError(t, err)
-	require.Len(t, history, 1) // just the zero hash (genesis placeholder)
-	require.True(t, history[0].IsZero())
+	require.Len(t, history, 1) // genesis hash so the peer can locate us
+	expected, _ := types.HashFromHex(GenesisHash)
+	require.Equal(t, expected, history[0])
 }
 
 func TestSparseChainHistory_FewBlocks(t *testing.T) {

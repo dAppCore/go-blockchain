@@ -18,7 +18,14 @@ func (c *Chain) SparseChainHistory() ([]types.Hash, error) {
 	}
 
 	if height == 0 {
-		return []types.Hash{{}}, nil // zero hash placeholder
+		// No blocks stored yet; send the genesis hash so the peer can
+		// locate our fork point. A zero hash is meaningless and would
+		// cause the peer to ignore the request.
+		gh, err := types.HashFromHex(GenesisHash)
+		if err != nil {
+			return nil, err
+		}
+		return []types.Hash{gh}, nil
 	}
 
 	var hashes []types.Hash
