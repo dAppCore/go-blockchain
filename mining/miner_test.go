@@ -168,3 +168,67 @@ func TestMiner_Start_Good_TemplateRefresh(t *testing.T) {
 
 	assert.GreaterOrEqual(t, mock.templateCalls.Load(), int64(2))
 }
+
+func TestMiner_Start_Good_BlockFound(t *testing.T) {
+	// With difficulty=1, every hash is valid — should find a block immediately.
+	var foundHeight uint64
+	var foundHash types.Hash
+
+	mock := &mockProvider{
+		templates: []*rpc.BlockTemplateResponse{
+			{Difficulty: "1", Height: 50, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
+		},
+		infos: []*rpc.DaemonInfo{{Height: 50}},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+		OnBlockFound: func(height uint64, hash types.Hash) {
+			foundHeight = height
+			foundHash = hash
+		},
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Start will find a block (diff=1), submit it, then fetch another template.
+	// The second template fetch is the same, so it finds another block.
+	// Eventually the context times out.
+	_ = m.Start(ctx)
+
+	assert.Equal(t, uint64(50), foundHeight)
+	assert.False(t, foundHash.IsZero())
+	assert.GreaterOrEqual(t, mock.submitCalls.Load(), int64(1))
+	assert.GreaterOrEqual(t, m.Stats().BlocksFound, uint64(1))
+}
+
+func TestMiner_Start_Good_StatsUpdate(t *testing.T) {
+	mock := &mockProvider{
+		templates: []*rpc.BlockTemplateResponse{
+			{Difficulty: "1", Height: 200, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
+		},
+		infos: []*rpc.DaemonInfo{{Height: 200}},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	_ = m.Start(ctx)
+
+	stats := m.Stats()
+	assert.Greater(t, stats.Hashrate, float64(0))
+	assert.Greater(t, stats.Uptime, time.Duration(0))
+}
