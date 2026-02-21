@@ -159,6 +159,20 @@ func (c *Chain) HasTransaction(hash types.Hash) bool {
 	return err == nil
 }
 
+// getBlockMeta retrieves only the metadata for a block at the given height,
+// without decoding the wire blob. Useful for lightweight lookups.
+func (c *Chain) getBlockMeta(height uint64) (*BlockMeta, error) {
+	val, err := c.store.Get(groupBlocks, heightKey(height))
+	if err != nil {
+		return nil, fmt.Errorf("chain: block meta %d: %w", height, err)
+	}
+	var rec blockRecord
+	if err := json.Unmarshal([]byte(val), &rec); err != nil {
+		return nil, fmt.Errorf("chain: unmarshal block meta %d: %w", height, err)
+	}
+	return &rec.Meta, nil
+}
+
 func decodeBlockRecord(val string) (*types.Block, *BlockMeta, error) {
 	var rec blockRecord
 	if err := json.Unmarshal([]byte(val), &rec); err != nil {
