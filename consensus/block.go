@@ -124,3 +124,28 @@ func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSi
 
 	return nil
 }
+
+// ValidateBlock performs full consensus validation on a block. It checks
+// the timestamp, miner transaction structure, and reward. Transaction
+// semantic validation for regular transactions should be done separately
+// via ValidateTransaction for each tx in the block.
+func ValidateBlock(blk *types.Block, height, blockSize, medianSize, totalFees, adjustedTime uint64,
+	recentTimestamps []uint64, forks []config.HardFork) error {
+
+	// Timestamp validation.
+	if err := CheckTimestamp(blk.Timestamp, blk.Flags, adjustedTime, recentTimestamps); err != nil {
+		return err
+	}
+
+	// Miner transaction structure.
+	if err := ValidateMinerTx(&blk.MinerTx, height, forks); err != nil {
+		return err
+	}
+
+	// Block reward.
+	if err := ValidateBlockReward(&blk.MinerTx, height, blockSize, medianSize, totalFees, forks); err != nil {
+		return err
+	}
+
+	return nil
+}

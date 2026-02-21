@@ -150,3 +150,51 @@ func TestValidateBlockReward_Good_WithFees(t *testing.T) {
 	err := ValidateBlockReward(tx, height, 1000, config.BlockGrantedFullRewardZone, fees, config.MainnetForks)
 	require.NoError(t, err)
 }
+
+func TestValidateBlock_Good(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	height := uint64(100)
+	blk := &types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 1,
+			Timestamp:    now,
+			Flags:        0, // PoW
+		},
+		MinerTx: *validMinerTx(height),
+	}
+
+	err := ValidateBlock(blk, height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
+	require.NoError(t, err)
+}
+
+func TestValidateBlock_Bad_Timestamp(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	height := uint64(100)
+	blk := &types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 1,
+			Timestamp:    now + config.BlockFutureTimeLimit + 100,
+			Flags:        0,
+		},
+		MinerTx: *validMinerTx(height),
+	}
+
+	err := ValidateBlock(blk, height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
+	assert.ErrorIs(t, err, ErrTimestampFuture)
+}
+
+func TestValidateBlock_Bad_MinerTx(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	height := uint64(100)
+	blk := &types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 1,
+			Timestamp:    now,
+			Flags:        0,
+		},
+		MinerTx: *validMinerTx(200), // wrong height
+	}
+
+	err := ValidateBlock(blk, height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
+	assert.ErrorIs(t, err, ErrMinerTxHeight)
+}
