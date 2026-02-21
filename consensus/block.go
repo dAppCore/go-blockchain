@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"forge.lthn.ai/core/go-blockchain/config"
+	"forge.lthn.ai/core/go-blockchain/types"
 )
 
 // IsPoS returns true if the block flags indicate a Proof-of-Stake block.
@@ -56,4 +57,43 @@ func medianTimestamp(timestamps []uint64) uint64 {
 		return 0
 	}
 	return sorted[n/2]
+}
+
+// ValidateMinerTx checks the structure of a coinbase (miner) transaction.
+// For PoW blocks: exactly 1 input (TxInputGenesis). For PoS blocks: exactly
+// 2 inputs (TxInputGenesis + stake input).
+func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFork) error {
+	if len(tx.Vin) == 0 {
+		return fmt.Errorf("%w: no inputs", ErrMinerTxInputs)
+	}
+
+	// First input must be TxInputGenesis.
+	gen, ok := tx.Vin[0].(types.TxInputGenesis)
+	if !ok {
+		return fmt.Errorf("%w: first input is not txin_gen", ErrMinerTxInputs)
+	}
+	if gen.Height != height {
+		return fmt.Errorf("%w: got %d, expected %d", ErrMinerTxHeight, gen.Height, height)
+	}
+
+	// PoW blocks: exactly 1 input. PoS: exactly 2.
+	if len(tx.Vin) == 1 {
+		// PoW — valid.
+	} else if len(tx.Vin) == 2 {
+		// PoS — second input must be a spend input.
+		switch tx.Vin[1].(type) {
+		case types.TxInputToKey:
+			// Pre-HF4 PoS.
+		default:
+			hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
+			if !hf4Active {
+				return fmt.Errorf("%w: invalid PoS stake input type", ErrMinerTxInputs)
+			}
+			// Post-HF4: accept ZC inputs.
+		}
+	} else {
+		return fmt.Errorf("%w: %d inputs (expected 1 or 2)", ErrMinerTxInputs, len(tx.Vin))
+	}
+
+	return nil
 }

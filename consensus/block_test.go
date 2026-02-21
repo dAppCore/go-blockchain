@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"forge.lthn.ai/core/go-blockchain/config"
+	"forge.lthn.ai/core/go-blockchain/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,5 +61,58 @@ func TestCheckTimestamp_Ugly(t *testing.T) {
 		timestamps[i] = now - 100
 	}
 	err := CheckTimestamp(now-200, 0, now, timestamps) // old but under 60 entries
+	require.NoError(t, err)
+}
+
+func validMinerTx(height uint64) *types.Transaction {
+	return &types.Transaction{
+		Version: types.VersionInitial,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: height}},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: config.BlockReward, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+}
+
+func TestValidateMinerTx_Good(t *testing.T) {
+	tx := validMinerTx(100)
+	err := ValidateMinerTx(tx, 100, config.MainnetForks)
+	require.NoError(t, err)
+}
+
+func TestValidateMinerTx_Bad_WrongHeight(t *testing.T) {
+	tx := validMinerTx(100)
+	err := ValidateMinerTx(tx, 200, config.MainnetForks) // height mismatch
+	assert.ErrorIs(t, err, ErrMinerTxHeight)
+}
+
+func TestValidateMinerTx_Bad_NoInputs(t *testing.T) {
+	tx := &types.Transaction{Version: types.VersionInitial}
+	err := ValidateMinerTx(tx, 100, config.MainnetForks)
+	assert.ErrorIs(t, err, ErrMinerTxInputs)
+}
+
+func TestValidateMinerTx_Bad_WrongFirstInput(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionInitial,
+		Vin:     []types.TxInput{types.TxInputToKey{Amount: 1}},
+	}
+	err := ValidateMinerTx(tx, 100, config.MainnetForks)
+	assert.ErrorIs(t, err, ErrMinerTxInputs)
+}
+
+func TestValidateMinerTx_Good_PoS(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionInitial,
+		Vin: []types.TxInput{
+			types.TxInputGenesis{Height: 100},
+			types.TxInputToKey{Amount: 1}, // PoS stake input
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: config.BlockReward, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	err := ValidateMinerTx(tx, 100, config.MainnetForks)
+	// 2 inputs with genesis + TxInputToKey is valid PoS structure.
 	require.NoError(t, err)
 }
