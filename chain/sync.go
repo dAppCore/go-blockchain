@@ -167,9 +167,9 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 			return fmt.Errorf("validate tx %s: %w", txInfo.ID, err)
 		}
 
-		// Optionally verify signatures (structural check only — nil getRingOutputs).
+		// Optionally verify signatures using the chain's output index.
 		if opts.VerifySignatures {
-			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, bd.Height, nil); err != nil {
+			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, bd.Height, c.GetRingOutputs); err != nil {
 				return fmt.Errorf("verify tx signatures %s: %w", txInfo.ID, err)
 			}
 		}
