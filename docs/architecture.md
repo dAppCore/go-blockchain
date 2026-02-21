@@ -22,6 +22,7 @@ rpc/          Daemon JSON-RPC 2.0 client (12 endpoints)
 chain/        Chain storage, indexing, and sync client (go-store backed)
 consensus/    Three-layer block/transaction validation (structural, economic, crypto)
 wallet/       Wallet core: key management, scanning, signing, TX construction
+mining/      Solo PoW miner (daemon RPC, RandomX nonce grinding)
 ```
 
 ### config/
@@ -122,7 +123,7 @@ The Levin wire format in go-p2p includes:
 ### rpc/
 
 Typed JSON-RPC 2.0 client for querying the Lethean daemon. The `Client` struct
-wraps `net/http` and provides Go methods for 10 core daemon endpoints.
+wraps `net/http` and provides Go methods for 11 core daemon endpoints.
 
 Eight endpoints use JSON-RPC 2.0 via `/json_rpc`. Two endpoints (`GetHeight`,
 `GetTransactions`) use legacy JSON POST to dedicated URI paths (`/getheight`,
@@ -139,7 +140,7 @@ rather than `MAP_JON_RPC`.
 - `blocks.go` -- `GetLastBlockHeader`, `GetBlockHeaderByHeight`,
   `GetBlockHeaderByHash`, `GetBlocksDetails`.
 - `transactions.go` -- `GetTxDetails`, `GetTransactions` (legacy).
-- `mining.go` -- `SubmitBlock`.
+- `mining.go` -- `GetBlockTemplate`, `SubmitBlock`.
 
 **Wallet endpoints:**
 - `wallet.go` -- `GetRandomOutputs` (for ring decoy selection via `/getrandom_outs1`)
@@ -264,6 +265,31 @@ with four core abstractions so v1 (NLSAG) implementations ship now and v2+
 - Unit tests with go-store `:memory:` for all components.
 - Build-tagged integration test (`//go:build integration`) syncing from
   C++ testnet daemon and verifying balance/transfers.
+
+### mining/
+
+Solo PoW miner that talks to a C++ daemon via JSON-RPC. Single-threaded
+mining loop: fetches block templates, computes a header mining hash once
+per template, then grinds nonces with RandomX until a solution is found
+or the chain advances.
+
+**Core types:**
+- `Config` -- daemon URL, wallet address, poll interval, callbacks.
+- `Miner` -- mining loop with `Start(ctx)` (blocking) and `Stats()` (lock-free).
+- `TemplateProvider` -- interface satisfied by `rpc.Client` for testability.
+
+**Mining flow:**
+1. `GetBlockTemplate(walletAddr)` -- fetches template from daemon.
+2. `HeaderMiningHash(block)` -- Keccak-256 of `BlockHashingBlob` with nonce=0.
+3. Nonce loop: `RandomXHash("LetheanRandomXv1", headerHash || nonce_LE)`.
+4. `CheckDifficulty(powHash, difficulty)` -- solution found?
+5. `SubmitBlock(hexBlob)` -- submits the solved block.
+
+**Template refresh:** polls `GetInfo()` every `PollInterval` (default 3s) to
+detect new blocks. Re-fetches the template when the chain height advances.
+
+**Testing:** Mock `TemplateProvider` for unit tests. Build-tagged integration
+test against C++ testnet daemon on `localhost:46941`.
 
 ---
 

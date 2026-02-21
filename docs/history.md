@@ -511,10 +511,18 @@ Coverage: 82.1% of statements.
 
 All passing with `-race` and `go vet`.
 
-## Phase 8 -- Mining (Planned)
+## Phase 8 -- Mining
 
-PoW mining support with stratum protocol client. PoS staking with kernel
-hash computation and coinstake transaction construction.
+Solo PoW miner in `mining/` package. Fetches block templates from the C++
+daemon, computes header mining hash (nonce=0 Keccak-256), grinds nonces with
+RandomX, submits solutions. Single-threaded loop with poll-based template
+refresh.
+
+**Commits:** `8735e53..f9ff8ad` on `feat/phase8-mining`
+
+**Known limitations:**
+- Single-threaded (CGo RandomX bridge uses static global cache/VM).
+- Solo mining only (no stratum protocol).
 
 ---
 
