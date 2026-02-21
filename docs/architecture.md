@@ -103,7 +103,10 @@ connections) and defines the application-level command semantics:
 - **timedsync.go** -- COMMAND_TIMED_SYNC (1002): periodic blockchain state sync.
 - **ping.go** -- COMMAND_PING (1003): simple liveness check.
 - **relay.go** -- Block relay (2001), transaction relay (2002), chain
-  request/response (2006/2007).
+  request/response (2006/2007). `BlockCompleteEntry` for block + transaction
+  blob pairs. `BlockContextInfo` for chain entry response objects.
+- **getobjects.go** -- `RequestGetObjects` (2003) and `ResponseGetObjects`
+  (2004) types for fetching blocks by hash during P2P sync.
 - **sync.go** -- CoreSyncData type (current_height, top_id, checkpoint,
   core_time, client_version, pruning mode).
 - **commands.go** -- Command ID re-exports from the levin package.
@@ -174,13 +177,28 @@ to the C++ daemon's core containers.
   block size).
 - `sync.go` -- `Sync(client)` blocking RPC poll loop. Fetches blocks in batches
   of 10, decodes wire blobs, validates headers, indexes transactions/outputs/
-  key images, verifies block hashes.
+  key images, verifies block hashes. `processBlockBlobs()` shared validation
+  path for both RPC and P2P sync. `resolveBlockBlobs()` reconstructs block data
+  from daemon JSON responses. Context cancellation and progress logging for
+  long syncs.
+
+**P2P sync:**
+- `P2PConnection` interface abstracting peer communication (request/response
+  over any transport).
+- `LevinP2PConn` adapter wrapping a Levin TCP connection to satisfy
+  `P2PConnection`.
+- `P2PSync()` state machine running the REQUEST_CHAIN / REQUEST_GET_OBJECTS
+  loop until the peer has no more blocks.
+- `SparseChainHistory()` builds exponentially-spaced block hash lists matching
+  the C++ `get_short_chain_history()` algorithm.
+- `GetRingOutputs()` callback for ring signature verification during sync.
 
 **Testing:**
 - Unit tests with go-store `:memory:` for all CRUD operations and validation.
 - Mock RPC server sync tests.
 - Build-tagged integration test (`//go:build integration`) syncing first 10
   blocks from C++ testnet daemon on `localhost:46941`.
+- P2P sync integration test against C++ testnet daemon on `localhost:46942`.
 
 ### consensus/
 
@@ -204,8 +222,9 @@ and height, returning errors. No dependency on `chain/` or any storage layer.
 - `CheckDifficulty()` / `CheckPoWHash()` — 256-bit PoW hash comparison via
   RandomX (vendored in `crypto/randomx/`, key `"LetheanRandomXv1"`).
 - `VerifyTransactionSignatures()` — NLSAG (pre-HF4) and CLSAG (post-HF4)
-  signature verification scaffold. Structural checks implemented; crypto bridge
-  calls marked TODO.
+  signature verification. `verifyV1Signatures()` performs real NLSAG ring
+  signature verification via CGo, using a `RingOutputsFn` callback to fetch
+  ring member public keys from chain storage.
 
 **Block validation:**
 - `CheckTimestamp()` — future time limit (7200s PoW, 1200s PoS) + median-of-60.

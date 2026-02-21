@@ -567,6 +567,73 @@ prefix hash matches the known tx hash.
 
 ---
 
+## Block Sync (Phase 3 addendum)
+
+Commit range: `ca3d8e0`..`a74ac2e` (17 commits)
+
+Wired real NLSAG ring signature verification into the consensus path and
+implemented full P2P block synchronisation via the Levin protocol. The chain
+can now sync to tip from either a JSON-RPC daemon or a raw P2P peer, with all
+blocks validated through the same shared code path.
+
+### Highlights
+
+- NLSAG ring signature verification wired into consensus path
+- Full testnet chain synced via RPC with all blocks validated
+- Ring signature verification passes on all spending transactions
+- P2P block sync via REQUEST_CHAIN / REQUEST_GET_OBJECTS protocol
+- Sparse chain history builder for P2P sync requests
+- Shared `processBlockBlobs()` for RPC and P2P paths
+- Context cancellation and progress logging for long syncs
+- `TxInputZC` key image tracking for v2+ transactions
+- Block blob reconstruction from daemon JSON response
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `chain/p2p.go` | `P2PConnection` interface + `LevinP2PConn` adapter |
+| `chain/p2p_sync.go` | `P2PSync()` state machine (REQUEST_CHAIN / REQUEST_GET_OBJECTS loop) |
+| `chain/sparse.go` | `SparseChainHistory()` exponentially-spaced block hash list |
+| `chain/integration_p2p_test.go` | P2P sync integration test against C++ testnet |
+| `p2p/getobjects.go` | `RequestGetObjects` (2003) and `ResponseGetObjects` (2004) types |
+| `p2p/getobjects_test.go` | GetObjects round-trip tests |
+| `p2p/integration_chain_test.go` | Chain request + block fetch integration test |
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `chain/sync.go` | Extracted `processBlockBlobs()`, added `resolveBlockBlobs()`, context support, progress logging |
+| `chain/index.go` | `TxInputZC` key image tracking |
+| `consensus/verify.go` | `verifyV1Signatures()` now performs real NLSAG ring signature verification via CGo |
+| `p2p/relay.go` | `BlockCompleteEntry`, `BlockContextInfo` types for chain entry responses |
+
+### Key findings
+
+- **Shared validation path.** `processBlockBlobs()` decodes, validates, and
+  indexes blocks identically for both RPC and P2P sync. This ensures consensus
+  rules are applied regardless of the transport used to fetch blocks.
+
+- **Sparse chain history.** `SparseChainHistory()` builds an exponentially-spaced
+  list of block hashes (every 1, 2, 4, 8, ... blocks back from tip), matching
+  the C++ `get_short_chain_history()` algorithm. This minimises the data
+  exchanged during the REQUEST_CHAIN handshake.
+
+- **P2PSync state machine.** The sync loop issues REQUEST_CHAIN to get a list
+  of chain entry hashes, then fetches blocks in batches via REQUEST_GET_OBJECTS,
+  repeating until the peer has no more blocks.
+
+- **Overlap block skipping.** The first block in a REQUEST_GET_OBJECTS response
+  overlaps with the last known block (to confirm chain continuity). This
+  duplicate is detected and skipped during processing.
+
+- **Network ID and serialisation fixes.** The C++ daemon is strict about
+  portable storage field ordering and network ID bytes. Several round-trips
+  were needed to match the exact byte layout expected by the C++ peer.
+
+---
+
 ## Known Limitations
 
 **V2+ spending transactions untested.** The v2 coinbase serialisation is
