@@ -97,3 +97,30 @@ func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFo
 
 	return nil
 }
+
+// ValidateBlockReward checks that the miner transaction outputs do not
+// exceed the expected reward (base reward + fees for pre-HF4).
+func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSize, totalFees uint64, forks []config.HardFork) error {
+	base := BaseReward(height)
+	reward, err := BlockReward(base, blockSize, medianSize)
+	if err != nil {
+		return err
+	}
+
+	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
+	expected := MinerReward(reward, totalFees, hf4Active)
+
+	// Sum miner tx outputs.
+	var outputSum uint64
+	for _, vout := range minerTx.Vout {
+		if bare, ok := vout.(types.TxOutputBare); ok {
+			outputSum += bare.Amount
+		}
+	}
+
+	if outputSum > expected {
+		return fmt.Errorf("%w: outputs %d > expected %d", ErrRewardMismatch, outputSum, expected)
+	}
+
+	return nil
+}

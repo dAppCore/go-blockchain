@@ -116,3 +116,37 @@ func TestValidateMinerTx_Good_PoS(t *testing.T) {
 	// 2 inputs with genesis + TxInputToKey is valid PoS structure.
 	require.NoError(t, err)
 }
+
+func TestValidateBlockReward_Good(t *testing.T) {
+	height := uint64(100)
+	tx := validMinerTx(height)
+	err := ValidateBlockReward(tx, height, 1000, config.BlockGrantedFullRewardZone, 0, config.MainnetForks)
+	require.NoError(t, err)
+}
+
+func TestValidateBlockReward_Bad_TooMuch(t *testing.T) {
+	height := uint64(100)
+	tx := &types.Transaction{
+		Version: types.VersionInitial,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: height}},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: config.BlockReward + 1, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	err := ValidateBlockReward(tx, height, 1000, config.BlockGrantedFullRewardZone, 0, config.MainnetForks)
+	assert.ErrorIs(t, err, ErrRewardMismatch)
+}
+
+func TestValidateBlockReward_Good_WithFees(t *testing.T) {
+	height := uint64(100)
+	fees := uint64(50_000_000_000)
+	tx := &types.Transaction{
+		Version: types.VersionInitial,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: height}},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: config.BlockReward + fees, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	err := ValidateBlockReward(tx, height, 1000, config.BlockGrantedFullRewardZone, fees, config.MainnetForks)
+	require.NoError(t, err)
+}
