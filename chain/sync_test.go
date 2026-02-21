@@ -734,3 +734,206 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 		t.Fatal("Sync: expected error from invalid block blob, got nil")
 	}
 }
+
+// testCoinbaseTxV2 creates a v2 (post-HF4) coinbase transaction with Zarcanum outputs.
+func testCoinbaseTxV2(height uint64) types.Transaction {
+	return types.Transaction{
+		Version: types.VersionPostHF4,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: height}},
+		Vout: []types.TxOutput{
+			types.TxOutputZarcanum{
+				StealthAddress:   types.PublicKey{0x01},
+				ConcealingPoint:  types.PublicKey{0x02},
+				AmountCommitment: types.PublicKey{0x03},
+				BlindedAssetID:   types.PublicKey{0x04},
+				EncryptedAmount:  1000000,
+				MixAttr:          0,
+			},
+			types.TxOutputZarcanum{
+				StealthAddress:   types.PublicKey{0x05},
+				ConcealingPoint:  types.PublicKey{0x06},
+				AmountCommitment: types.PublicKey{0x07},
+				BlindedAssetID:   types.PublicKey{0x08},
+				EncryptedAmount:  2000000,
+				MixAttr:          0,
+			},
+		},
+		Extra:         wire.EncodeVarint(0),
+		Attachment:    wire.EncodeVarint(0),
+		SignaturesRaw: wire.EncodeVarint(0),
+		Proofs:        wire.EncodeVarint(0),
+	}
+}
+
+func TestSync_Good_ZCInputKeyImageMarkedSpent(t *testing.T) {
+	// --- Build genesis block (block 0) ---
+	genesisBlob, genesisHash := makeGenesisBlockBlob()
+
+	// --- Build a v2 transaction with a TxInputZC for block 1 ---
+	zcKeyImage := types.KeyImage{0xdd, 0xee, 0xff}
+	zcTx := types.Transaction{
+		Version: types.VersionPostHF4,
+		Vin: []types.TxInput{
+			types.TxInputZC{
+				KeyOffsets: []types.TxOutRef{{
+					Tag:         types.RefTypeGlobalIndex,
+					GlobalIndex: 0,
+				}},
+				KeyImage:   zcKeyImage,
+				EtcDetails: wire.EncodeVarint(0),
+			},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputZarcanum{
+				StealthAddress:   types.PublicKey{0x10},
+				ConcealingPoint:  types.PublicKey{0x11},
+				AmountCommitment: types.PublicKey{0x12},
+				BlindedAssetID:   types.PublicKey{0x13},
+				EncryptedAmount:  500000,
+				MixAttr:          0,
+			},
+			types.TxOutputZarcanum{
+				StealthAddress:   types.PublicKey{0x14},
+				ConcealingPoint:  types.PublicKey{0x15},
+				AmountCommitment: types.PublicKey{0x16},
+				BlindedAssetID:   types.PublicKey{0x17},
+				EncryptedAmount:  400000,
+				MixAttr:          0,
+			},
+		},
+		Extra:         wire.EncodeVarint(0),
+		Attachment:    wire.EncodeVarint(0),
+		SignaturesRaw: wire.EncodeVarint(0),
+		Proofs:        wire.EncodeVarint(0),
+	}
+
+	var txBuf bytes.Buffer
+	txEnc := wire.NewEncoder(&txBuf)
+	wire.EncodeTransaction(txEnc, &zcTx)
+	zcTxBlob := hex.EncodeToString(txBuf.Bytes())
+	zcTxHash := wire.TransactionHash(&zcTx)
+
+	// --- Build block 1 (v2 block) ---
+	minerTx1 := testCoinbaseTxV2(1)
+	block1 := types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 2,
+			Nonce:        42,
+			PrevID:       genesisHash,
+			Timestamp:    1770897720,
+		},
+		MinerTx:  minerTx1,
+		TxHashes: []types.Hash{zcTxHash},
+	}
+
+	var blk1Buf bytes.Buffer
+	blk1Enc := wire.NewEncoder(&blk1Buf)
+	wire.EncodeBlock(blk1Enc, &block1)
+	block1Blob := hex.EncodeToString(blk1Buf.Bytes())
+	block1Hash := wire.BlockHash(&block1)
+
+	// Override genesis hash for this test.
+	orig := GenesisHash
+	GenesisHash = genesisHash.String()
+	t.Cleanup(func() { GenesisHash = orig })
+
+	// Mock RPC server returning 2 blocks.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.URL.Path == "/getheight" {
+			json.NewEncoder(w).Encode(map[string]any{
+				"height": 2,
+				"status": "OK",
+			})
+			return
+		}
+
+		var req struct {
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+
+		switch req.Method {
+		case "get_blocks_details":
+			blocks := []map[string]any{
+				{
+					"height":               uint64(0),
+					"timestamp":            uint64(1770897600),
+					"base_reward":          uint64(1000000000000),
+					"id":                   genesisHash.String(),
+					"difficulty":           "1",
+					"type":                 uint64(1),
+					"blob":                 genesisBlob,
+					"transactions_details": []any{},
+				},
+				{
+					"height":      uint64(1),
+					"timestamp":   uint64(1770897720),
+					"base_reward": uint64(1000000),
+					"id":          block1Hash.String(),
+					"difficulty":  "100",
+					"type":        uint64(1),
+					"blob":        block1Blob,
+					"transactions_details": []map[string]any{
+						{
+							"id":   zcTxHash.String(),
+							"blob": zcTxBlob,
+							"fee":  uint64(0),
+						},
+					},
+				},
+			}
+
+			result := map[string]any{
+				"blocks": blocks,
+				"status": "OK",
+			}
+			resultBytes, _ := json.Marshal(result)
+			json.NewEncoder(w).Encode(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      "0",
+				"result":  json.RawMessage(resultBytes),
+			})
+		}
+	}))
+	defer srv.Close()
+
+	s, _ := store.New(":memory:")
+	defer s.Close()
+	c := New(s)
+
+	client := rpc.NewClient(srv.URL)
+
+	// Use custom forks where HF4 is active from height 0 so ZC inputs pass validation.
+	opts := SyncOptions{
+		VerifySignatures: false,
+		Forks: []config.HardFork{
+			{Version: config.HF1, Height: 0, Mandatory: true},
+			{Version: config.HF2, Height: 0, Mandatory: true},
+			{Version: config.HF3, Height: 0, Mandatory: true},
+			{Version: config.HF4Zarcanum, Height: 0, Mandatory: true},
+		},
+	}
+
+	err := c.Sync(context.Background(), client, opts)
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+
+	// Verify height is 2.
+	h, _ := c.Height()
+	if h != 2 {
+		t.Errorf("height after sync: got %d, want 2", h)
+	}
+
+	// Verify the ZC key image was marked as spent.
+	spent, err := c.IsSpent(zcKeyImage)
+	if err != nil {
+		t.Fatalf("IsSpent: %v", err)
+	}
+	if !spent {
+		t.Error("IsSpent(zc_key_image): got false, want true")
+	}
+}

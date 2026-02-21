@@ -199,9 +199,14 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 
 		// Mark key images as spent.
 		for _, vin := range tx.Vin {
-			if toKey, ok := vin.(types.TxInputToKey); ok {
-				if err := c.MarkSpent(toKey.KeyImage, bd.Height); err != nil {
-					return fmt.Errorf("mark spent %s: %w", toKey.KeyImage, err)
+			switch inp := vin.(type) {
+			case types.TxInputToKey:
+				if err := c.MarkSpent(inp.KeyImage, bd.Height); err != nil {
+					return fmt.Errorf("mark spent %s: %w", inp.KeyImage, err)
+				}
+			case types.TxInputZC:
+				if err := c.MarkSpent(inp.KeyImage, bd.Height); err != nil {
+					return fmt.Errorf("mark spent %s: %w", inp.KeyImage, err)
 				}
 			}
 		}
