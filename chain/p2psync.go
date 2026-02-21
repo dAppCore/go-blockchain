@@ -116,9 +116,13 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 					log.Printf("p2p sync: processing block %d", blockHeight)
 				}
 
-				// P2P path: difficulty=0 (TODO: compute from LWMA)
+				blockDiff, err := c.NextDifficulty(blockHeight)
+				if err != nil {
+					return fmt.Errorf("p2p sync: compute difficulty for block %d: %w", blockHeight, err)
+				}
+
 				if err := c.processBlockBlobs(entry.Block, entry.Txs,
-					blockHeight, 0, opts); err != nil {
+					blockHeight, blockDiff, opts); err != nil {
 					return fmt.Errorf("p2p sync: process block %d: %w", blockHeight, err)
 				}
 			}
