@@ -20,6 +20,7 @@ crypto/       CGo bridge to vendored C++ libcryptonote (keys, signatures, proofs
 p2p/          CryptoNote P2P command types (handshake, sync, relay)
 rpc/          Daemon JSON-RPC 2.0 client (12 endpoints)
 chain/        Chain storage, indexing, and sync client (go-store backed)
+consensus/    Three-layer block/transaction validation (structural, economic, crypto)
 wallet/       Wallet core: key management, scanning, signing, TX construction
 ```
 
@@ -179,6 +180,42 @@ to the C++ daemon's core containers.
 - Mock RPC server sync tests.
 - Build-tagged integration test (`//go:build integration`) syncing first 10
   blocks from C++ testnet daemon on `localhost:46941`.
+
+### consensus/
+
+Standalone consensus validation package implementing three-layer block and
+transaction verification. All functions are pure — they take types, config,
+and height, returning errors. No dependency on `chain/` or any storage layer.
+
+**Layer 1 — Structural (no crypto):**
+- `ValidateTransaction()` — 8 ordered checks matching C++ `validate_tx_semantic()`:
+  blob size, input count, input types, output validation, money overflow,
+  key image uniqueness, extra parsing, balance check.
+
+**Layer 2 — Economic:**
+- `BaseReward()` / `BlockReward()` / `MinerReward()` — fixed 1 LTHN/block with
+  size penalty using 128-bit arithmetic (`math/bits.Mul64`). Pre-HF4 fees go to
+  miner; post-HF4 fees are burned.
+- `TxFee()` — fee extraction with overflow detection.
+- `ValidateBlockReward()` — miner output sum vs expected reward.
+
+**Layer 3 — Cryptographic (CGo):**
+- `CheckDifficulty()` / `CheckPoWHash()` — 256-bit PoW hash comparison via
+  RandomX (vendored in `crypto/randomx/`, key `"LetheanRandomXv1"`).
+- `VerifyTransactionSignatures()` — NLSAG (pre-HF4) and CLSAG (post-HF4)
+  signature verification scaffold. Structural checks implemented; crypto bridge
+  calls marked TODO.
+
+**Block validation:**
+- `CheckTimestamp()` — future time limit (7200s PoW, 1200s PoS) + median-of-60.
+- `ValidateMinerTx()` — coinbase structure (1 input = PoW, 2 inputs = PoS).
+- `ValidateBlock()` — orchestrator combining timestamp, miner tx, and reward.
+- `IsPoS()` — flags bit 0 check.
+
+All validation is hardfork-aware via `config.IsHardForkActive()` with the fork
+schedule passed as a parameter. The `chain/sync.go` integration calls
+`ValidateMinerTx()` and `ValidateTransaction()` during sync, with optional
+signature verification via `SyncOptions.VerifySignatures`.
 
 ### wallet/
 

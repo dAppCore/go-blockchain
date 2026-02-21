@@ -439,11 +439,77 @@ with interface-driven design for v1/v2+ extensibility.
 63 unit tests + 1 integration test = 64 total across wallet/ and rpc/wallet.
 All passing with `-race` and `go vet`.
 
-## Phase 7 -- Consensus Rules (Planned)
+## Phase 7 -- Consensus Rules
 
-Implement `consensus/` with hardfork-aware block reward calculation, fee
-policy enforcement, and full block/transaction validation rules per hardfork
-version.
+Commit range: `fa1c127`..`112da0e` (12 commits)
+
+Added standalone `consensus/` package implementing three-layer validation
+(structural, economic, cryptographic) for blocks and transactions. Vendored
+RandomX PoW hash function into the CGo crypto bridge. Integrated consensus
+validation into the chain sync pipeline.
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `consensus/doc.go` | Package documentation |
+| `consensus/errors.go` | 21 sentinel error variables |
+| `consensus/errors_test.go` | Error uniqueness tests |
+| `consensus/reward.go` | Block reward with 128-bit size penalty |
+| `consensus/reward_test.go` | Reward calculation tests |
+| `consensus/fee.go` | Fee extraction with overflow detection |
+| `consensus/fee_test.go` | Fee tests |
+| `consensus/tx.go` | Transaction semantic validation (8 checks) |
+| `consensus/tx_test.go` | TX validation tests |
+| `consensus/block.go` | Block validation (timestamp, miner tx, reward) |
+| `consensus/block_test.go` | Block validation tests |
+| `consensus/pow.go` | PoW difficulty check (256-bit comparison) |
+| `consensus/pow_test.go` | PoW tests |
+| `consensus/verify.go` | Signature verification scaffold |
+| `consensus/verify_test.go` | Signature verification tests |
+| `consensus/integration_test.go` | Build-tagged integration test |
+| `crypto/randomx/` | Vendored RandomX source (26 files) |
+| `crypto/pow.go` | CGo RandomX hash wrapper |
+| `crypto/pow_test.go` | RandomX hash test |
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `crypto/CMakeLists.txt` | Added RandomX static library build |
+| `crypto/bridge.h` | Added `bridge_randomx_hash()` declaration |
+| `crypto/bridge.cpp` | Added `bridge_randomx_hash()` implementation |
+| `crypto/crypto.go` | Added RandomX CGo flags |
+| `config/config.go` | Added `MaxTransactionBlobSize` constant |
+| `chain/sync.go` | Added `SyncOptions`, consensus validation calls |
+| `chain/sync_test.go` | Updated for new `Sync()` signature |
+
+### Key findings
+
+- **RandomX integration.** Vendored the full RandomX source (26 files including
+  x86_64 JIT compiler) into `crypto/randomx/`. Built as a separate static
+  library (`librandomx.a`) linked into the CGo bridge. Cache key is
+  `"LetheanRandomXv1"`, input is `header_hash(32B) || nonce(8B LE)`.
+
+- **128-bit arithmetic for size penalty.** The block reward penalty formula
+  uses `math/bits.Mul64` and `bits.Div64` for 128-bit intermediate products,
+  matching the C++ 128-bit unsigned arithmetic exactly.
+
+- **Standalone package.** `consensus/` has zero dependencies on `chain/` or
+  any storage layer. All functions are pure: take types + config + height,
+  return errors. The `RingOutputsFn` callback type decouples signature
+  verification from chain storage.
+
+- **Hardfork-aware validation.** Every validation function accepts the fork
+  schedule as a parameter. Pre-HF4 and post-HF4 code paths are implemented
+  throughout (input types, fee treatment, output requirements).
+
+### Tests added
+
+37 unit tests + 1 integration test = 38 total in consensus/.
+Coverage: 82.1% of statements.
+
+All passing with `-race` and `go vet`.
 
 ## Phase 8 -- Mining (Planned)
 
