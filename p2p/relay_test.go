@@ -66,18 +66,19 @@ func TestRequestChain_Good_Roundtrip(t *testing.T) {
 		t.Fatalf("encode: %v", err)
 	}
 
-	// Decode back via storage
+	// Decode back via storage — block_ids is a single concatenated blob
+	// (KV_SERIALIZE_CONTAINER_POD_AS_BLOB in C++).
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
 		t.Fatalf("decode storage: %v", err)
 	}
 	if v, ok := s["block_ids"]; ok {
-		ids, err := v.AsStringArray()
+		blob, err := v.AsString()
 		if err != nil {
-			t.Fatalf("AsStringArray: %v", err)
+			t.Fatalf("AsString: %v", err)
 		}
-		if len(ids) != 1 || ids[0][0] != 0xFF {
-			t.Errorf("block_ids roundtrip failed")
+		if len(blob) != 32 || blob[0] != 0xFF {
+			t.Errorf("block_ids roundtrip failed: len=%d, first=%x", len(blob), blob[0])
 		}
 	} else {
 		t.Error("block_ids not found in decoded storage")
@@ -87,10 +88,16 @@ func TestRequestChain_Good_Roundtrip(t *testing.T) {
 func TestResponseChainEntry_Good_Decode(t *testing.T) {
 	hash := make([]byte, 32)
 	hash[31] = 0xAB
+	// m_block_ids is an object array of block_context_info,
+	// each with "h" (hash blob) and "cumul_size" (uint64).
+	entry := levin.Section{
+		"h":          levin.StringVal(hash),
+		"cumul_size": levin.Uint64Val(1234),
+	}
 	s := levin.Section{
 		"start_height": levin.Uint64Val(100),
 		"total_height": levin.Uint64Val(6300),
-		"m_block_ids":  levin.StringArrayVal([][]byte{hash}),
+		"m_block_ids":  levin.ObjectArrayVal([]levin.Section{entry}),
 	}
 	data, err := levin.EncodeStorage(s)
 	if err != nil {
@@ -112,6 +119,12 @@ func TestResponseChainEntry_Good_Decode(t *testing.T) {
 	}
 	if resp.BlockIDs[0][31] != 0xAB {
 		t.Errorf("block_ids[0][31]: got %x, want AB", resp.BlockIDs[0][31])
+	}
+	if len(resp.Blocks) != 1 {
+		t.Fatalf("blocks: got %d, want 1", len(resp.Blocks))
+	}
+	if resp.Blocks[0].CumulSize != 1234 {
+		t.Errorf("cumul_size: got %d, want 1234", resp.Blocks[0].CumulSize)
 	}
 }
 
@@ -144,9 +157,13 @@ func TestRequestGetObjects_RoundTrip(t *testing.T) {
 }
 
 func TestRequestGetObjects_WithTxs(t *testing.T) {
+	txHash := make([]byte, 32)
+	txHash[0] = 0xAA
+	txHash[1] = 0xBB
+	txHash[2] = 0xCC
 	req := RequestGetObjects{
 		Blocks: [][]byte{make([]byte, 32)},
-		Txs:    [][]byte{{0xAA, 0xBB, 0xCC}},
+		Txs:    [][]byte{txHash},
 	}
 	data, err := req.Encode()
 	if err != nil {
@@ -197,9 +214,10 @@ func TestResponseGetObjects_Decode(t *testing.T) {
 	}
 	missedHash := make([]byte, 32)
 	missedHash[0] = 0xFF
+	// missed_ids uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB in C++.
 	s := levin.Section{
 		"blocks":                   levin.ObjectArrayVal([]levin.Section{blockEntry1, blockEntry2}),
-		"missed_ids":               levin.StringArrayVal([][]byte{missedHash}),
+		"missed_ids":               levin.StringVal(missedHash),
 		"current_blockchain_height": levin.Uint64Val(6300),
 	}
 	data, err := levin.EncodeStorage(s)

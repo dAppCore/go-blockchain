@@ -168,19 +168,27 @@ func TestTransactionVersionConstants_Good(t *testing.T) {
 }
 
 func TestNetworkID_Good(t *testing.T) {
-	// Mainnet: byte 10 = 0 (not testnet), byte 15 = 84 (0x54)
-	if NetworkIDMainnet[10] != 0x00 {
-		t.Errorf("mainnet testnet flag: got %x, want 0x00", NetworkIDMainnet[10])
+	// In the C++ source, #ifndef TESTNET (mainnet) sets
+	// P2P_NETWORK_ID_TESTNET_FLAG=1 and #else (testnet) sets it to 0.
+	// The naming is counter-intuitive but matches the compiled binaries.
+
+	// Mainnet: byte 10 = 1 (flag from #ifndef branch), byte 15 = 84 (0x54)
+	if NetworkIDMainnet[10] != 0x01 {
+		t.Errorf("mainnet flag: got %x, want 0x01", NetworkIDMainnet[10])
 	}
 	if NetworkIDMainnet[15] != 0x54 {
 		t.Errorf("mainnet version: got %x, want 0x54", NetworkIDMainnet[15])
 	}
-	// Testnet: byte 10 = 1, byte 15 = 100 (0x64)
-	if NetworkIDTestnet[10] != 0x01 {
-		t.Errorf("testnet testnet flag: got %x, want 0x01", NetworkIDTestnet[10])
+	// Testnet: byte 10 = 0 (flag from #else branch), byte 15 = 100 (0x64)
+	if NetworkIDTestnet[10] != 0x00 {
+		t.Errorf("testnet flag: got %x, want 0x00", NetworkIDTestnet[10])
 	}
 	if NetworkIDTestnet[15] != 0x64 {
 		t.Errorf("testnet version: got %x, want 0x64", NetworkIDTestnet[15])
+	}
+	// The two IDs must differ.
+	if NetworkIDMainnet == NetworkIDTestnet {
+		t.Error("mainnet and testnet IDs must differ")
 	}
 	// ChainConfig should have them
 	if Mainnet.NetworkID != NetworkIDMainnet {

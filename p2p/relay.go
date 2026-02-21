@@ -86,12 +86,22 @@ type RequestGetObjects struct {
 }
 
 // Encode serialises the request.
+// The C++ daemon uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB for both blocks
+// and txs, so we pack all hashes into single concatenated blobs.
 func (r *RequestGetObjects) Encode() ([]byte, error) {
+	blocksBlob := make([]byte, 0, len(r.Blocks)*32)
+	for _, id := range r.Blocks {
+		blocksBlob = append(blocksBlob, id...)
+	}
 	s := levin.Section{
-		"blocks": levin.StringArrayVal(r.Blocks),
+		"blocks": levin.StringVal(blocksBlob),
 	}
 	if len(r.Txs) > 0 {
-		s["txs"] = levin.StringArrayVal(r.Txs)
+		txsBlob := make([]byte, 0, len(r.Txs)*32)
+		for _, id := range r.Txs {
+			txsBlob = append(txsBlob, id...)
+		}
+		s["txs"] = levin.StringVal(txsBlob)
 	}
 	return levin.EncodeStorage(s)
 }
@@ -103,10 +113,12 @@ func (r *RequestGetObjects) Decode(data []byte) error {
 		return err
 	}
 	if v, ok := s["blocks"]; ok {
-		r.Blocks, _ = v.AsStringArray()
+		blob, _ := v.AsString()
+		r.Blocks = splitHashes(blob, 32)
 	}
 	if v, ok := s["txs"]; ok {
-		r.Txs, _ = v.AsStringArray()
+		blob, _ := v.AsString()
+		r.Txs = splitHashes(blob, 32)
 	}
 	return nil
 }
@@ -132,7 +144,12 @@ func (r *ResponseGetObjects) Encode() ([]byte, error) {
 		"current_blockchain_height": levin.Uint64Val(r.CurrentHeight),
 	}
 	if len(r.MissedIDs) > 0 {
-		s["missed_ids"] = levin.StringArrayVal(r.MissedIDs)
+		// missed_ids uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB in C++.
+		blob := make([]byte, 0, len(r.MissedIDs)*32)
+		for _, id := range r.MissedIDs {
+			blob = append(blob, id...)
+		}
+		s["missed_ids"] = levin.StringVal(blob)
 	}
 	return levin.EncodeStorage(s)
 }
@@ -159,7 +176,9 @@ func (r *ResponseGetObjects) Decode(data []byte) error {
 		}
 	}
 	if v, ok := s["missed_ids"]; ok {
-		r.MissedIDs, _ = v.AsStringArray()
+		// missed_ids uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB in C++.
+		blob, _ := v.AsString()
+		r.MissedIDs = splitHashes(blob, 32)
 	}
 	return nil
 }
@@ -170,21 +189,37 @@ type RequestChain struct {
 }
 
 // Encode serialises the request.
+// The C++ daemon uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB for block_ids,
+// so we pack all hashes into a single concatenated blob.
 func (r *RequestChain) Encode() ([]byte, error) {
+	blob := make([]byte, 0, len(r.BlockIDs)*32)
+	for _, id := range r.BlockIDs {
+		blob = append(blob, id...)
+	}
 	s := levin.Section{
-		"block_ids": levin.StringArrayVal(r.BlockIDs),
+		"block_ids": levin.StringVal(blob),
 	}
 	return levin.EncodeStorage(s)
+}
+
+// BlockContextInfo holds a block hash and cumulative size from a chain
+// entry response. Mirrors the C++ block_context_info struct.
+type BlockContextInfo struct {
+	Hash      []byte // 32-byte block hash (KV_SERIALIZE_VAL_POD_AS_BLOB)
+	CumulSize uint64 // Cumulative block size
 }
 
 // ResponseChainEntry is NOTIFY_RESPONSE_CHAIN_ENTRY (2007).
 type ResponseChainEntry struct {
 	StartHeight uint64
 	TotalHeight uint64
-	BlockIDs    [][]byte
+	BlockIDs    [][]byte           // Convenience: just the hashes
+	Blocks      []BlockContextInfo // Full entries with cumulative sizes
 }
 
 // Decode parses a chain entry response.
+// m_block_ids is an object array of block_context_info, each with
+// "h" (hash blob) and "cumul_size" (uint64).
 func (r *ResponseChainEntry) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
@@ -197,7 +232,28 @@ func (r *ResponseChainEntry) Decode(data []byte) error {
 		r.TotalHeight, _ = v.AsUint64()
 	}
 	if v, ok := s["m_block_ids"]; ok {
-		r.BlockIDs, _ = v.AsStringArray()
+		sections, _ := v.AsSectionArray()
+		r.Blocks = make([]BlockContextInfo, len(sections))
+		r.BlockIDs = make([][]byte, len(sections))
+		for i, sec := range sections {
+			if hv, ok := sec["h"]; ok {
+				r.Blocks[i].Hash, _ = hv.AsString()
+				r.BlockIDs[i] = r.Blocks[i].Hash
+			}
+			if cv, ok := sec["cumul_size"]; ok {
+				r.Blocks[i].CumulSize, _ = cv.AsUint64()
+			}
+		}
 	}
 	return nil
+}
+
+// splitHashes divides a concatenated blob into fixed-size hash slices.
+func splitHashes(blob []byte, size int) [][]byte {
+	n := len(blob) / size
+	out := make([][]byte, n)
+	for i := 0; i < n; i++ {
+		out[i] = blob[i*size : (i+1)*size]
+	}
+	return out
 }

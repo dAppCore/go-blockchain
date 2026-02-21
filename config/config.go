@@ -276,22 +276,29 @@ const (
 )
 
 // NetworkIDMainnet is the 16-byte network UUID for mainnet P2P handshake.
-// From net_node.inl: bytes 0-9 are fixed, byte 10 = testnet flag (0),
+// From net_node.inl: bytes 0-9 are fixed, byte 10 = P2P_NETWORK_ID_TESTNET_FLAG,
 // bytes 11-14 fixed, byte 15 = formation version (84 = 0x54).
+// NOTE: In the C++ source, the #ifndef TESTNET branch (i.e. mainnet) sets
+// P2P_NETWORK_ID_TESTNET_FLAG = 1 and the #else (testnet) sets it to 0.
+// The naming is counter-intuitive but matches the compiled binaries.
 var NetworkIDMainnet = [16]byte{
 	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
-	0x10, 0x11, 0x00, 0x11, 0x01, 0x11, 0x21, 0x54,
+	0x10, 0x11, 0x01, 0x11, 0x01, 0x11, 0x21, 0x54,
 }
 
 // NetworkIDTestnet is the 16-byte network UUID for testnet P2P handshake.
-// Byte 10 = testnet flag (1), byte 15 = formation version (100 = 0x64).
+// Byte 10 = 0x00 (P2P_NETWORK_ID_TESTNET_FLAG in testnet build),
+// byte 15 = formation version (100 = 0x64).
 var NetworkIDTestnet = [16]byte{
 	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
-	0x10, 0x11, 0x01, 0x11, 0x01, 0x11, 0x21, 0x64,
+	0x10, 0x11, 0x00, 0x11, 0x01, 0x11, 0x21, 0x64,
 }
 
 // ClientVersion is the version string sent in CORE_SYNC_DATA.
-const ClientVersion = "Lethean/go-blockchain 0.1.0"
+// The C++ daemon parses this as "major.minor.revision.build[commit]"
+// and rejects connections where it cannot parse or the build number
+// is below the minimum for the current hard-fork era.
+const ClientVersion = "6.0.1.2[go-blockchain]"
 
 
 // ---------------------------------------------------------------------------

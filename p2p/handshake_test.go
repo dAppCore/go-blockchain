@@ -137,9 +137,10 @@ func TestNodeData_Good_NetworkIDBlob(t *testing.T) {
 	if len(blob) != 16 {
 		t.Fatalf("network_id blob: got %d bytes, want 16", len(blob))
 	}
-	// Byte 10 = testnet flag = 1
-	if blob[10] != 0x01 {
-		t.Errorf("testnet flag: got %x, want 0x01", blob[10])
+	// Byte 10 = P2P_NETWORK_ID_TESTNET_FLAG. In the C++ source, the
+	// #else (testnet) branch sets this to 0 (counter-intuitive naming).
+	if blob[10] != 0x00 {
+		t.Errorf("testnet flag: got %x, want 0x00", blob[10])
 	}
 	// Byte 15 = version = 0x64 (100)
 	if blob[15] != 0x64 {
