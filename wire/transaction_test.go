@@ -115,8 +115,9 @@ func TestFullTxRoundTrip_Good(t *testing.T) {
 }
 
 func TestTransactionHash_Good(t *testing.T) {
-	// TransactionHash for v0/v1 should equal TransactionPrefixHash
-	// (confirmed from C++ source: get_transaction_hash delegates to prefix hash).
+	// TransactionHash should equal TransactionPrefixHash for all versions.
+	// Confirmed from C++ source: get_transaction_hash delegates to
+	// get_transaction_prefix_hash for all transaction versions.
 	tx := types.Transaction{
 		Version: 1,
 		Vin:     []types.TxInput{types.TxInputGenesis{Height: 0}},
@@ -130,24 +131,19 @@ func TestTransactionHash_Good(t *testing.T) {
 
 	txHash := TransactionHash(&tx)
 	prefixHash := TransactionPrefixHash(&tx)
-	// For v1, full tx hash should differ from prefix hash because
-	// TransactionHash encodes the full transaction (prefix + suffix).
-	// The prefix is a subset of the full encoding.
+
+	// TransactionHash always delegates to TransactionPrefixHash.
+	if txHash != prefixHash {
+		t.Error("TransactionHash should equal TransactionPrefixHash")
+	}
+
+	// Verify manual consistency.
 	var prefBuf bytes.Buffer
-	enc1 := NewEncoder(&prefBuf)
-	EncodeTransactionPrefix(enc1, &tx)
+	enc := NewEncoder(&prefBuf)
+	EncodeTransactionPrefix(enc, &tx)
 
-	var fullBuf bytes.Buffer
-	enc2 := NewEncoder(&fullBuf)
-	EncodeTransaction(enc2, &tx)
-
-	// Prefix hash is over prefix bytes only.
 	if Keccak256(prefBuf.Bytes()) != [32]byte(prefixHash) {
 		t.Error("TransactionPrefixHash does not match manual prefix encoding")
-	}
-	// TransactionHash is over full encoding.
-	if Keccak256(fullBuf.Bytes()) != [32]byte(txHash) {
-		t.Error("TransactionHash does not match manual full encoding")
 	}
 }
 
@@ -245,8 +241,8 @@ func TestExtraVariantTags_Good(t *testing.T) {
 		},
 		{
 			name: "signed_parts",
-			// count=1, tag=17, uint32 LE
-			data: []byte{0x01, tagSignedParts, 0xFF, 0x00, 0x00, 0x00},
+			// count=1, tag=17, two varints: n_outs=2, n_extras=1
+			data: []byte{0x01, tagSignedParts, 0x02, 0x01},
 		},
 		{
 			name: "etc_tx_flags16",

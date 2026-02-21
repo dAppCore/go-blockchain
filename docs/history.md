@@ -526,11 +526,52 @@ refresh.
 
 ---
 
+## V2+ Transaction Serialisation
+
+Completed and verified v2+ (Zarcanum/HF4+) transaction serialisation. The code
+is tested against a real post-HF4 coinbase transaction from testnet block 101
+(tx hash `543bc3c29e9f4c5d1fc566be03fb4da1f2ce2d70d4312fdcc3e4eed7ca3b61e0`,
+1323 bytes). Round-trip encoding produces byte-identical output and the
+prefix hash matches the known tx hash.
+
+### Bugs fixed
+
+- **V2 suffix field order** — was `attachment + proofs`, corrected to
+  `attachment + signatures + proofs` (matching C++ serialisation order).
+- **`TransactionHash`** — was hashing the full transaction blob; corrected to
+  delegate to `TransactionPrefixHash` for all versions (matching C++
+  `get_transaction_hash`).
+- **`tagSignedParts` (17)** — was reading 4 fixed bytes (uint32 LE); corrected
+  to read two varints (`n_outs` + `n_extras`), matching C++ `VARINT_FIELD`.
+
+### New features
+
+- **`TxInputZC`** — Zarcanum confidential input (tag 0x25). Wire format:
+  `key_offsets + k_image + etc_details` (no amount field).
+- **`SignaturesRaw`** — new Transaction field for v2+ raw signature bytes.
+- **`tagZarcanumTxDataV1` (39)** — extra variant handler (varint fee).
+- **Proof tag handlers (46-48)** — `zc_asset_surjection_proof` (vector of
+  BGE_proof_s), `zc_outs_range_proof` (BPP + aggregation proof),
+  `zc_balance_proof` (double Schnorr, 96 bytes).
+- **Signature tag handlers (42-45)** — `NLSAG_sig`, `ZC_sig`, `void_sig`,
+  `zarcanum_sig` with full crypto blob readers for CLSAG GGX/GGXXG, BPP/BPPE.
+
+### Files
+
+| File | Action |
+|------|--------|
+| `types/transaction.go` | Added `TxInputZC`, `SignaturesRaw` field |
+| `wire/transaction.go` | Fixed suffix, added InputTypeZC, 10 tag handlers |
+| `wire/transaction_v2_test.go` | New -- v2 round-trip, hash, fields, prefix tests |
+| `wire/hash.go` | Fixed `TransactionHash` to delegate to prefix hash |
+
+---
+
 ## Known Limitations
 
-**v2+ transaction serialisation is stubbed.** The v0/v1 wire format is complete
-and verified. The v2+ (Zarcanum) code paths compile but are untested -- they
-will be validated in Phase 2 when post-HF4 transactions appear on-chain.
+**V2+ spending transactions untested.** The v2 coinbase serialisation is
+verified, but `TxInputZC` and signature tags 42-45 remain untested with real
+spending transaction data (no spending txs on testnet yet).
 
 **BPP range proof verification tested with real data.** The `cn_bpp_verify`
 bridge function (Bulletproofs++, 1 delta, `bpp_crypto_trait_ZC_out`) is verified

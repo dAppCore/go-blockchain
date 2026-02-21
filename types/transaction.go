@@ -83,6 +83,11 @@ type Transaction struct {
 	// Each element corresponds to one input; inner slice is the ring.
 	Signatures [][]Signature
 
+	// SignaturesRaw holds the serialised variant vector of v2+ signatures
+	// (NLSAG_sig, ZC_sig, void_sig, zarcanum_sig). Stored as raw wire bytes.
+	// V0/v1 uses the structured Signatures field; v2+ uses this field.
+	SignaturesRaw []byte
+
 	// Attachment holds the serialised variant vector of transaction attachments.
 	// Stored as raw wire bytes.
 	Attachment []byte
@@ -146,6 +151,23 @@ type TxInputToKey struct {
 
 // InputType returns the wire variant tag for key inputs.
 func (t TxInputToKey) InputType() uint8 { return InputTypeToKey }
+
+// TxInputZC is a Zarcanum confidential input (HF4+). Unlike TxInputToKey,
+// there is no amount field — amounts are hidden by commitments.
+// Wire order: key_offsets, k_image, etc_details.
+type TxInputZC struct {
+	// KeyOffsets contains the output references forming the decoy ring.
+	KeyOffsets []TxOutRef
+
+	// KeyImage prevents double-spending of this input.
+	KeyImage KeyImage
+
+	// EtcDetails holds the serialised variant vector of input-level details.
+	EtcDetails []byte
+}
+
+// InputType returns the wire variant tag for ZC inputs.
+func (t TxInputZC) InputType() uint8 { return InputTypeZC }
 
 // TxOutputBare is a transparent (pre-Zarcanum) transaction output.
 type TxOutputBare struct {

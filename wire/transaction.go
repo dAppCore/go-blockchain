@@ -130,16 +130,17 @@ func decodeSuffixV1(dec *Decoder, tx *types.Transaction) {
 	tx.Attachment = decodeRawVariantVector(dec)
 }
 
-// --- v2+ suffix (attachment + signatures_raw + proofs) ---
+// --- v2+ suffix (attachment + signatures + proofs) ---
 
 func encodeSuffixV2(enc *Encoder, tx *types.Transaction) {
 	enc.WriteBytes(tx.Attachment)
-	// v2+ signatures and proofs are stored as raw wire bytes
+	enc.WriteBytes(tx.SignaturesRaw)
 	enc.WriteBytes(tx.Proofs)
 }
 
 func decodeSuffixV2(dec *Decoder, tx *types.Transaction) {
 	tx.Attachment = decodeRawVariantVector(dec)
+	tx.SignaturesRaw = decodeRawVariantVector(dec)
 	tx.Proofs = decodeRawVariantVector(dec)
 }
 
@@ -154,6 +155,10 @@ func encodeInputs(enc *Encoder, vin []types.TxInput) {
 			enc.WriteVarint(v.Height)
 		case types.TxInputToKey:
 			enc.WriteVarint(v.Amount)
+			encodeKeyOffsets(enc, v.KeyOffsets)
+			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
+			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputZC:
 			encodeKeyOffsets(enc, v.KeyOffsets)
 			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
 			enc.WriteBytes(v.EtcDetails)
@@ -178,6 +183,12 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 		case types.InputTypeToKey:
 			var in types.TxInputToKey
 			in.Amount = dec.ReadVarint()
+			in.KeyOffsets = decodeKeyOffsets(dec)
+			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeZC:
+			var in types.TxInputZC
 			in.KeyOffsets = decodeKeyOffsets(dec)
 			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
 			in.EtcDetails = decodeRawVariantVector(dec)
@@ -393,7 +404,7 @@ const (
 	tagUnlockTime             = 14 // etc_tx_details_unlock_time — varint
 	tagExpirationTime         = 15 // etc_tx_details_expiration_time — varint
 	tagTxDetailsFlags         = 16 // etc_tx_details_flags — varint
-	tagSignedParts            = 17 // signed_parts — uint32 LE
+	tagSignedParts            = 17 // signed_parts — two varints (n_outs, n_extras)
 	tagExtraAttachmentInfo    = 18 // extra_attachment_info — string + hash + varint
 	tagExtraUserData          = 19 // extra_user_data — string
 	tagExtraAliasEntryOld     = 20 // extra_alias_entry_old — complex
@@ -409,7 +420,18 @@ const (
 	tagTxPayer                = 31 // tx_payer — 2 keys + optional flag
 	tagTxReceiver             = 32 // tx_receiver — 2 keys + optional flag
 	tagExtraAliasEntry        = 33 // extra_alias_entry — complex
-	tagZarcanumTxDataV1       = 39 // zarcanum_tx_data_v1 — complex
+	tagZarcanumTxDataV1       = 39 // zarcanum_tx_data_v1 — varint (fee)
+
+	// Signature variant tags (signature_v).
+	tagNLSAGSig    = 42 // NLSAG_sig — vector<signature>
+	tagZCSig       = 43 // ZC_sig — 2 public_keys + CLSAG_GGX
+	tagVoidSig     = 44 // void_sig — empty
+	tagZarcanumSig = 45 // zarcanum_sig — complex
+
+	// Proof variant tags (proof_v).
+	tagZCAssetSurjectionProof = 46 // vector<BGE_proof_s>
+	tagZCOutsRangeProof       = 47 // bpp_serialized + aggregation_proof
+	tagZCBalanceProof         = 48 // generic_double_schnorr_sig_s (96 bytes)
 )
 
 // readVariantElementData reads the data portion of a variant element (after the
@@ -435,8 +457,10 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 	// Fixed-size integer fields
 	case tagTxCryptoChecksum: // two uint32 LE
 		return dec.ReadBytes(8)
-	case tagSignedParts, tagUint32: // uint32 LE
+	case tagUint32: // uint32 LE
 		return dec.ReadBytes(4)
+	case tagSignedParts: // two varints: n_outs + n_extras
+		return readSignedParts(dec)
 	case tagEtcTxFlags16, tagUint16: // uint16 LE
 		return dec.ReadBytes(2)
 
@@ -459,6 +483,32 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return readUnlockTime2(dec)
 	case tagTxServiceAttachment:
 		return readTxServiceAttachment(dec)
+
+	// Zarcanum extra variant
+	case tagZarcanumTxDataV1: // fee (varint)
+		v := dec.ReadVarint()
+		if dec.err != nil {
+			return nil
+		}
+		return EncodeVarint(v)
+
+	// Signature variants
+	case tagNLSAGSig: // vector<signature> (64 bytes each)
+		return readVariantVectorFixed(dec, 64)
+	case tagZCSig: // 2 public_keys + CLSAG_GGX_serialized
+		return readZCSig(dec)
+	case tagVoidSig: // empty struct
+		return []byte{}
+	case tagZarcanumSig: // complex: 10 scalars + bppe + public_key + CLSAG_GGXXG
+		return readZarcanumSig(dec)
+
+	// Proof variants
+	case tagZCAssetSurjectionProof: // vector<BGE_proof_s>
+		return readZCAssetSurjectionProof(dec)
+	case tagZCOutsRangeProof: // bpp_serialized + aggregation_proof
+		return readZCOutsRangeProof(dec)
+	case tagZCBalanceProof: // generic_double_schnorr_sig_s (3 scalars = 96 bytes)
+		return dec.ReadBytes(96)
 
 	default:
 		dec.err = fmt.Errorf("wire: unsupported variant tag 0x%02x (%d)", tag, tag)
@@ -603,5 +653,278 @@ func readTxServiceAttachment(dec *Decoder) []byte {
 		return nil
 	}
 	raw = append(raw, b)
+	return raw
+}
+
+// readSignedParts reads signed_parts (tag 17).
+// Structure: n_outs (varint) + n_extras (varint).
+func readSignedParts(dec *Decoder) []byte {
+	v1 := dec.ReadVarint()
+	if dec.err != nil {
+		return nil
+	}
+	raw := EncodeVarint(v1)
+	v2 := dec.ReadVarint()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, EncodeVarint(v2)...)
+	return raw
+}
+
+// --- crypto blob readers ---
+// These read variable-length serialised crypto structures and return raw bytes.
+// All vectors are varint(count) + 32*count bytes (scalars or points).
+
+// readVectorOfPoints reads a vector of 32-byte points/scalars.
+// Returns raw bytes including the varint count prefix.
+func readVectorOfPoints(dec *Decoder) []byte {
+	return readVariantVectorFixed(dec, 32)
+}
+
+// readBPPSerialized reads a bpp_signature_serialized.
+// Wire: vec(L) + vec(R) + A0(32) + A(32) + B(32) + r(32) + s(32) + delta(32).
+func readBPPSerialized(dec *Decoder) []byte {
+	var raw []byte
+	// L: vector of points
+	v := readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// R: vector of points
+	v = readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// 6 fixed scalars: A0, A, B, r, s, delta
+	b := dec.ReadBytes(6 * 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// readBPPESerialized reads a bppe_signature_serialized.
+// Wire: vec(L) + vec(R) + A0(32) + A(32) + B(32) + r(32) + s(32) + delta_1(32) + delta_2(32).
+func readBPPESerialized(dec *Decoder) []byte {
+	var raw []byte
+	v := readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	v = readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// 7 fixed scalars: A0, A, B, r, s, delta_1, delta_2
+	b := dec.ReadBytes(7 * 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// readBGEProof reads a BGE_proof_s.
+// Wire: A(32) + B(32) + vec(Pk) + vec(f) + y(32) + z(32).
+func readBGEProof(dec *Decoder) []byte {
+	var raw []byte
+	// A + B: 2 fixed points
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// Pk: vector of points
+	v := readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// f: vector of scalars
+	v = readVectorOfPoints(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// y + z: 2 fixed scalars
+	b = dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// readAggregationProof reads a vector_UG_aggregation_proof_serialized.
+// Wire: vec(commitments) + vec(y0s) + vec(y1s) + c(32).
+func readAggregationProof(dec *Decoder) []byte {
+	var raw []byte
+	// 3 vectors of points/scalars
+	for range 3 {
+		v := readVectorOfPoints(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, v...)
+	}
+	// c: 1 fixed scalar
+	b := dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// readCLSAG_GGX reads a CLSAG_GGX_signature_serialized.
+// Wire: c(32) + vec(r_g) + vec(r_x) + K1(32) + K2(32).
+func readCLSAG_GGX(dec *Decoder) []byte {
+	var raw []byte
+	// c: 1 fixed scalar
+	b := dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// r_g, r_x: 2 vectors
+	for range 2 {
+		v := readVectorOfPoints(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, v...)
+	}
+	// K1 + K2: 2 fixed points
+	b = dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// readCLSAG_GGXXG reads a CLSAG_GGXXG_signature_serialized.
+// Wire: c(32) + vec(r_g) + vec(r_x) + K1(32) + K2(32) + K3(32) + K4(32).
+func readCLSAG_GGXXG(dec *Decoder) []byte {
+	var raw []byte
+	// c: 1 fixed scalar
+	b := dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// r_g, r_x: 2 vectors
+	for range 2 {
+		v := readVectorOfPoints(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, v...)
+	}
+	// K1 + K2 + K3 + K4: 4 fixed points
+	b = dec.ReadBytes(128)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	return raw
+}
+
+// --- signature variant readers ---
+
+// readZCSig reads ZC_sig (tag 43).
+// Wire: pseudo_out_amount_commitment(32) + pseudo_out_blinded_asset_id(32) + CLSAG_GGX.
+func readZCSig(dec *Decoder) []byte {
+	var raw []byte
+	// 2 public keys
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// CLSAG_GGX_serialized
+	v := readCLSAG_GGX(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// readZarcanumSig reads zarcanum_sig (tag 45).
+// Wire: d(32) + C(32) + C'(32) + E(32) + c(32) + y0(32) + y1(32) + y2(32) + y3(32) + y4(32)
+//
+//	+ bppe_serialized + pseudo_out_amount_commitment(32) + CLSAG_GGXXG.
+func readZarcanumSig(dec *Decoder) []byte {
+	var raw []byte
+	// 10 fixed scalars/points
+	b := dec.ReadBytes(10 * 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// E_range_proof: bppe_signature_serialized
+	v := readBPPESerialized(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// pseudo_out_amount_commitment: 1 public key
+	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// clsag_ggxxg: CLSAG_GGXXG_signature_serialized
+	v = readCLSAG_GGXXG(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// --- proof variant readers ---
+
+// readZCAssetSurjectionProof reads zc_asset_surjection_proof (tag 46).
+// Wire: varint(count) + count * BGE_proof_s.
+func readZCAssetSurjectionProof(dec *Decoder) []byte {
+	count := dec.ReadVarint()
+	if dec.err != nil {
+		return nil
+	}
+	raw := EncodeVarint(count)
+	for i := uint64(0); i < count; i++ {
+		b := readBGEProof(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+	}
+	return raw
+}
+
+// readZCOutsRangeProof reads zc_outs_range_proof (tag 47).
+// Wire: bpp_signature_serialized + vector_UG_aggregation_proof_serialized.
+func readZCOutsRangeProof(dec *Decoder) []byte {
+	var raw []byte
+	// bpp
+	v := readBPPSerialized(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	// aggregation_proof
+	v = readAggregationProof(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
 	return raw
 }

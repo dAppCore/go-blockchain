@@ -52,16 +52,14 @@ func BlockHash(b *types.Block) types.Hash {
 	return types.Hash(Keccak256(prefixed))
 }
 
-// TransactionHash computes the full transaction hash (tx_id).
+// TransactionHash computes the transaction hash (tx_id).
 //
-// For v0/v1 transactions this is Keccak-256 of the full serialised transaction
-// (prefix + signatures + attachment). For v2+ it delegates to the prefix hash
-// (Zano computes v2+ hashes from prefix data only).
+// In the C++ daemon, get_transaction_hash delegates to
+// get_transaction_prefix_hash for all versions. The tx_id is always
+// Keccak-256 of the serialised prefix (version + inputs + outputs + extra,
+// in version-dependent field order).
 func TransactionHash(tx *types.Transaction) types.Hash {
-	var buf bytes.Buffer
-	enc := NewEncoder(&buf)
-	EncodeTransaction(enc, tx)
-	return types.Hash(Keccak256(buf.Bytes()))
+	return TransactionPrefixHash(tx)
 }
 
 // TransactionPrefixHash computes the hash of a transaction prefix.
