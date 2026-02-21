@@ -73,6 +73,97 @@ func (n *NewTransactionsNotification) Decode(data []byte) error {
 	return nil
 }
 
+// BlockCompleteEntry holds a block blob and its transaction blobs.
+type BlockCompleteEntry struct {
+	Block []byte   // Serialised block
+	Txs   [][]byte // Serialised transactions
+}
+
+// RequestGetObjects is NOTIFY_REQUEST_GET_OBJECTS (2003).
+type RequestGetObjects struct {
+	Blocks [][]byte // 32-byte block hashes
+	Txs    [][]byte // 32-byte tx hashes (usually empty for sync)
+}
+
+// Encode serialises the request.
+func (r *RequestGetObjects) Encode() ([]byte, error) {
+	s := levin.Section{
+		"blocks": levin.StringArrayVal(r.Blocks),
+	}
+	if len(r.Txs) > 0 {
+		s["txs"] = levin.StringArrayVal(r.Txs)
+	}
+	return levin.EncodeStorage(s)
+}
+
+// Decode parses a get-objects request from a storage blob.
+func (r *RequestGetObjects) Decode(data []byte) error {
+	s, err := levin.DecodeStorage(data)
+	if err != nil {
+		return err
+	}
+	if v, ok := s["blocks"]; ok {
+		r.Blocks, _ = v.AsStringArray()
+	}
+	if v, ok := s["txs"]; ok {
+		r.Txs, _ = v.AsStringArray()
+	}
+	return nil
+}
+
+// ResponseGetObjects is NOTIFY_RESPONSE_GET_OBJECTS (2004).
+type ResponseGetObjects struct {
+	Blocks        []BlockCompleteEntry
+	MissedIDs     [][]byte
+	CurrentHeight uint64
+}
+
+// Encode serialises the response.
+func (r *ResponseGetObjects) Encode() ([]byte, error) {
+	sections := make([]levin.Section, len(r.Blocks))
+	for i, entry := range r.Blocks {
+		sections[i] = levin.Section{
+			"block": levin.StringVal(entry.Block),
+			"txs":   levin.StringArrayVal(entry.Txs),
+		}
+	}
+	s := levin.Section{
+		"blocks":                    levin.ObjectArrayVal(sections),
+		"current_blockchain_height": levin.Uint64Val(r.CurrentHeight),
+	}
+	if len(r.MissedIDs) > 0 {
+		s["missed_ids"] = levin.StringArrayVal(r.MissedIDs)
+	}
+	return levin.EncodeStorage(s)
+}
+
+// Decode parses a get-objects response from a storage blob.
+func (r *ResponseGetObjects) Decode(data []byte) error {
+	s, err := levin.DecodeStorage(data)
+	if err != nil {
+		return err
+	}
+	if v, ok := s["current_blockchain_height"]; ok {
+		r.CurrentHeight, _ = v.AsUint64()
+	}
+	if v, ok := s["blocks"]; ok {
+		sections, _ := v.AsSectionArray()
+		r.Blocks = make([]BlockCompleteEntry, len(sections))
+		for i, sec := range sections {
+			if blk, ok := sec["block"]; ok {
+				r.Blocks[i].Block, _ = blk.AsString()
+			}
+			if txs, ok := sec["txs"]; ok {
+				r.Blocks[i].Txs, _ = txs.AsStringArray()
+			}
+		}
+	}
+	if v, ok := s["missed_ids"]; ok {
+		r.MissedIDs, _ = v.AsStringArray()
+	}
+	return nil
+}
+
 // RequestChain is NOTIFY_REQUEST_CHAIN (2006).
 type RequestChain struct {
 	BlockIDs [][]byte // Array of 32-byte block hashes
