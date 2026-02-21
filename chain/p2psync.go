@@ -78,8 +78,20 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 
 		log.Printf("p2p sync: chain entry from height %d, %d block IDs", startHeight, len(blockIDs))
 
+		// The daemon returns the fork-point block as the first entry.
+		// Skip blocks we already have.
+		skip := 0
+		if startHeight < localHeight {
+			skip = int(localHeight - startHeight)
+			if skip >= len(blockIDs) {
+				continue // all IDs are blocks we already have
+			}
+		}
+		fetchIDs := blockIDs[skip:]
+		fetchStart := startHeight + uint64(skip)
+
 		// Fetch blocks in batches.
-		for i := 0; i < len(blockIDs); i += p2pBatchSize {
+		for i := 0; i < len(fetchIDs); i += p2pBatchSize {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -87,17 +99,17 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 			}
 
 			end := i + p2pBatchSize
-			if end > len(blockIDs) {
-				end = len(blockIDs)
+			if end > len(fetchIDs) {
+				end = len(fetchIDs)
 			}
-			batch := blockIDs[i:end]
+			batch := fetchIDs[i:end]
 
 			entries, err := conn.RequestObjects(batch)
 			if err != nil {
 				return fmt.Errorf("p2p sync: request objects: %w", err)
 			}
 
-			currentHeight := startHeight + uint64(i)
+			currentHeight := fetchStart + uint64(i)
 			for j, entry := range entries {
 				blockHeight := currentHeight + uint64(j)
 				if blockHeight > 0 && blockHeight%100 == 0 {
