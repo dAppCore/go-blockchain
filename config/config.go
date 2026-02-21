@@ -173,6 +173,11 @@ const (
 	// transaction blob in bytes.
 	CoinbaseBlobReservedSize uint64 = 1100
 
+	// MaxTransactionBlobSize is the maximum serialised transaction size in bytes.
+	// Derived from BlockGrantedFullRewardZone - 2*CoinbaseBlobReservedSize
+	// but the canonical C++ value is 374,600.
+	MaxTransactionBlobSize uint64 = 374_600
+
 	// BlockFutureTimeLimit is the maximum acceptable future timestamp for
 	// PoW blocks in seconds (2 hours).
 	BlockFutureTimeLimit uint64 = 60 * 60 * 2
