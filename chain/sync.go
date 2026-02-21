@@ -100,59 +100,101 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 		log.Printf("sync: processing block %d", bd.Height)
 	}
 
-	// Decode block blob.
 	blockBlob, err := hex.DecodeString(bd.Blob)
 	if err != nil {
 		return fmt.Errorf("decode block hex: %w", err)
 	}
+
+	// Build a set of the block's regular tx hashes for lookup.
+	// We need to extract regular tx blobs from bd.Transactions,
+	// skipping the miner tx entry.
+	// To know which are regular, we decode the block header to get TxHashes.
+	dec := wire.NewDecoder(bytes.NewReader(blockBlob))
+	blk := wire.DecodeBlock(dec)
+	if err := dec.Err(); err != nil {
+		return fmt.Errorf("decode block for tx hashes: %w", err)
+	}
+
+	regularTxs := make(map[string]struct{}, len(blk.TxHashes))
+	for _, h := range blk.TxHashes {
+		regularTxs[h.String()] = struct{}{}
+	}
+
+	var txBlobs [][]byte
+	for _, txInfo := range bd.Transactions {
+		if _, isRegular := regularTxs[txInfo.ID]; !isRegular {
+			continue
+		}
+		txBlobBytes, err := hex.DecodeString(txInfo.Blob)
+		if err != nil {
+			return fmt.Errorf("decode tx hex %s: %w", txInfo.ID, err)
+		}
+		txBlobs = append(txBlobs, txBlobBytes)
+	}
+
+	diff, _ := strconv.ParseUint(bd.Difficulty, 10, 64)
+
+	// Verify the daemon's hash matches our computed hash.
+	computedHash := wire.BlockHash(&blk)
+	daemonHash, err := types.HashFromHex(bd.ID)
+	if err != nil {
+		return fmt.Errorf("parse daemon block hash: %w", err)
+	}
+	if computedHash != daemonHash {
+		return fmt.Errorf("block hash mismatch: computed %s, daemon says %s",
+			computedHash, daemonHash)
+	}
+
+	return c.processBlockBlobs(blockBlob, txBlobs, bd.Height, diff, opts)
+}
+
+// processBlockBlobs validates and stores a block from raw wire blobs.
+// This is the shared processing path for both RPC and P2P sync.
+func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
+	height uint64, difficulty uint64, opts SyncOptions) error {
+
+	// Wire-decode the block blob.
 	dec := wire.NewDecoder(bytes.NewReader(blockBlob))
 	blk := wire.DecodeBlock(dec)
 	if err := dec.Err(); err != nil {
 		return fmt.Errorf("decode block wire: %w", err)
 	}
 
-	// Compute and verify block hash.
-	computedHash := wire.BlockHash(&blk)
-	blockHash, err := types.HashFromHex(bd.ID)
-	if err != nil {
-		return fmt.Errorf("parse block hash: %w", err)
-	}
-	if computedHash != blockHash {
-		return fmt.Errorf("block hash mismatch: computed %s, daemon says %s",
-			computedHash, blockHash)
-	}
+	// Compute the block hash.
+	blockHash := wire.BlockHash(&blk)
 
 	// Genesis chain identity check.
-	if bd.Height == 0 {
-		if bd.ID != GenesisHash {
+	if height == 0 {
+		genesisHash, err := types.HashFromHex(GenesisHash)
+		if err != nil {
+			return fmt.Errorf("parse genesis hash: %w", err)
+		}
+		if blockHash != genesisHash {
 			return fmt.Errorf("genesis hash %s does not match expected %s",
-				bd.ID, GenesisHash)
+				blockHash, GenesisHash)
 		}
 	}
 
 	// Validate header.
-	if err := c.ValidateHeader(&blk, bd.Height); err != nil {
+	if err := c.ValidateHeader(&blk, height); err != nil {
 		return err
 	}
 
 	// Validate miner transaction structure.
-	if err := consensus.ValidateMinerTx(&blk.MinerTx, bd.Height, opts.Forks); err != nil {
+	if err := consensus.ValidateMinerTx(&blk.MinerTx, height, opts.Forks); err != nil {
 		return fmt.Errorf("validate miner tx: %w", err)
 	}
 
-	// Parse difficulty from string.
-	diff, _ := strconv.ParseUint(bd.Difficulty, 10, 64)
-
 	// Calculate cumulative difficulty.
 	var cumulDiff uint64
-	if bd.Height > 0 {
+	if height > 0 {
 		_, prevMeta, err := c.TopBlock()
 		if err != nil {
 			return fmt.Errorf("get prev block meta: %w", err)
 		}
-		cumulDiff = prevMeta.CumulativeDiff + diff
+		cumulDiff = prevMeta.CumulativeDiff + difficulty
 	} else {
-		cumulDiff = diff
+		cumulDiff = difficulty
 	}
 
 	// Store miner transaction.
@@ -162,65 +204,49 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 		return fmt.Errorf("index miner tx outputs: %w", err)
 	}
 	if err := c.PutTransaction(minerTxHash, &blk.MinerTx, &TxMeta{
-		KeeperBlock:         bd.Height,
+		KeeperBlock:         height,
 		GlobalOutputIndexes: minerGindexes,
 	}); err != nil {
 		return fmt.Errorf("store miner tx: %w", err)
 	}
 
-	// Build a set of the block's regular tx hashes for lookup.
-	regularTxs := make(map[string]struct{}, len(blk.TxHashes))
-	for _, h := range blk.TxHashes {
-		regularTxs[h.String()] = struct{}{}
-	}
-
-	// Process regular transactions (skip the miner tx).
-	for _, txInfo := range bd.Transactions {
-		if _, isRegular := regularTxs[txInfo.ID]; !isRegular {
-			continue // skip miner tx entry
-		}
-		txBlob, err := hex.DecodeString(txInfo.Blob)
-		if err != nil {
-			return fmt.Errorf("decode tx hex %s: %w", txInfo.ID, err)
-		}
-		txDec := wire.NewDecoder(bytes.NewReader(txBlob))
+	// Process regular transactions from txBlobs.
+	for i, txBlobData := range txBlobs {
+		txDec := wire.NewDecoder(bytes.NewReader(txBlobData))
 		tx := wire.DecodeTransaction(txDec)
 		if err := txDec.Err(); err != nil {
-			return fmt.Errorf("decode tx wire %s: %w", txInfo.ID, err)
+			return fmt.Errorf("decode tx wire [%d]: %w", i, err)
 		}
 
+		txHash := wire.TransactionHash(&tx)
+
 		// Validate transaction semantics.
-		if err := consensus.ValidateTransaction(&tx, txBlob, opts.Forks, bd.Height); err != nil {
-			return fmt.Errorf("validate tx %s: %w", txInfo.ID, err)
+		if err := consensus.ValidateTransaction(&tx, txBlobData, opts.Forks, height); err != nil {
+			return fmt.Errorf("validate tx %s: %w", txHash, err)
 		}
 
 		// Optionally verify signatures using the chain's output index.
 		if opts.VerifySignatures {
-			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, bd.Height, c.GetRingOutputs); err != nil {
-				return fmt.Errorf("verify tx signatures %s: %w", txInfo.ID, err)
+			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, height, c.GetRingOutputs); err != nil {
+				return fmt.Errorf("verify tx signatures %s: %w", txHash, err)
 			}
-		}
-
-		txHash, err := types.HashFromHex(txInfo.ID)
-		if err != nil {
-			return fmt.Errorf("parse tx hash: %w", err)
 		}
 
 		// Index outputs.
 		gindexes, err := c.indexOutputs(txHash, &tx)
 		if err != nil {
-			return fmt.Errorf("index tx outputs %s: %w", txInfo.ID, err)
+			return fmt.Errorf("index tx outputs %s: %w", txHash, err)
 		}
 
 		// Mark key images as spent.
 		for _, vin := range tx.Vin {
 			switch inp := vin.(type) {
 			case types.TxInputToKey:
-				if err := c.MarkSpent(inp.KeyImage, bd.Height); err != nil {
+				if err := c.MarkSpent(inp.KeyImage, height); err != nil {
 					return fmt.Errorf("mark spent %s: %w", inp.KeyImage, err)
 				}
 			case types.TxInputZC:
-				if err := c.MarkSpent(inp.KeyImage, bd.Height); err != nil {
+				if err := c.MarkSpent(inp.KeyImage, height); err != nil {
 					return fmt.Errorf("mark spent %s: %w", inp.KeyImage, err)
 				}
 			}
@@ -228,21 +254,21 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 
 		// Store transaction.
 		if err := c.PutTransaction(txHash, &tx, &TxMeta{
-			KeeperBlock:         bd.Height,
+			KeeperBlock:         height,
 			GlobalOutputIndexes: gindexes,
 		}); err != nil {
-			return fmt.Errorf("store tx %s: %w", txInfo.ID, err)
+			return fmt.Errorf("store tx %s: %w", txHash, err)
 		}
 	}
 
-	// Store block.
+	// Store block metadata.
 	meta := &BlockMeta{
 		Hash:           blockHash,
-		Height:         bd.Height,
-		Timestamp:      bd.Timestamp,
-		Difficulty:     diff,
+		Height:         height,
+		Timestamp:      blk.Timestamp,
+		Difficulty:     difficulty,
 		CumulativeDiff: cumulDiff,
-		GeneratedCoins: bd.BaseReward,
+		GeneratedCoins: 0, // not available from wire; RPC path passes via bd.BaseReward
 	}
 	return c.PutBlock(&blk, meta)
 }
