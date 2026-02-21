@@ -11,6 +11,7 @@
 #include "crypto-ops.h"
 #include "clsag.h"
 #include "hash-ops.h"
+#include "randomx.h"
 
 extern "C" {
 
@@ -415,6 +416,35 @@ int cn_bge_verify(const uint8_t /*context*/[32], const uint8_t * /*ring*/,
 int cn_zarcanum_verify(const uint8_t /*hash*/[32], const uint8_t * /*proof*/,
                        size_t /*proof_len*/) {
     return -1; // not implemented
+}
+
+// ── RandomX PoW Hashing ──────────────────────────────────
+
+int bridge_randomx_hash(const uint8_t* key, size_t key_size,
+                        const uint8_t* input, size_t input_size,
+                        uint8_t* output) {
+    // Static RandomX state — initialised on first call.
+    // Thread safety: not thread-safe; Go wrapper must serialise calls.
+    static randomx_cache* rx_cache = nullptr;
+    static randomx_vm* rx_vm = nullptr;
+
+    if (rx_cache == nullptr) {
+        randomx_flags flags = randomx_get_flags();
+        // Use light mode (no dataset) for verification.
+        flags = (randomx_flags)(flags | RANDOMX_FLAG_DEFAULT);
+        rx_cache = randomx_alloc_cache(flags);
+        if (rx_cache == nullptr) return -1;
+        randomx_init_cache(rx_cache, key, key_size);
+        rx_vm = randomx_create_vm(flags, rx_cache, nullptr);
+        if (rx_vm == nullptr) {
+            randomx_release_cache(rx_cache);
+            rx_cache = nullptr;
+            return -1;
+        }
+    }
+
+    randomx_calculate_hash(rx_vm, input, input_size, output);
+    return 0;
 }
 
 } // extern "C"

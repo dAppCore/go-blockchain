@@ -105,6 +105,15 @@ int cn_bge_verify(const uint8_t context[32], const uint8_t *ring,
 int cn_zarcanum_verify(const uint8_t hash[32], const uint8_t *proof,
                        size_t proof_len);
 
+// ── RandomX PoW Hashing ──────────────────────────────────
+// key/key_size: RandomX cache key (e.g. "LetheanRandomXv1")
+// input/input_size: block header hash (32 bytes) + nonce (8 bytes LE)
+// output: 32-byte hash result
+// Returns 0 on success.
+int bridge_randomx_hash(const uint8_t* key, size_t key_size,
+                        const uint8_t* input, size_t input_size,
+                        uint8_t* output);
+
 #ifdef __cplusplus
 }
 #endif

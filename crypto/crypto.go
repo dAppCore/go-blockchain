@@ -3,8 +3,8 @@
 package crypto
 
 /*
-#cgo CPPFLAGS: -I${SRCDIR}/upstream -I${SRCDIR}/compat
-#cgo LDFLAGS: -L${SRCDIR}/build -lcryptonote -lstdc++ -lssl -lcrypto
+#cgo CPPFLAGS: -I${SRCDIR}/upstream -I${SRCDIR}/compat -I${SRCDIR}/randomx
+#cgo LDFLAGS: -L${SRCDIR}/build -lcryptonote -lrandomx -lstdc++ -lssl -lcrypto -lpthread
 #include "bridge.h"
 */
 import "C"
