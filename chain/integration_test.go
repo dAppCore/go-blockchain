@@ -9,6 +9,9 @@ package chain
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -16,8 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"forge.lthn.ai/core/go-blockchain/config"
+	"forge.lthn.ai/core/go-blockchain/p2p"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
+	levin "forge.lthn.ai/core/go-p2p/node/levin"
 	store "forge.lthn.ai/core/go-store"
 )
 
@@ -161,4 +166,75 @@ func TestIntegration_SyncWithSignatures(t *testing.T) {
 	finalHeight, _ := c.Height()
 	t.Logf("synced %d blocks with signature verification", finalHeight)
 	require.Equal(t, remoteHeight, finalHeight)
+}
+
+func TestIntegration_P2PSync(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping P2P sync test in short mode")
+	}
+
+	// Dial testnet daemon P2P port.
+	conn, err := net.DialTimeout("tcp", "localhost:46942", 10*time.Second)
+	if err != nil {
+		t.Skipf("testnet P2P not reachable: %v", err)
+	}
+	defer conn.Close()
+
+	lc := levin.NewConnection(conn)
+
+	// Handshake.
+	var peerIDBuf [8]byte
+	rand.Read(peerIDBuf[:])
+	peerID := binary.LittleEndian.Uint64(peerIDBuf[:])
+
+	req := p2p.HandshakeRequest{
+		NodeData: p2p.NodeData{
+			NetworkID: config.NetworkIDTestnet,
+			PeerID:    peerID,
+			LocalTime: time.Now().Unix(),
+			MyPort:    0,
+		},
+		PayloadData: p2p.CoreSyncData{
+			CurrentHeight:  1,
+			ClientVersion:  config.ClientVersion,
+			NonPruningMode: true,
+		},
+	}
+	payload, err := p2p.EncodeHandshakeRequest(&req)
+	require.NoError(t, err)
+	require.NoError(t, lc.WritePacket(p2p.CommandHandshake, payload, true))
+
+	hdr, data, err := lc.ReadPacket()
+	require.NoError(t, err)
+	require.Equal(t, uint32(p2p.CommandHandshake), hdr.Command)
+
+	var resp p2p.HandshakeResponse
+	require.NoError(t, resp.Decode(data))
+	t.Logf("peer height: %d", resp.PayloadData.CurrentHeight)
+
+	// Create P2P connection adapter with our local sync state.
+	localSync := p2p.CoreSyncData{
+		CurrentHeight:  1,
+		ClientVersion:  config.ClientVersion,
+		NonPruningMode: true,
+	}
+	p2pConn := NewLevinP2PConn(lc, resp.PayloadData.CurrentHeight, localSync)
+
+	// Create chain and sync.
+	s, err := store.New(":memory:")
+	require.NoError(t, err)
+	defer s.Close()
+
+	c := New(s)
+	opts := SyncOptions{
+		VerifySignatures: false,
+		Forks:            config.TestnetForks,
+	}
+
+	err = c.P2PSync(context.Background(), p2pConn, opts)
+	require.NoError(t, err)
+
+	finalHeight, _ := c.Height()
+	t.Logf("P2P synced %d blocks", finalHeight)
+	require.Equal(t, resp.PayloadData.CurrentHeight, finalHeight)
 }
