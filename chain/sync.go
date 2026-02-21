@@ -7,8 +7,10 @@ package chain
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strconv"
 
 	"forge.lthn.ai/core/go-blockchain/config"
@@ -43,7 +45,7 @@ func DefaultSyncOptions() SyncOptions {
 
 // Sync fetches blocks from the daemon and stores them locally.
 // It is a blocking function — the caller controls retry and scheduling.
-func (c *Chain) Sync(client *rpc.Client, opts SyncOptions) error {
+func (c *Chain) Sync(ctx context.Context, client *rpc.Client, opts SyncOptions) error {
 	localHeight, err := c.Height()
 	if err != nil {
 		return fmt.Errorf("sync: get local height: %w", err)
@@ -55,6 +57,12 @@ func (c *Chain) Sync(client *rpc.Client, opts SyncOptions) error {
 	}
 
 	for localHeight < remoteHeight {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		remaining := remoteHeight - localHeight
 		batch := uint64(syncBatchSize)
 		if remaining < batch {
@@ -82,6 +90,10 @@ func (c *Chain) Sync(client *rpc.Client, opts SyncOptions) error {
 }
 
 func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
+	if bd.Height > 0 && bd.Height%100 == 0 {
+		log.Printf("sync: processing block %d", bd.Height)
+	}
+
 	// Decode block blob.
 	blockBlob, err := hex.DecodeString(bd.Blob)
 	if err != nil {

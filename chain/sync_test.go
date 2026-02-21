@@ -7,6 +7,7 @@ package chain
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
@@ -116,7 +117,7 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 
 	client := rpc.NewClient(srv.URL)
 
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -282,7 +283,7 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 
 	client := rpc.NewClient(srv.URL)
 
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -387,7 +388,7 @@ func TestSync_Good_AlreadySynced(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err != nil {
 		t.Fatalf("Sync on empty: %v", err)
 	}
@@ -410,7 +411,7 @@ func TestSync_Bad_GetHeightError(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from bad getheight, got nil")
 	}
@@ -446,7 +447,7 @@ func TestSync_Bad_FetchBlocksError(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from bad get_blocks_details, got nil")
 	}
@@ -505,7 +506,7 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected genesis hash mismatch error, got nil")
 	}
@@ -567,7 +568,7 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected block hash mismatch error, got nil")
 	}
@@ -668,7 +669,7 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from invalid tx blob, got nil")
 	}
@@ -728,7 +729,7 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 	c := New(s)
 
 	client := rpc.NewClient(srv.URL)
-	err := c.Sync(client, DefaultSyncOptions())
+	err := c.Sync(context.Background(), client, DefaultSyncOptions())
 	if err == nil {
 		t.Fatal("Sync: expected error from invalid block blob, got nil")
 	}
