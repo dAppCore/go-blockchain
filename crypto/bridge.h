@@ -90,18 +90,41 @@ int cn_clsag_ggxxg_verify(const uint8_t hash[32], const uint8_t *ring,
                            const uint8_t extended_commitment[32],
                            const uint8_t ki[32], const uint8_t *sig);
 
-// ── Range Proofs (Bulletproofs+ Enhanced) ─────────────────
-// Proof verification requires deserialising variable-length BPPE structs from
-// on-chain binary format. Implementation deferred to Phase 4 (needs RPC + chain data).
-// Returns 0 on success, 1 on verification failure, -1 if not implemented.
+// ── Range Proofs (BPP — Bulletproofs++) ──────────────────
+// Verifies a BPP range proof (1 delta). Used for zc_outs_range_proof in
+// post-HF4 transactions. proof is the wire-serialised bpp_signature:
+//   varint(len(L)) + L[]*32 + varint(len(R)) + R[]*32
+//   + A0(32) + A(32) + B(32) + r(32) + s(32) + delta(32)
+// commitments is a flat array of 32-byte public keys — the
+// amount_commitments_for_rp_aggregation (E'_j, premultiplied by 1/8).
+// Uses bpp_crypto_trait_ZC_out (generators UGX, N=64, values_max=32).
+// Returns 0 on success, 1 on verification failure or deserialisation error.
+int cn_bpp_verify(const uint8_t *proof, size_t proof_len,
+                  const uint8_t *commitments, size_t num_commitments);
+
+// ── Range Proofs (BPPE — Bulletproofs++ Enhanced) ────────
+// Verifies a BPPE range proof (2 deltas). Used for Zarcanum PoS E_range_proof.
+// proof is the wire-serialised bppe_signature:
+//   varint(len(L)) + L[]*32 + varint(len(R)) + R[]*32
+//   + A0(32) + A(32) + B(32) + r(32) + s(32) + delta_1(32) + delta_2(32)
+// commitments is a flat array of 32-byte public keys (premultiplied by 1/8).
+// Uses bpp_crypto_trait_Zarcanum (N=128, values_max=16).
+// Returns 0 on success, 1 on verification failure or deserialisation error.
 int cn_bppe_verify(const uint8_t *proof, size_t proof_len,
                    const uint8_t *commitments, size_t num_commitments);
 
 // ── BGE One-out-of-Many ───────────────────────────────────
+// Verifies a BGE one-out-of-many proof. proof is wire-serialised BGE_proof:
+//   A(32) + B(32) + varint(len(Pk)) + Pk[]*32
+//   + varint(len(f)) + f[]*32 + y(32) + z(32)
+// ring is a flat array of 32-byte public keys. context is a 32-byte hash.
+// Returns 0 on success, 1 on verification failure or deserialisation error.
 int cn_bge_verify(const uint8_t context[32], const uint8_t *ring,
                   size_t ring_size, const uint8_t *proof, size_t proof_len);
 
 // ── Zarcanum PoS ──────────────────────────────────────────
+// TODO: extend API to accept kernel_hash, ring, last_pow_block_id,
+// stake_ki, pos_difficulty. Currently returns -1 (not implemented).
 int cn_zarcanum_verify(const uint8_t hash[32], const uint8_t *proof,
                        size_t proof_len);
 

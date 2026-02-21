@@ -413,16 +413,175 @@ func TestCLSAG_GGXXG_Good_SigSize(t *testing.T) {
 	}
 }
 
-// ── Range Proofs / Zarcanum (stubs) ──────────────────────
+// ── Range Proofs (BPP — Bulletproofs++) ──────────────────
 
-func TestBPPE_Stub_NotImplemented(t *testing.T) {
-	t.Skip("BPPE verification needs on-chain proof data — Phase 4")
+func TestBPP_Bad_EmptyProof(t *testing.T) {
+	commitment := [32]byte{0x01}
+	if crypto.VerifyBPP([]byte{}, [][32]byte{commitment}) {
+		t.Fatal("empty BPP proof should fail")
+	}
 }
 
-func TestBGE_Stub_NotImplemented(t *testing.T) {
-	t.Skip("BGE verification needs on-chain proof data — Phase 4")
+func TestBPP_Bad_GarbageProof(t *testing.T) {
+	// Build a minimal valid-shaped proof: L(0) + R(0) + 6 * 32-byte fields.
+	proof := make([]byte, 0, 2+6*32)
+	proof = append(proof, 0x00) // varint 0: L length
+	proof = append(proof, 0x00) // varint 0: R length
+	proof = append(proof, make([]byte, 6*32)...)
+
+	commitment := [32]byte{0x01}
+	if crypto.VerifyBPP(proof, [][32]byte{commitment}) {
+		t.Fatal("garbage BPP proof should fail verification")
+	}
+}
+
+func TestBPP_Good_TestnetCoinbase101(t *testing.T) {
+	// Real BPP range proof from testnet block 101 (first post-HF4 coinbase).
+	// TX hash: 543bc3c29e9f4c5d1fc566be03fb4da1f2ce2d70d4312fdcc3e4eed7ca3b61e0
+	//
+	// This is the zc_outs_range_proof.bpp field, verified by bpp_crypto_trait_ZC_out.
+	// Commitments are the amount_commitments_for_rp_aggregation (E'_j) from the
+	// aggregation proof, NOT the raw output amount_commitments.
+	proofHex := "07" +
+		// L[0..6]
+		"47c3d2db565bf368c9879dd1b08899a5e69bc956bc0a89b0cb456a54e066aa85" +
+		"89c6a14ac578409af177d9605f03fe61dfae8067338a40ca551b34580350f694" +
+		"bf389b62ae684146d33632e1ca5bf51dc6fed884780443489ee8fd68a535ddcf" +
+		"5299c9ca2f400fd0a978b1c0ef55a03922549ef78b8b5cd268bd4df5eb32f1fc" +
+		"4d4543466be7e9b9ceb6051955a815427bd773ad9a5cc9fec49fae4c0ab46fc7" +
+		"53d1c86e8c04cea4b903fc8c42f404bc8c85b25eb2468f8de75171e2bf802ae9" +
+		"6daa934cdb68b0609eb8942b3691c2bf1a122068bcd18d8ef4dd08abb2929780" +
+		"07" + // R count
+		// R[0..6]
+		"599626cfd549b317eb92667ab1783a730cab6528326b581034a60b8f2582ff61" +
+		"d8ac1ec8395699a170dc9ca5ae2a87cd70388083475e38763aa327e31b27bd69" +
+		"1ebd37e22b4eda43001e908fdb211de548ed942766139c8197201d9cc53c744a" +
+		"88ee20995c5f0b64d1bc48293f9c3b8799b2866e473915871df9d55ac065c58e" +
+		"bd51887763709d9e9992d317c12bd27ad933452d06b821b4ee282de78e7cc561" +
+		"02ad119d2f1fb9a79a709614cb24dcb83119bb5734a70c923c4c9586afe1e5bd" +
+		"fedc244f7568a3cd9de95d9d240fb01ee0e0695f6d2066d085457054e78dead4" +
+		// A0
+		"b47ed0fcf2de7c5a9802352f7ab65667c468e32329964723a2084ae0dd38ae97" +
+		// A
+		"79ff7e0870d6b664275b8207e545f4f80537e7cc4c9f81098eefa42e5efc1c85" +
+		// B
+		"86bc9e7a48652c1f1e1e28e86b6e7ea80079dd6db7c78d083235ede6ae359631" +
+		// r
+		"dbcb543d3a6e8b8692fb013832acb9b93ee717c72e832fd78c3a2d5f4fcb380f" +
+		// s
+		"e3e21825ce80bda2c30b499ae87ce5e9daedde3f8885bcd7463fccaa88d37500" +
+		// delta
+		"7c8c94c0f95faa4d0c9e14811442ecb3dc78bd46dafba93e648324b7d0a36d0c"
+
+	proof, err := hex.DecodeString(proofHex)
+	if err != nil {
+		t.Fatalf("decode proof hex: %v", err)
+	}
+
+	// Aggregation proof commitments (E'_j, premultiplied by 1/8).
+	var c0, c1 [32]byte
+	h0, _ := hex.DecodeString("c61a3937e37ff91acd74bd2877bb47e236c36315744a8031339a02c41481d52b")
+	h1, _ := hex.DecodeString("5157b6954e712187a14edcd6faf0e6adbb8ec66f2d9260bd238106e076d3098e")
+	copy(c0[:], h0)
+	copy(c1[:], h1)
+
+	if !crypto.VerifyBPP(proof, [][32]byte{c0, c1}) {
+		t.Fatal("real testnet BPP proof should verify successfully")
+	}
+}
+
+func TestBPP_Bad_TestnetWrongCommitment(t *testing.T) {
+	// Same proof as above but with corrupted commitment — must fail.
+	proofHex := "07" +
+		"47c3d2db565bf368c9879dd1b08899a5e69bc956bc0a89b0cb456a54e066aa85" +
+		"89c6a14ac578409af177d9605f03fe61dfae8067338a40ca551b34580350f694" +
+		"bf389b62ae684146d33632e1ca5bf51dc6fed884780443489ee8fd68a535ddcf" +
+		"5299c9ca2f400fd0a978b1c0ef55a03922549ef78b8b5cd268bd4df5eb32f1fc" +
+		"4d4543466be7e9b9ceb6051955a815427bd773ad9a5cc9fec49fae4c0ab46fc7" +
+		"53d1c86e8c04cea4b903fc8c42f404bc8c85b25eb2468f8de75171e2bf802ae9" +
+		"6daa934cdb68b0609eb8942b3691c2bf1a122068bcd18d8ef4dd08abb2929780" +
+		"07" +
+		"599626cfd549b317eb92667ab1783a730cab6528326b581034a60b8f2582ff61" +
+		"d8ac1ec8395699a170dc9ca5ae2a87cd70388083475e38763aa327e31b27bd69" +
+		"1ebd37e22b4eda43001e908fdb211de548ed942766139c8197201d9cc53c744a" +
+		"88ee20995c5f0b64d1bc48293f9c3b8799b2866e473915871df9d55ac065c58e" +
+		"bd51887763709d9e9992d317c12bd27ad933452d06b821b4ee282de78e7cc561" +
+		"02ad119d2f1fb9a79a709614cb24dcb83119bb5734a70c923c4c9586afe1e5bd" +
+		"fedc244f7568a3cd9de95d9d240fb01ee0e0695f6d2066d085457054e78dead4" +
+		"b47ed0fcf2de7c5a9802352f7ab65667c468e32329964723a2084ae0dd38ae97" +
+		"79ff7e0870d6b664275b8207e545f4f80537e7cc4c9f81098eefa42e5efc1c85" +
+		"86bc9e7a48652c1f1e1e28e86b6e7ea80079dd6db7c78d083235ede6ae359631" +
+		"dbcb543d3a6e8b8692fb013832acb9b93ee717c72e832fd78c3a2d5f4fcb380f" +
+		"e3e21825ce80bda2c30b499ae87ce5e9daedde3f8885bcd7463fccaa88d37500" +
+		"7c8c94c0f95faa4d0c9e14811442ecb3dc78bd46dafba93e648324b7d0a36d0c"
+
+	proof, _ := hex.DecodeString(proofHex)
+
+	// Corrupted commitment (flipped first byte).
+	var c0, c1 [32]byte
+	h0, _ := hex.DecodeString("d61a3937e37ff91acd74bd2877bb47e236c36315744a8031339a02c41481d52b")
+	h1, _ := hex.DecodeString("5157b6954e712187a14edcd6faf0e6adbb8ec66f2d9260bd238106e076d3098e")
+	copy(c0[:], h0)
+	copy(c1[:], h1)
+
+	if crypto.VerifyBPP(proof, [][32]byte{c0, c1}) {
+		t.Fatal("BPP proof with corrupted commitment should fail")
+	}
+}
+
+// ── Range Proofs (BPPE — Bulletproofs++ Enhanced) ────────
+
+func TestBPPE_Bad_EmptyProof(t *testing.T) {
+	// Empty proof must return false (not crash).
+	commitment := [32]byte{0x01}
+	if crypto.VerifyBPPE([]byte{}, [][32]byte{commitment}) {
+		t.Fatal("empty BPPE proof should fail")
+	}
+}
+
+func TestBPPE_Bad_GarbageProof(t *testing.T) {
+	// Garbage bytes should deserialise (valid varint + blobs) but fail verification.
+	// Build a minimal valid-shaped proof: L(0 entries) + R(0 entries) + 7 * 32-byte fields.
+	proof := make([]byte, 0, 2+7*32)
+	proof = append(proof, 0x00) // varint 0: L length
+	proof = append(proof, 0x00) // varint 0: R length
+	proof = append(proof, make([]byte, 7*32)...)
+
+	commitment := [32]byte{0x01}
+	if crypto.VerifyBPPE(proof, [][32]byte{commitment}) {
+		t.Fatal("garbage BPPE proof should fail verification")
+	}
+}
+
+func TestBGE_Bad_EmptyProof(t *testing.T) {
+	ctx := [32]byte{0x01}
+	ring := [][32]byte{{0x02}}
+	if crypto.VerifyBGE(ctx, ring, []byte{}) {
+		t.Fatal("empty BGE proof should fail")
+	}
+}
+
+func TestBGE_Bad_GarbageProof(t *testing.T) {
+	// Build a minimal valid-shaped proof: A(32) + B(32) + Pk(0) + f(0) + y(32) + z(32).
+	proof := make([]byte, 0, 4*32+2)
+	proof = append(proof, make([]byte, 32)...) // A
+	proof = append(proof, make([]byte, 32)...) // B
+	proof = append(proof, 0x00)                // varint 0: Pk length
+	proof = append(proof, 0x00)                // varint 0: f length
+	proof = append(proof, make([]byte, 32)...) // y
+	proof = append(proof, make([]byte, 32)...) // z
+
+	ctx := [32]byte{0x01}
+	ring := [][32]byte{{0x02}}
+	if crypto.VerifyBGE(ctx, ring, proof) {
+		t.Fatal("garbage BGE proof should fail verification")
+	}
 }
 
 func TestZarcanum_Stub_NotImplemented(t *testing.T) {
-	t.Skip("Zarcanum verification needs on-chain proof data — Phase 4")
+	// Zarcanum bridge API needs extending — verify it returns false.
+	hash := [32]byte{0x01}
+	if crypto.VerifyZarcanum(hash, []byte{0x00}) {
+		t.Fatal("Zarcanum stub should return false")
+	}
 }

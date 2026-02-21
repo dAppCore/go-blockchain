@@ -183,9 +183,9 @@ CryptoNote crypto library. The upstream code (37 files from Zano commit
 | `crypto/keyimage.go` | Key image generation and validation |
 | `crypto/signature.go` | Standard + NLSAG ring signatures |
 | `crypto/clsag.go` | CLSAG (GG/GGX/GGXXG) + cofactor helpers |
-| `crypto/proof.go` | BPPE, BGE, Zarcanum verification stubs |
+| `crypto/proof.go` | BPP, BPPE, BGE, Zarcanum verification wrappers |
 | `crypto/PROVENANCE.md` | Upstream origin mapping + update workflow |
-| `crypto/crypto_test.go` | 22 tests (19 pass, 3 skipped proof stubs) |
+| `crypto/crypto_test.go` | 30 tests (all passing) |
 
 ### Key findings
 
@@ -532,12 +532,17 @@ refresh.
 and verified. The v2+ (Zarcanum) code paths compile but are untested -- they
 will be validated in Phase 2 when post-HF4 transactions appear on-chain.
 
-**Proof verification not yet wired.** Key generation, derivation, signatures
-(standard, NLSAG, CLSAG GG) are fully operational. BPPE, BGE, and Zarcanum
-proof verification stubs exist but return "not implemented" -- the deserialisation
-of on-chain proof blobs requires matching the exact binary format from chain data
-(Phase 4). CLSAG GGX/GGXXG verify functions are wired but untested without real
-ring data.
+**BPP range proof verification tested with real data.** The `cn_bpp_verify`
+bridge function (Bulletproofs++, 1 delta, `bpp_crypto_trait_ZC_out`) is verified
+against a real testnet coinbase transaction from block 101 (post-HF4). The
+`cn_bppe_verify` function (Bulletproofs++ Enhanced, 2 deltas,
+`bpp_crypto_trait_Zarcanum`) is wired but untested with real data -- it is used
+for Zarcanum PoS range proofs, not regular transaction output proofs. BGE
+(one-out-of-many) proofs are wired but untested (coinbase transactions have
+empty BGE proof vectors). CLSAG GGX/GGXXG verify functions are similarly wired
+but untested without real ring data. Zarcanum proof verification remains
+stubbed -- the bridge API needs extending to pass kernel_hash, ring,
+last_pow_block_id, stake_ki, and pos_difficulty.
 
 **CGo toolchain required.** The `crypto/` package requires CMake, GCC/Clang,
 OpenSSL, and Boost headers to build `libcryptonote.a`. Pure Go packages
