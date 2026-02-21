@@ -6,11 +6,20 @@
 package mining
 
 import (
+	"bytes"
+	"context"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	"strconv"
 	"sync/atomic"
 	"time"
 
+	"forge.lthn.ai/core/go-blockchain/consensus"
+	"forge.lthn.ai/core/go-blockchain/crypto"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
+	"forge.lthn.ai/core/go-blockchain/wire"
 )
 
 // TemplateProvider abstracts the RPC methods needed by the miner.
@@ -106,5 +115,121 @@ func (m *Miner) Stats() Stats {
 		Height:      m.height.Load(),
 		Difficulty:  m.difficulty.Load(),
 		Uptime:      uptime,
+	}
+}
+
+// Start runs the mining loop. It blocks until ctx is cancelled.
+// Returns the context error (typically context.Canceled or context.DeadlineExceeded).
+func (m *Miner) Start(ctx context.Context) error {
+	m.startTime = time.Now()
+
+	for {
+		// Fetch a block template.
+		tmpl, err := m.provider.GetBlockTemplate(m.cfg.WalletAddr)
+		if err != nil {
+			// Transient RPC error — wait and retry.
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(m.cfg.PollInterval):
+				continue
+			}
+		}
+
+		// Parse difficulty.
+		diff, err := strconv.ParseUint(tmpl.Difficulty, 10, 64)
+		if err != nil {
+			return fmt.Errorf("mining: invalid difficulty %q: %w", tmpl.Difficulty, err)
+		}
+
+		// Decode the block template blob.
+		blobBytes, err := hex.DecodeString(tmpl.BlockTemplateBlob)
+		if err != nil {
+			return fmt.Errorf("mining: invalid template blob hex: %w", err)
+		}
+		dec := wire.NewDecoder(bytes.NewReader(blobBytes))
+		block := wire.DecodeBlock(dec)
+		if dec.Err() != nil {
+			return fmt.Errorf("mining: decode template: %w", dec.Err())
+		}
+
+		// Update stats.
+		m.height.Store(tmpl.Height)
+		m.difficulty.Store(diff)
+
+		if m.cfg.OnNewTemplate != nil {
+			m.cfg.OnNewTemplate(tmpl.Height, diff)
+		}
+
+		// Compute the header mining hash (once per template).
+		headerHash := HeaderMiningHash(&block)
+
+		// Mine until solution found or template becomes stale.
+		if err := m.mine(ctx, &block, headerHash, diff); err != nil {
+			return err
+		}
+	}
+}
+
+// mine grinds nonces against the given header hash and difficulty.
+// Returns nil when a new template should be fetched (new block detected).
+// Returns ctx.Err() when shutdown is requested.
+func (m *Miner) mine(ctx context.Context, block *types.Block, headerHash [32]byte, difficulty uint64) error {
+	pollTicker := time.NewTicker(m.cfg.PollInterval)
+	defer pollTicker.Stop()
+
+	currentHeight := m.height.Load()
+
+	for nonce := uint64(0); ; nonce++ {
+		// Check for shutdown or poll trigger.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-pollTicker.C:
+			// Check if chain has advanced.
+			info, err := m.provider.GetInfo()
+			if err == nil && info.Height > currentHeight {
+				return nil // fetch new template
+			}
+			continue
+		default:
+		}
+
+		// Compute RandomX hash.
+		var input [40]byte
+		copy(input[:32], headerHash[:])
+		binary.LittleEndian.PutUint64(input[32:], nonce)
+
+		powHash, err := crypto.RandomXHash(RandomXKey, input[:])
+		if err != nil {
+			return fmt.Errorf("mining: RandomX hash: %w", err)
+		}
+
+		m.hashCount.Add(1)
+
+		if consensus.CheckDifficulty(types.Hash(powHash), difficulty) {
+			// Solution found!
+			block.Nonce = nonce
+
+			var buf bytes.Buffer
+			enc := wire.NewEncoder(&buf)
+			wire.EncodeBlock(enc, block)
+			if enc.Err() != nil {
+				return fmt.Errorf("mining: encode solution: %w", enc.Err())
+			}
+
+			hexBlob := hex.EncodeToString(buf.Bytes())
+			if err := m.provider.SubmitBlock(hexBlob); err != nil {
+				return fmt.Errorf("mining: submit block: %w", err)
+			}
+
+			m.blocksFound.Add(1)
+
+			if m.cfg.OnBlockFound != nil {
+				m.cfg.OnBlockFound(currentHeight, wire.BlockHash(block))
+			}
+
+			return nil // fetch new template
+		}
 	}
 }
