@@ -13,9 +13,12 @@ import (
 	"testing"
 	"time"
 
-	store "forge.lthn.ai/core/go-store"
+	"github.com/stretchr/testify/require"
+
+	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
+	store "forge.lthn.ai/core/go-store"
 )
 
 const testnetRPCAddr = "http://localhost:46941"
@@ -89,4 +92,42 @@ func TestIntegration_SyncFirst10Blocks(t *testing.T) {
 		}
 		_ = prevMeta // linkage verified during sync
 	}
+}
+
+func TestIntegration_SyncToTip(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping long sync test in short mode")
+	}
+
+	client := rpc.NewClientWithHTTP(testnetRPCAddr, &http.Client{Timeout: 60 * time.Second})
+
+	remoteHeight, err := client.GetHeight()
+	if err != nil {
+		t.Skipf("testnet daemon not reachable at %s: %v", testnetRPCAddr, err)
+	}
+	t.Logf("testnet height: %d", remoteHeight)
+
+	s, err := store.New(":memory:")
+	require.NoError(t, err)
+	defer s.Close()
+
+	c := New(s)
+
+	opts := SyncOptions{
+		VerifySignatures: false, // first pass: no sigs
+		Forks:            config.TestnetForks,
+	}
+
+	err = c.Sync(context.Background(), client, opts)
+	require.NoError(t, err)
+
+	finalHeight, _ := c.Height()
+	t.Logf("synced %d blocks", finalHeight)
+	require.Equal(t, remoteHeight, finalHeight)
+
+	// Verify genesis.
+	_, genMeta, err := c.GetBlockByHeight(0)
+	require.NoError(t, err)
+	expectedHash, _ := types.HashFromHex(GenesisHash)
+	require.Equal(t, expectedHash, genMeta.Hash)
 }
