@@ -99,3 +99,53 @@ func TestHeaderMiningHash_Good_NonceIgnored(t *testing.T) {
 			block1.Nonce, h1, block2.Nonce, h2)
 	}
 }
+
+func TestCheckNonce_Good_LowDifficulty(t *testing.T) {
+	// Build a genesis block and compute its header hash.
+	rawTx := testnetGenesisRawTx()
+	dec := wire.NewDecoder(bytes.NewReader(rawTx))
+	minerTx := wire.DecodeTransaction(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode genesis tx: %v", dec.Err())
+	}
+
+	block := types.Block{
+		BlockHeader: testnetGenesisHeader(),
+		MinerTx:     minerTx,
+	}
+	headerHash := HeaderMiningHash(&block)
+
+	// With difficulty=1, any nonce should produce a valid solution.
+	ok, err := CheckNonce(headerHash, 0, 1)
+	if err != nil {
+		t.Fatalf("CheckNonce: %v", err)
+	}
+	if !ok {
+		t.Error("CheckNonce should pass with difficulty=1")
+	}
+}
+
+func TestCheckNonce_Good_HighDifficulty(t *testing.T) {
+	// With extremely high difficulty, nonce=0 should NOT produce a valid solution.
+	rawTx := testnetGenesisRawTx()
+	dec := wire.NewDecoder(bytes.NewReader(rawTx))
+	minerTx := wire.DecodeTransaction(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode genesis tx: %v", dec.Err())
+	}
+
+	block := types.Block{
+		BlockHeader: testnetGenesisHeader(),
+		MinerTx:     minerTx,
+	}
+	headerHash := HeaderMiningHash(&block)
+
+	// With difficulty = max uint64, virtually no hash passes.
+	ok, err := CheckNonce(headerHash, 0, ^uint64(0))
+	if err != nil {
+		t.Fatalf("CheckNonce: %v", err)
+	}
+	if ok {
+		t.Error("CheckNonce should fail with max difficulty")
+	}
+}

@@ -290,6 +290,38 @@ func (f *failingSubmitter) SubmitBlock(hexBlob string) error {
 	return fmt.Errorf("connection refused")
 }
 
+func TestMiner_Start_Good_OnNewTemplate(t *testing.T) {
+	var tmplHeight uint64
+	var tmplDiff uint64
+
+	mock := &mockProvider{
+		templates: []*rpc.BlockTemplateResponse{
+			{Difficulty: "42", Height: 300, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
+		},
+		infos: []*rpc.DaemonInfo{{Height: 300}},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+		OnNewTemplate: func(height uint64, difficulty uint64) {
+			tmplHeight = height
+			tmplDiff = difficulty
+		},
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	_ = m.Start(ctx)
+
+	assert.Equal(t, uint64(300), tmplHeight)
+	assert.Equal(t, uint64(42), tmplDiff)
+}
+
 func TestMiner_Start_Bad_SubmitFails(t *testing.T) {
 	mock := &failingSubmitter{
 		mockProvider: mockProvider{
