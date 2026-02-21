@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -231,4 +232,86 @@ func TestMiner_Start_Good_StatsUpdate(t *testing.T) {
 	stats := m.Stats()
 	assert.Greater(t, stats.Hashrate, float64(0))
 	assert.Greater(t, stats.Uptime, time.Duration(0))
+}
+
+func TestMiner_Start_Bad_InvalidDifficulty(t *testing.T) {
+	mock := &mockProvider{
+		templates: []*rpc.BlockTemplateResponse{
+			{Difficulty: "not_a_number", Height: 100, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
+		},
+		infos: []*rpc.DaemonInfo{{Height: 100}},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	err := m.Start(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid difficulty")
+}
+
+func TestMiner_Start_Bad_InvalidBlob(t *testing.T) {
+	mock := &mockProvider{
+		templates: []*rpc.BlockTemplateResponse{
+			{Difficulty: "1", Height: 100, BlockTemplateBlob: "not_valid_hex!", Status: "OK"},
+		},
+		infos: []*rpc.DaemonInfo{{Height: 100}},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	err := m.Start(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid template blob hex")
+}
+
+type failingSubmitter struct {
+	mockProvider
+}
+
+func (f *failingSubmitter) SubmitBlock(hexBlob string) error {
+	return fmt.Errorf("connection refused")
+}
+
+func TestMiner_Start_Bad_SubmitFails(t *testing.T) {
+	mock := &failingSubmitter{
+		mockProvider: mockProvider{
+			templates: []*rpc.BlockTemplateResponse{
+				{Difficulty: "1", Height: 100, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
+			},
+			infos: []*rpc.DaemonInfo{{Height: 100}},
+		},
+	}
+
+	cfg := Config{
+		DaemonURL:    "http://localhost:46941",
+		WalletAddr:   "iTHNtestaddr",
+		PollInterval: 100 * time.Millisecond,
+		Provider:     mock,
+	}
+	m := NewMiner(cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := m.Start(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "submit block")
 }
