@@ -9,7 +9,9 @@ import (
 	"fmt"
 
 	"forge.lthn.ai/core/go-blockchain/config"
+	"forge.lthn.ai/core/go-blockchain/crypto"
 	"forge.lthn.ai/core/go-blockchain/types"
+	"forge.lthn.ai/core/go-blockchain/wire"
 )
 
 // RingOutputsFn fetches the public keys for a ring at the given amount
@@ -60,7 +62,51 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 		return nil
 	}
 
-	// TODO: Wire up crypto.CheckRingSignature() for each input.
+	prefixHash := wire.TransactionPrefixHash(tx)
+
+	var sigIdx int
+	for _, vin := range tx.Vin {
+		inp, ok := vin.(types.TxInputToKey)
+		if !ok {
+			continue
+		}
+
+		// Extract absolute global indices from key offsets.
+		offsets := make([]uint64, len(inp.KeyOffsets))
+		for i, ref := range inp.KeyOffsets {
+			offsets[i] = ref.GlobalIndex
+		}
+
+		ringKeys, err := getRingOutputs(inp.Amount, offsets)
+		if err != nil {
+			return fmt.Errorf("consensus: failed to fetch ring outputs for input %d: %w",
+				sigIdx, err)
+		}
+
+		ringSigs := tx.Signatures[sigIdx]
+		if len(ringSigs) != len(ringKeys) {
+			return fmt.Errorf("consensus: input %d has %d signatures but ring size %d",
+				sigIdx, len(ringSigs), len(ringKeys))
+		}
+
+		// Convert typed slices to raw byte arrays for the crypto bridge.
+		pubs := make([][32]byte, len(ringKeys))
+		for i, pk := range ringKeys {
+			pubs[i] = [32]byte(pk)
+		}
+
+		sigs := make([][64]byte, len(ringSigs))
+		for i, s := range ringSigs {
+			sigs[i] = [64]byte(s)
+		}
+
+		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(inp.KeyImage), pubs, sigs) {
+			return fmt.Errorf("consensus: ring signature verification failed for input %d", sigIdx)
+		}
+
+		sigIdx++
+	}
+
 	return nil
 }
 
