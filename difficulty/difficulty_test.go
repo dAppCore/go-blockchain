@@ -8,12 +8,14 @@ package difficulty
 import (
 	"math/big"
 	"testing"
+
+	"forge.lthn.ai/core/go-blockchain/config"
 )
 
 func TestNextDifficulty_Good(t *testing.T) {
 	// Synthetic test: constant block times at exactly the target interval.
 	// With perfectly timed blocks, the difficulty should remain stable.
-	const target uint64 = 120
+	target := config.BlockTarget
 	const numBlocks = 100
 
 	timestamps := make([]uint64, numBlocks)
@@ -45,9 +47,9 @@ func TestNextDifficulty_Good(t *testing.T) {
 
 func TestNextDifficultyEmpty_Good(t *testing.T) {
 	// Empty input should return starter difficulty.
-	result := NextDifficulty(nil, nil, 120)
+	result := NextDifficulty(nil, nil, config.BlockTarget)
 	if result.Cmp(StarterDifficulty) != 0 {
-		t.Errorf("NextDifficulty(nil, nil, 120) = %s, want %s", result, StarterDifficulty)
+		t.Errorf("NextDifficulty(nil, nil, %d) = %s, want %s", config.BlockTarget, result, StarterDifficulty)
 	}
 }
 
@@ -55,7 +57,7 @@ func TestNextDifficultySingleEntry_Good(t *testing.T) {
 	// A single entry is insufficient for calculation.
 	timestamps := []uint64{1000}
 	diffs := []*big.Int{big.NewInt(100)}
-	result := NextDifficulty(timestamps, diffs, 120)
+	result := NextDifficulty(timestamps, diffs, config.BlockTarget)
 	if result.Cmp(StarterDifficulty) != 0 {
 		t.Errorf("NextDifficulty with single entry = %s, want %s", result, StarterDifficulty)
 	}
@@ -63,7 +65,7 @@ func TestNextDifficultySingleEntry_Good(t *testing.T) {
 
 func TestNextDifficultyFastBlocks_Good(t *testing.T) {
 	// When blocks come faster than the target, difficulty should increase.
-	const target uint64 = 120
+	target := config.BlockTarget
 	const numBlocks = 50
 	const actualInterval uint64 = 60 // half the target — blocks are too fast
 
@@ -84,7 +86,7 @@ func TestNextDifficultyFastBlocks_Good(t *testing.T) {
 
 func TestNextDifficultySlowBlocks_Good(t *testing.T) {
 	// When blocks come slower than the target, difficulty should decrease.
-	const target uint64 = 120
+	target := config.BlockTarget
 	const numBlocks = 50
 	const actualInterval uint64 = 240 // double the target — blocks are too slow
 
@@ -107,7 +109,7 @@ func TestNextDifficulty_Ugly(t *testing.T) {
 	// Two entries with zero time span — should handle gracefully.
 	timestamps := []uint64{1000, 1000}
 	diffs := []*big.Int{big.NewInt(0), big.NewInt(100)}
-	result := NextDifficulty(timestamps, diffs, 120)
+	result := NextDifficulty(timestamps, diffs, config.BlockTarget)
 	if result.Sign() <= 0 {
 		t.Errorf("NextDifficulty with zero time span should still return positive, got %s", result)
 	}

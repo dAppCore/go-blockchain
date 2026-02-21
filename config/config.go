@@ -121,6 +121,10 @@ const (
 	// DifficultyPosStarter is the initial PoS difficulty.
 	DifficultyPosStarter uint64 = 1
 
+	// BlockTarget is the desired block interval in seconds.
+	// Both PoW and PoS blocks use the same 120-second target.
+	BlockTarget uint64 = 120
+
 	// DifficultyPowTargetHF6 is the PoW target after hardfork 6 (240s).
 	DifficultyPowTargetHF6 uint64 = 240
 
