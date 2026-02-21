@@ -116,7 +116,7 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 					log.Printf("p2p sync: processing block %d", blockHeight)
 				}
 
-				blockDiff, err := c.NextDifficulty(blockHeight)
+				blockDiff, err := c.NextDifficulty(blockHeight, opts.Forks)
 				if err != nil {
 					return fmt.Errorf("p2p sync: compute difficulty for block %d: %w", blockHeight, err)
 				}

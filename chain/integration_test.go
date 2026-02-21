@@ -168,6 +168,61 @@ func TestIntegration_SyncWithSignatures(t *testing.T) {
 	require.Equal(t, remoteHeight, finalHeight)
 }
 
+func TestIntegration_DifficultyMatchesRPC(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping difficulty comparison test in short mode")
+	}
+
+	client := rpc.NewClientWithHTTP(testnetRPCAddr, &http.Client{Timeout: 60 * time.Second})
+
+	_, err := client.GetHeight()
+	if err != nil {
+		t.Skipf("testnet daemon not reachable: %v", err)
+	}
+
+	s, err := store.New(":memory:")
+	require.NoError(t, err)
+	defer s.Close()
+
+	c := New(s)
+
+	// Sync a portion of the chain via RPC (which stores daemon-provided difficulty).
+	opts := SyncOptions{
+		VerifySignatures: false,
+		Forks:            config.TestnetForks,
+	}
+	err = c.Sync(context.Background(), client, opts)
+	require.NoError(t, err)
+
+	finalHeight, _ := c.Height()
+	t.Logf("synced %d blocks, checking difficulty computation", finalHeight)
+
+	// For each block from height 1 onwards, verify our NextDifficulty matches
+	// the daemon-provided difficulty stored in BlockMeta.
+	mismatches := 0
+	for h := uint64(1); h < finalHeight; h++ {
+		meta, err := c.getBlockMeta(h)
+		require.NoError(t, err)
+
+		computed, err := c.NextDifficulty(h, config.TestnetForks)
+		require.NoError(t, err)
+
+		if computed != meta.Difficulty {
+			if mismatches < 10 {
+				t.Logf("difficulty mismatch at height %d: computed=%d, daemon=%d",
+					h, computed, meta.Difficulty)
+			}
+			mismatches++
+		}
+	}
+
+	if mismatches > 0 {
+		t.Errorf("%d/%d blocks have difficulty mismatches", mismatches, finalHeight-1)
+	} else {
+		t.Logf("all %d blocks have matching difficulty", finalHeight-1)
+	}
+}
+
 func TestIntegration_P2PSync(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping P2P sync test in short mode")

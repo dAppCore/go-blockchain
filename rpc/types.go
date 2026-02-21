@@ -56,7 +56,8 @@ type BlockDetails struct {
 	TotalFee       uint64   `json:"total_fee"`
 	ID             string   `json:"id"`
 	PrevID         string   `json:"prev_id"`
-	Difficulty     string   `json:"difficulty"`
+	Difficulty            string   `json:"difficulty"`
+	CumulativeDiffPrecise string  `json:"cumulative_diff_precise"`
 	Type           uint64   `json:"type"`
 	IsOrphan       bool     `json:"is_orphan"`
 	CumulativeSize uint64   `json:"block_cumulative_size"`

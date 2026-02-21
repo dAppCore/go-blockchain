@@ -14,7 +14,7 @@ import (
 
 func TestNextDifficulty_Good(t *testing.T) {
 	// Synthetic test: constant block times at exactly the target interval.
-	// With perfectly timed blocks, the difficulty should remain stable.
+	// With the LWMA-1 formula, constant D gives next_D = D/n for full window.
 	target := config.BlockTarget
 	const numBlocks = 100
 
@@ -32,16 +32,11 @@ func TestNextDifficulty_Good(t *testing.T) {
 		t.Fatalf("NextDifficulty returned non-positive value: %s", result)
 	}
 
-	// With constant intervals, the result should be approximately equal to
-	// the base difficulty. Allow some tolerance due to integer arithmetic.
-	expected := baseDifficulty
-	tolerance := new(big.Int).Div(expected, big.NewInt(10)) // 10% tolerance
-
-	diff := new(big.Int).Sub(result, expected)
-	diff.Abs(diff)
-	if diff.Cmp(tolerance) > 0 {
-		t.Errorf("NextDifficulty with constant intervals: got %s, expected ~%s (tolerance %s)",
-			result, expected, tolerance)
+	// LWMA trims to last 61 entries (N+1=61), giving n=60 intervals.
+	// Formula: D/n = 1000/60 = 16.
+	expected := big.NewInt(16)
+	if result.Cmp(expected) != 0 {
+		t.Errorf("NextDifficulty with constant intervals: got %s, expected %s", result, expected)
 	}
 }
 
@@ -64,7 +59,8 @@ func TestNextDifficultySingleEntry_Good(t *testing.T) {
 }
 
 func TestNextDifficultyFastBlocks_Good(t *testing.T) {
-	// When blocks come faster than the target, difficulty should increase.
+	// When blocks come faster than the target, difficulty should increase
+	// relative to the constant-rate result.
 	target := config.BlockTarget
 	const numBlocks = 50
 	const actualInterval uint64 = 60 // half the target — blocks are too fast
@@ -78,14 +74,24 @@ func TestNextDifficultyFastBlocks_Good(t *testing.T) {
 		cumulativeDiffs[i] = new(big.Int).Mul(baseDifficulty, big.NewInt(int64(i)))
 	}
 
-	result := NextDifficulty(timestamps, cumulativeDiffs, target)
-	if result.Cmp(baseDifficulty) <= 0 {
-		t.Errorf("expected difficulty > %s for fast blocks, got %s", baseDifficulty, result)
+	resultFast := NextDifficulty(timestamps, cumulativeDiffs, target)
+
+	// Now compute with on-target intervals for comparison.
+	timestampsTarget := make([]uint64, numBlocks)
+	for i := 0; i < numBlocks; i++ {
+		timestampsTarget[i] = uint64(i) * target
+	}
+	resultTarget := NextDifficulty(timestampsTarget, cumulativeDiffs, target)
+
+	if resultFast.Cmp(resultTarget) <= 0 {
+		t.Errorf("fast blocks (%s) should produce higher difficulty than target-rate blocks (%s)",
+			resultFast, resultTarget)
 	}
 }
 
 func TestNextDifficultySlowBlocks_Good(t *testing.T) {
-	// When blocks come slower than the target, difficulty should decrease.
+	// When blocks come slower than the target, difficulty should decrease
+	// relative to the constant-rate result.
 	target := config.BlockTarget
 	const numBlocks = 50
 	const actualInterval uint64 = 240 // double the target — blocks are too slow
@@ -99,9 +105,18 @@ func TestNextDifficultySlowBlocks_Good(t *testing.T) {
 		cumulativeDiffs[i] = new(big.Int).Mul(baseDifficulty, big.NewInt(int64(i)))
 	}
 
-	result := NextDifficulty(timestamps, cumulativeDiffs, target)
-	if result.Cmp(baseDifficulty) >= 0 {
-		t.Errorf("expected difficulty < %s for slow blocks, got %s", baseDifficulty, result)
+	resultSlow := NextDifficulty(timestamps, cumulativeDiffs, target)
+
+	// Compute with on-target intervals for comparison.
+	timestampsTarget := make([]uint64, numBlocks)
+	for i := 0; i < numBlocks; i++ {
+		timestampsTarget[i] = uint64(i) * target
+	}
+	resultTarget := NextDifficulty(timestampsTarget, cumulativeDiffs, target)
+
+	if resultSlow.Cmp(resultTarget) >= 0 {
+		t.Errorf("slow blocks (%s) should produce lower difficulty than target-rate blocks (%s)",
+			resultSlow, resultTarget)
 	}
 }
 
@@ -127,5 +142,8 @@ func TestConstants_Good(t *testing.T) {
 	}
 	if BlocksCount != 735 {
 		t.Errorf("BlocksCount: got %d, want 735", BlocksCount)
+	}
+	if LWMAWindow != 60 {
+		t.Errorf("LWMAWindow: got %d, want 60", LWMAWindow)
 	}
 }

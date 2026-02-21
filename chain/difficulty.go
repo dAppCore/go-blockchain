@@ -14,20 +14,37 @@ import (
 
 // NextDifficulty computes the expected difficulty for the block at the given
 // height, using the LWMA algorithm over stored block history.
-func (c *Chain) NextDifficulty(height uint64) (uint64, error) {
+//
+// The genesis block (height 0) is excluded from the difficulty window,
+// matching the C++ daemon's load_targetdata_cache which skips index 0.
+//
+// The target block time depends on the hardfork schedule: 120s pre-HF2,
+// 240s post-HF2 (matching DIFFICULTY_POW_TARGET_HF6 in the C++ source).
+func (c *Chain) NextDifficulty(height uint64, forks []config.HardFork) (uint64, error) {
 	if height == 0 {
 		return 1, nil
 	}
 
-	// Determine how far back to look.
-	lookback := height
-	if lookback > difficulty.BlocksCount {
-		lookback = difficulty.BlocksCount
+	// LWMA needs N+1 entries (N solve-time intervals).
+	// Start from height 1 — genesis is excluded from the difficulty window.
+	maxLookback := difficulty.LWMAWindow + 1
+	lookback := height // height excludes genesis since we start from 1
+	if lookback > maxLookback {
+		lookback = maxLookback
 	}
 
+	// Start from max(1, height - lookback) to exclude genesis.
 	startHeight := height - lookback
-	count := int(lookback)
+	if startHeight == 0 {
+		startHeight = 1
+		lookback = height - 1
+	}
 
+	if lookback == 0 {
+		return 1, nil
+	}
+
+	count := int(lookback)
 	timestamps := make([]uint64, count)
 	cumulDiffs := make([]*big.Int, count)
 
@@ -43,6 +60,13 @@ func (c *Chain) NextDifficulty(height uint64) (uint64, error) {
 		cumulDiffs[i] = new(big.Int).SetUint64(meta.CumulativeDiff)
 	}
 
-	result := difficulty.NextDifficulty(timestamps, cumulDiffs, config.BlockTarget)
+	// Determine the target block time based on hardfork status.
+	// HF2 doubles the target from 120s to 240s.
+	target := config.DifficultyPowTarget
+	if config.IsHardForkActive(forks, config.HF2, height) {
+		target = config.DifficultyPowTargetHF6
+	}
+
+	result := difficulty.NextDifficulty(timestamps, cumulDiffs, target)
 	return result.Uint64(), nil
 }
