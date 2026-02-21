@@ -131,3 +131,34 @@ func TestIntegration_SyncToTip(t *testing.T) {
 	expectedHash, _ := types.HashFromHex(GenesisHash)
 	require.Equal(t, expectedHash, genMeta.Hash)
 }
+
+func TestIntegration_SyncWithSignatures(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping long sync test in short mode")
+	}
+
+	client := rpc.NewClientWithHTTP(testnetRPCAddr, &http.Client{Timeout: 60 * time.Second})
+
+	remoteHeight, err := client.GetHeight()
+	if err != nil {
+		t.Skipf("testnet daemon not reachable: %v", err)
+	}
+
+	s, err := store.New(":memory:")
+	require.NoError(t, err)
+	defer s.Close()
+
+	c := New(s)
+
+	opts := SyncOptions{
+		VerifySignatures: true,
+		Forks:            config.TestnetForks,
+	}
+
+	err = c.Sync(context.Background(), client, opts)
+	require.NoError(t, err)
+
+	finalHeight, _ := c.Height()
+	t.Logf("synced %d blocks with signature verification", finalHeight)
+	require.Equal(t, remoteHeight, finalHeight)
+}
