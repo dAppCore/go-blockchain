@@ -10,12 +10,14 @@ package p2p
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"net"
 	"testing"
 	"time"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-p2p/node/levin"
+	"github.com/stretchr/testify/require"
 )
 
 const testnetP2PAddr = "localhost:46942"
@@ -68,8 +70,9 @@ func TestIntegration_Handshake(t *testing.T) {
 	if hdr.Command != CommandHandshake {
 		t.Fatalf("response command: got %d, want %d", hdr.Command, CommandHandshake)
 	}
-	if hdr.ReturnCode != levin.ReturnOK {
-		t.Fatalf("return code: got %d, want %d", hdr.ReturnCode, levin.ReturnOK)
+	// The CryptoNote/Zano daemon handler returns 1 (not 0) on success.
+	if hdr.ReturnCode < 0 {
+		t.Fatalf("return code: got %d (negative = error)", hdr.ReturnCode)
 	}
 
 	// Parse response.
@@ -109,4 +112,101 @@ func TestIntegration_Handshake(t *testing.T) {
 		t.Errorf("ping status: got %q, want %q", status, "OK")
 	}
 	t.Logf("ping OK, remote peer_id: %x", remotePeerID)
+}
+
+// TestIntegration_RequestChainAndGetObjects performs a full chain sync
+// sequence: handshake, REQUEST_CHAIN with the genesis hash, then
+// REQUEST_GET_OBJECTS with the first block hash from the chain response.
+func TestIntegration_RequestChainAndGetObjects(t *testing.T) {
+	conn, err := net.DialTimeout("tcp", testnetP2PAddr, 10*time.Second)
+	if err != nil {
+		t.Skipf("testnet daemon not reachable: %v", err)
+	}
+	defer conn.Close()
+
+	lc := levin.NewConnection(conn)
+
+	// --- Handshake first ---
+	var peerIDBuf [8]byte
+	rand.Read(peerIDBuf[:])
+	peerID := binary.LittleEndian.Uint64(peerIDBuf[:])
+
+	req := HandshakeRequest{
+		NodeData: NodeData{
+			NetworkID: config.NetworkIDTestnet,
+			PeerID:    peerID,
+			LocalTime: time.Now().Unix(),
+			MyPort:    0,
+		},
+		PayloadData: CoreSyncData{
+			CurrentHeight:  1,
+			ClientVersion:  config.ClientVersion,
+			NonPruningMode: true,
+		},
+	}
+	payload, err := EncodeHandshakeRequest(&req)
+	require.NoError(t, err)
+	require.NoError(t, lc.WritePacket(CommandHandshake, payload, true))
+
+	hdr, _, err := lc.ReadPacket()
+	require.NoError(t, err)
+	require.Equal(t, uint32(CommandHandshake), hdr.Command)
+
+	// --- Request chain ---
+	genesisHash, _ := hex.DecodeString("cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963")
+	chainReq := RequestChain{
+		BlockIDs: [][]byte{genesisHash},
+	}
+	chainPayload, err := chainReq.Encode()
+	require.NoError(t, err)
+	require.NoError(t, lc.WritePacket(CommandRequestChain, chainPayload, false))
+
+	// Read until we get RESPONSE_CHAIN_ENTRY. The daemon may send
+	// timed_sync or other messages between our request and the response.
+	var chainData []byte
+	for {
+		hdr, data, err := lc.ReadPacket()
+		require.NoError(t, err)
+		if hdr.Command == CommandResponseChain {
+			chainData = data
+			break
+		}
+		t.Logf("skipping command %d", hdr.Command)
+	}
+
+	var chainResp ResponseChainEntry
+	require.NoError(t, chainResp.Decode(chainData))
+	t.Logf("chain response: start=%d, total=%d, block_ids=%d",
+		chainResp.StartHeight, chainResp.TotalHeight, len(chainResp.BlockIDs))
+	require.Greater(t, len(chainResp.BlockIDs), 0)
+
+	// --- Request first block ---
+	firstHash := chainResp.BlockIDs[0]
+	if len(firstHash) < 32 {
+		t.Fatalf("block hash too short: %d bytes", len(firstHash))
+	}
+
+	getReq := RequestGetObjects{
+		Blocks: [][]byte{firstHash[:32]},
+	}
+	getPayload, err := getReq.Encode()
+	require.NoError(t, err)
+	require.NoError(t, lc.WritePacket(CommandRequestObjects, getPayload, false))
+
+	// Read until RESPONSE_GET_OBJECTS.
+	for {
+		hdr, data, err := lc.ReadPacket()
+		require.NoError(t, err)
+		if hdr.Command == CommandResponseObjects {
+			var getResp ResponseGetObjects
+			require.NoError(t, getResp.Decode(data))
+			t.Logf("get_objects response: %d blocks, %d missed, height=%d",
+				len(getResp.Blocks), len(getResp.MissedIDs), getResp.CurrentHeight)
+			require.Len(t, getResp.Blocks, 1)
+			require.Greater(t, len(getResp.Blocks[0].Block), 0)
+			t.Logf("block blob: %d bytes", len(getResp.Blocks[0].Block))
+			break
+		}
+		t.Logf("skipping command %d", hdr.Command)
+	}
 }
