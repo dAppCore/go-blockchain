@@ -3,8 +3,9 @@ module forge.lthn.ai/core/go-blockchain
 go 1.26.0
 
 require (
+	forge.lthn.ai/core/cli v0.0.0-00010101000000-000000000000
 	forge.lthn.ai/core/go-p2p v0.0.0-00010101000000-000000000000
-	forge.lthn.ai/core/go-store v0.0.0-00010101000000-000000000000
+	forge.lthn.ai/core/go-store v0.1.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.48.0
 )
@@ -26,6 +27,12 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.46.1 // indirect
 )
+
+replace forge.lthn.ai/core/cli => /home/claude/Code/core/cli
+
+replace forge.lthn.ai/core/go => /home/claude/Code/core/go
+
+replace forge.lthn.ai/core/go-crypt => /home/claude/Code/core/go-crypt
 
 replace forge.lthn.ai/core/go-p2p => /home/claude/Code/core/go-p2p
 
