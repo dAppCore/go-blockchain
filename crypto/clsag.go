@@ -39,6 +39,20 @@ func PointDiv8(pk [32]byte) ([32]byte, error) {
 	return result, nil
 }
 
+// PointSub computes a - b on the Ed25519 curve.
+func PointSub(a, b [32]byte) ([32]byte, error) {
+	var result [32]byte
+	rc := C.cn_point_sub(
+		(*C.uint8_t)(unsafe.Pointer(&a[0])),
+		(*C.uint8_t)(unsafe.Pointer(&b[0])),
+		(*C.uint8_t)(unsafe.Pointer(&result[0])),
+	)
+	if rc != 0 {
+		return result, fmt.Errorf("crypto: point_sub failed")
+	}
+	return result, nil
+}
+
 // CLSAGGGSigSize returns the byte size of a CLSAG_GG signature for a given ring size.
 func CLSAGGGSigSize(ringSize int) int {
 	return int(C.cn_clsag_gg_sig_size(C.size_t(ringSize)))

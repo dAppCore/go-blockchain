@@ -1,0 +1,24 @@
+Testnet V2 Spending Transaction Test Vectors
+=============================================
+
+Generated on testnet at height ~2880.
+
+v2_spending_tx_mixin0.hex:
+  TX hash: 89c8839e3c6be3bb3616a5c2e7028fd8f33992e4f9ff218f8224825702865b8b
+  Block: 2823
+  Version: 3
+  Ring size: 16 (mixin 0 + ZC default)
+  Inputs: 1 txin_zc_input
+  Outputs: 2 tx_out_zarcanum
+  Signatures: CLSAG GGX
+  Proofs: BGE (2), BPP (1 with aggregation), ZC balance
+
+v2_spending_tx_mixin10.hex:
+  TX hash: 87fbc60cde013579e1ad6ab403dee81c4da7a6b4621bea44f6973568c37b0af6
+  Block: ~2878
+  Version: 3
+  Ring size: 26 (mixin 10 + ZC default)
+  Inputs: 1 txin_zc_input
+  Outputs: 2 tx_out_zarcanum
+  Signatures: CLSAG GGX
+  Proofs: BGE (2), BPP (1 with aggregation), ZC balance

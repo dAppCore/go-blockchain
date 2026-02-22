@@ -8,6 +8,7 @@ package chain
 import (
 	"fmt"
 
+	"forge.lthn.ai/core/go-blockchain/consensus"
 	"forge.lthn.ai/core/go-blockchain/types"
 )
 
@@ -40,4 +41,41 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 		}
 	}
 	return pubs, nil
+}
+
+// GetZCRingOutputs fetches ZC ring members (stealth address, amount commitment,
+// blinded asset ID) for the given global output indices. This implements the
+// consensus.ZCRingOutputsFn signature for post-HF4 CLSAG GGX verification.
+//
+// ZC outputs are indexed at amount=0 (confidential amounts).
+func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, error) {
+	members := make([]consensus.ZCRingMember, len(offsets))
+	for i, gidx := range offsets {
+		txHash, outNo, err := c.GetOutput(0, gidx)
+		if err != nil {
+			return nil, fmt.Errorf("ZC ring output %d (gidx=%d): %w", i, gidx, err)
+		}
+
+		tx, _, err := c.GetTransaction(txHash)
+		if err != nil {
+			return nil, fmt.Errorf("ZC ring output %d: tx %s: %w", i, txHash, err)
+		}
+
+		if int(outNo) >= len(tx.Vout) {
+			return nil, fmt.Errorf("ZC ring output %d: tx %s has %d outputs, want index %d",
+				i, txHash, len(tx.Vout), outNo)
+		}
+
+		switch out := tx.Vout[outNo].(type) {
+		case types.TxOutputZarcanum:
+			members[i] = consensus.ZCRingMember{
+				StealthAddress:   [32]byte(out.StealthAddress),
+				AmountCommitment: [32]byte(out.AmountCommitment),
+				BlindedAssetID:   [32]byte(out.BlindedAssetID),
+			}
+		default:
+			return nil, fmt.Errorf("ZC ring output %d: expected TxOutputZarcanum, got %T", i, out)
+		}
+	}
+	return members, nil
 }

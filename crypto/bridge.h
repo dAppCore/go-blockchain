@@ -57,6 +57,9 @@ int cn_point_mul8(const uint8_t pk[32], uint8_t result[32]);
 // Premultiply by 1/8 (cofactor inverse). Stored form on-chain.
 int cn_point_div8(const uint8_t pk[32], uint8_t result[32]);
 
+// Subtract two curve points: result = a - b.
+int cn_point_sub(const uint8_t a[32], const uint8_t b[32], uint8_t result[32]);
+
 // ── CLSAG Verification (HF4+) ────────────────────────────
 // Ring entries are flat arrays of 32-byte public keys per entry:
 //   GG:    [stealth_addr(32) | amount_commitment(32)] per entry = 64 bytes

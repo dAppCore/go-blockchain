@@ -227,7 +227,7 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 
 		// Optionally verify signatures using the chain's output index.
 		if opts.VerifySignatures {
-			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, height, c.GetRingOutputs); err != nil {
+			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, height, c.GetRingOutputs, c.GetZCRingOutputs); err != nil {
 				return fmt.Errorf("verify tx signatures %s: %w", txHash, err)
 			}
 		}

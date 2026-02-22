@@ -52,7 +52,7 @@ func TestVerifyV1Signatures_Good_MockRing(t *testing.T) {
 		return []types.PublicKey{types.PublicKey(pub)}, nil
 	}
 
-	err = VerifyTransactionSignatures(tx, config.MainnetForks, 100, getRing)
+	err = VerifyTransactionSignatures(tx, config.MainnetForks, 100, getRing, nil)
 	require.NoError(t, err)
 }
 
@@ -86,6 +86,6 @@ func TestVerifyV1Signatures_Bad_WrongSig(t *testing.T) {
 		return []types.PublicKey{types.PublicKey(pub)}, nil
 	}
 
-	err = VerifyTransactionSignatures(tx, config.MainnetForks, 100, getRing)
+	err = VerifyTransactionSignatures(tx, config.MainnetForks, 100, getRing, nil)
 	assert.Error(t, err)
 }

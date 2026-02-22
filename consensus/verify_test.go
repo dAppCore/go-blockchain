@@ -13,13 +13,13 @@ import (
 func TestVerifyTransactionSignatures_Good_Coinbase(t *testing.T) {
 	// Coinbase transactions have no signatures to verify.
 	tx := validMinerTx(100)
-	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil)
+	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil, nil)
 	require.NoError(t, err)
 }
 
 func TestVerifyTransactionSignatures_Bad_MissingSigs(t *testing.T) {
 	tx := validV1Tx()
 	tx.Signatures = nil // no signatures
-	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil)
+	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil, nil)
 	assert.Error(t, err)
 }

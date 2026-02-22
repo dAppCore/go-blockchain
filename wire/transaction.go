@@ -209,7 +209,7 @@ func encodeKeyOffsets(enc *Encoder, refs []types.TxOutRef) {
 		enc.WriteVariantTag(ref.Tag)
 		switch ref.Tag {
 		case types.RefTypeGlobalIndex:
-			enc.WriteVarint(ref.GlobalIndex)
+			enc.WriteUint64LE(ref.GlobalIndex)
 		case types.RefTypeByID:
 			enc.WriteBlob32((*[32]byte)(&ref.TxID))
 			enc.WriteVarint(ref.N)
@@ -227,7 +227,7 @@ func decodeKeyOffsets(dec *Decoder) []types.TxOutRef {
 		refs[i].Tag = dec.ReadVariantTag()
 		switch refs[i].Tag {
 		case types.RefTypeGlobalIndex:
-			refs[i].GlobalIndex = dec.ReadVarint()
+			refs[i].GlobalIndex = dec.ReadUint64LE()
 		case types.RefTypeByID:
 			dec.ReadBlob32((*[32]byte)(&refs[i].TxID))
 			refs[i].N = dec.ReadVarint()
@@ -446,8 +446,8 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 	case tagTxComment, tagString, tagTxDerivationHint, tagExtraUserData:
 		return readStringBlob(dec)
 
-	// Varint fields
-	case tagUnlockTime, tagExpirationTime, tagTxDetailsFlags, tagUint64, tagEtcTxTime:
+	// Varint fields (structs with VARINT_FIELD)
+	case tagUnlockTime, tagExpirationTime, tagTxDetailsFlags, tagEtcTxTime:
 		v := dec.ReadVarint()
 		if dec.err != nil {
 			return nil
@@ -455,6 +455,8 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return EncodeVarint(v)
 
 	// Fixed-size integer fields
+	case tagUint64: // raw uint64_t — do_serialize → serialize_int → 8-byte LE
+		return dec.ReadBytes(8)
 	case tagTxCryptoChecksum: // two uint32 LE
 		return dec.ReadBytes(8)
 	case tagUint32: // uint32 LE
@@ -485,12 +487,8 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return readTxServiceAttachment(dec)
 
 	// Zarcanum extra variant
-	case tagZarcanumTxDataV1: // fee (varint)
-		v := dec.ReadVarint()
-		if dec.err != nil {
-			return nil
-		}
-		return EncodeVarint(v)
+	case tagZarcanumTxDataV1: // fee — FIELD(fee) → serialize_int → 8-byte LE
+		return dec.ReadBytes(8)
 
 	// Signature variants
 	case tagNLSAGSig: // vector<signature> (64 bytes each)

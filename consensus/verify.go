@@ -18,14 +18,29 @@ import (
 // and offsets. Used to decouple consensus/ from chain storage.
 type RingOutputsFn func(amount uint64, offsets []uint64) ([]types.PublicKey, error)
 
+// ZCRingMember holds the three public keys per ring entry needed for
+// CLSAG GGX verification (HF4+). All fields are premultiplied by 1/8
+// as stored on chain.
+type ZCRingMember struct {
+	StealthAddress   [32]byte
+	AmountCommitment [32]byte
+	BlindedAssetID   [32]byte
+}
+
+// ZCRingOutputsFn fetches ZC ring members for the given global output indices.
+// Used for post-HF4 CLSAG GGX signature verification.
+type ZCRingOutputsFn func(offsets []uint64) ([]ZCRingMember, error)
+
 // VerifyTransactionSignatures verifies all ring signatures in a transaction.
 // For coinbase transactions, this is a no-op (no signatures).
 // For pre-HF4 transactions, NLSAG ring signatures are verified.
 // For post-HF4, CLSAG signatures and proofs are verified.
 //
-// getRingOutputs may be nil for coinbase-only checks.
+// getRingOutputs is used for pre-HF4 (V1) signature verification.
+// getZCRingOutputs is used for post-HF4 (V2) CLSAG GGX verification.
+// Either may be nil for structural-only checks.
 func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
-	height uint64, getRingOutputs RingOutputsFn) error {
+	height uint64, getRingOutputs RingOutputsFn, getZCRingOutputs ZCRingOutputsFn) error {
 
 	// Coinbase: no signatures.
 	if isCoinbase(tx) {
@@ -38,7 +53,7 @@ func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
 		return verifyV1Signatures(tx, getRingOutputs)
 	}
 
-	return verifyV2Signatures(tx, getRingOutputs)
+	return verifyV2Signatures(tx, getZCRingOutputs)
 }
 
 // verifyV1Signatures checks NLSAG ring signatures for pre-HF4 transactions.
@@ -111,7 +126,188 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 }
 
 // verifyV2Signatures checks CLSAG signatures and proofs for post-HF4 transactions.
-func verifyV2Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) error {
-	// TODO: Wire up CLSAG verification and proof checks.
+func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn) error {
+	// Parse the signature variant vector.
+	sigEntries, err := parseV2Signatures(tx.SignaturesRaw)
+	if err != nil {
+		return fmt.Errorf("consensus: %w", err)
+	}
+
+	// Match signatures to inputs: each input must have a corresponding signature.
+	if len(sigEntries) != len(tx.Vin) {
+		return fmt.Errorf("consensus: V2 signature count %d != input count %d",
+			len(sigEntries), len(tx.Vin))
+	}
+
+	// Validate that ZC inputs have ZC_sig and vice versa.
+	for i, vin := range tx.Vin {
+		switch vin.(type) {
+		case types.TxInputZC:
+			if sigEntries[i].tag != types.SigTypeZC {
+				return fmt.Errorf("consensus: input %d is ZC but signature tag is 0x%02x",
+					i, sigEntries[i].tag)
+			}
+		case types.TxInputToKey:
+			if sigEntries[i].tag != types.SigTypeNLSAG && sigEntries[i].tag != types.SigTypeVoid {
+				return fmt.Errorf("consensus: input %d is to_key but signature tag is 0x%02x",
+					i, sigEntries[i].tag)
+			}
+		}
+	}
+
+	// Without ring output data, we can only check structural correctness.
+	if getZCRingOutputs == nil {
+		return nil
+	}
+
+	// Compute tx prefix hash for CLSAG verification.
+	// For normal transactions (not TX_FLAG_SIGNATURE_MODE_SEPARATE),
+	// the hash is simply the transaction prefix hash.
+	prefixHash := wire.TransactionPrefixHash(tx)
+
+	// Verify CLSAG GGX signature for each ZC input.
+	for i, vin := range tx.Vin {
+		zcIn, ok := vin.(types.TxInputZC)
+		if !ok {
+			continue
+		}
+
+		zc := sigEntries[i].zcSig
+		if zc == nil {
+			return fmt.Errorf("consensus: input %d: missing ZC_sig data", i)
+		}
+
+		// Extract absolute global indices from key offsets.
+		offsets := make([]uint64, len(zcIn.KeyOffsets))
+		for j, ref := range zcIn.KeyOffsets {
+			offsets[j] = ref.GlobalIndex
+		}
+
+		ringMembers, err := getZCRingOutputs(offsets)
+		if err != nil {
+			return fmt.Errorf("consensus: failed to fetch ZC ring outputs for input %d: %w", i, err)
+		}
+
+		if len(ringMembers) != zc.ringSize {
+			return fmt.Errorf("consensus: input %d: ring size %d from chain != %d from sig",
+				i, len(ringMembers), zc.ringSize)
+		}
+
+		// Build flat ring: [stealth(32) | commitment(32) | blinded_asset_id(32)] per entry.
+		ring := make([]byte, 0, len(ringMembers)*96)
+		for _, m := range ringMembers {
+			ring = append(ring, m.StealthAddress[:]...)
+			ring = append(ring, m.AmountCommitment[:]...)
+			ring = append(ring, m.BlindedAssetID[:]...)
+		}
+
+		if !crypto.VerifyCLSAGGGX(
+			[32]byte(prefixHash),
+			ring, zc.ringSize,
+			zc.pseudoOutCommitment,
+			zc.pseudoOutAssetID,
+			[32]byte(zcIn.KeyImage),
+			zc.clsagFlatSig,
+		) {
+			return fmt.Errorf("consensus: CLSAG GGX verification failed for input %d", i)
+		}
+	}
+
+	// Parse and verify proofs.
+	proofs, err := parseV2Proofs(tx.Proofs)
+	if err != nil {
+		return fmt.Errorf("consensus: %w", err)
+	}
+
+	// Verify BPP range proof if present.
+	if len(proofs.bppProofBytes) > 0 && len(proofs.bppCommitments) > 0 {
+		if !crypto.VerifyBPP(proofs.bppProofBytes, proofs.bppCommitments) {
+			return fmt.Errorf("consensus: BPP range proof verification failed")
+		}
+	}
+
+	// Verify BGE asset surjection proofs.
+	// One proof per output, with a ring of (pseudo_out_asset_id - output_asset_id)
+	// per ZC input.
+	if len(proofs.bgeProofs) > 0 {
+		if err := verifyBGEProofs(tx, sigEntries, proofs, prefixHash); err != nil {
+			return err
+		}
+	}
+
+	// TODO: Verify balance proof (generic_double_schnorr_sig).
+	// Requires computing commitment_to_zero and a new bridge function.
+
+	return nil
+}
+
+// verifyBGEProofs verifies the BGE asset surjection proofs.
+// There is one BGE proof per Zarcanum output. For each output j, the proof
+// demonstrates that the output's blinded asset ID matches one of the
+// pseudo-out asset IDs from the ZC inputs.
+//
+// The BGE ring for output j has one entry per ZC input i:
+//
+//	ring[i] = mul8(pseudo_out_blinded_asset_id_i) - mul8(output_blinded_asset_id_j)
+//
+// The context hash is the transaction prefix hash (tx_id).
+func verifyBGEProofs(tx *types.Transaction, sigEntries []v2SigEntry,
+	proofs *v2ProofData, prefixHash types.Hash) error {
+
+	// Collect Zarcanum output blinded asset IDs.
+	var outputAssetIDs [][32]byte
+	for _, out := range tx.Vout {
+		if zOut, ok := out.(types.TxOutputZarcanum); ok {
+			outputAssetIDs = append(outputAssetIDs, [32]byte(zOut.BlindedAssetID))
+		}
+	}
+
+	if len(proofs.bgeProofs) != len(outputAssetIDs) {
+		return fmt.Errorf("consensus: BGE proof count %d != Zarcanum output count %d",
+			len(proofs.bgeProofs), len(outputAssetIDs))
+	}
+
+	// Collect pseudo-out asset IDs from ZC signatures and expand to full points.
+	var pseudoOutAssetIDs [][32]byte
+	for _, entry := range sigEntries {
+		if entry.tag == types.SigTypeZC && entry.zcSig != nil {
+			pseudoOutAssetIDs = append(pseudoOutAssetIDs, entry.zcSig.pseudoOutAssetID)
+		}
+	}
+
+	// mul8 all pseudo-out asset IDs (stored premultiplied by 1/8 on chain).
+	mul8PseudoOuts := make([][32]byte, len(pseudoOutAssetIDs))
+	for i, p := range pseudoOutAssetIDs {
+		full, err := crypto.PointMul8(p)
+		if err != nil {
+			return fmt.Errorf("consensus: mul8 pseudo-out asset ID %d: %w", i, err)
+		}
+		mul8PseudoOuts[i] = full
+	}
+
+	// For each output, build the BGE ring and verify.
+	context := [32]byte(prefixHash)
+	for j, outAssetID := range outputAssetIDs {
+		// mul8 the output's blinded asset ID.
+		mul8Out, err := crypto.PointMul8(outAssetID)
+		if err != nil {
+			return fmt.Errorf("consensus: mul8 output asset ID %d: %w", j, err)
+		}
+
+		// ring[i] = mul8(pseudo_out_i) - mul8(output_j)
+		ring := make([][32]byte, len(mul8PseudoOuts))
+		for i, mul8Pseudo := range mul8PseudoOuts {
+			diff, err := crypto.PointSub(mul8Pseudo, mul8Out)
+			if err != nil {
+				return fmt.Errorf("consensus: BGE ring[%d][%d] sub: %w", j, i, err)
+			}
+			ring[i] = diff
+		}
+
+		if !crypto.VerifyBGE(context, ring, proofs.bgeProofs[j]) {
+			return fmt.Errorf("consensus: BGE proof verification failed for output %d", j)
+		}
+	}
+
 	return nil
 }

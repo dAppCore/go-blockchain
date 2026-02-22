@@ -330,6 +330,19 @@ int cn_point_div8(const uint8_t pk[32], uint8_t result[32]) {
     return 0;
 }
 
+int cn_point_sub(const uint8_t a[32], const uint8_t b[32], uint8_t result[32]) {
+    crypto::public_key pa, pb;
+    memcpy(&pa, a, 32);
+    memcpy(&pb, b, 32);
+    crypto::point_t pta(pa);
+    crypto::point_t ptb(pb);
+    crypto::point_t diff = pta - ptb;
+    crypto::public_key dst;
+    diff.to_public_key(dst);
+    memcpy(result, &dst, 32);
+    return 0;
+}
+
 // ── CLSAG (HF4+) ────────────────────────────────────────
 
 // Signature layout for GG: c(32) | r[N*32] | K1(32)
