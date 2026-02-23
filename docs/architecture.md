@@ -310,6 +310,23 @@ detect new blocks. Re-fetches the template when the chain height advances.
 **Testing:** Mock `TemplateProvider` for unit tests. Build-tagged integration
 test against C++ testnet daemon on `localhost:46941`.
 
+### tui/ — Terminal Dashboard
+
+Model library for the blockchain TUI dashboard:
+
+| File | Purpose |
+|------|---------|
+| `node.go` | Node wrapper — polls chain for status snapshots |
+| `status_model.go` | StatusModel (FrameModel) — chain sync header bar |
+| `explorer_model.go` | ExplorerModel (FrameModel) — block list / block detail / tx detail |
+| `keyhints_model.go` | KeyHintsModel (FrameModel) — context-sensitive key hints |
+| `messages.go` | Custom bubbletea message types |
+
+### cmd/chain/ — TUI Binary
+
+Thin wiring: creates Node, StatusModel, ExplorerModel, KeyHintsModel, wires into
+core/cli Frame ("HCF" layout), starts P2P sync in background, runs Frame.
+
 ---
 
 ## Key Types

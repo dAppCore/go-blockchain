@@ -675,3 +675,10 @@ coverage.
 **Future forks are placeholders.** HF3 through HF6 are defined with activation
 height 999,999,999 on mainnet. These heights will be updated when each fork is
 scheduled for activation on the live network.
+
+## TUI Dashboard (Phase 9)
+
+- `tui/` model library: Node wrapper, StatusModel, ExplorerModel, KeyHintsModel
+- `cmd/chain/` standalone binary with P2P sync
+- Uses core/cli Frame (bubbletea + lipgloss)
+- Block explorer with three views: block list, block detail, tx detail
