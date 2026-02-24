@@ -15,6 +15,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -54,8 +55,8 @@ type Account struct {
 	SpendSecretKey types.SecretKey `json:"spend_secret_key"`
 	ViewPublicKey  types.PublicKey `json:"view_public_key"`
 	ViewSecretKey  types.SecretKey `json:"view_secret_key"`
-	CreatedAt      uint64         `json:"created_at"`
-	Flags          uint8          `json:"flags"`
+	CreatedAt      uint64          `json:"created_at"`
+	Flags          uint8           `json:"flags"`
 }
 
 // GenerateAccount creates a new account with random spend keys and a
@@ -162,7 +163,7 @@ func LoadAccount(s *store.Store, password string) (*Account, error) {
 	}
 
 	if len(blob) < saltLen+nonceLen+1 {
-		return nil, fmt.Errorf("wallet: account data too short")
+		return nil, errors.New("wallet: account data too short")
 	}
 
 	salt := blob[:saltLen]

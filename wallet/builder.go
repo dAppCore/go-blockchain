@@ -11,6 +11,7 @@ package wallet
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -170,7 +171,7 @@ func (b *V1Builder) buildInput(src *Transfer) (types.TxInputToKey, inputMeta, er
 		}
 	}
 	if realIdx < 0 {
-		return types.TxInputToKey{}, inputMeta{}, fmt.Errorf("real output not found in ring")
+		return types.TxInputToKey{}, inputMeta{}, errors.New("real output not found in ring")
 	}
 
 	// Build key offsets and public key list.

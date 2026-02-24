@@ -7,6 +7,7 @@ package chain
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"forge.lthn.ai/core/go-blockchain/config"
@@ -31,7 +32,7 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	// Genesis block: prev_id must be zero.
 	if expectedHeight == 0 {
 		if !b.PrevID.IsZero() {
-			return fmt.Errorf("validate: genesis block has non-zero prev_id")
+			return errors.New("validate: genesis block has non-zero prev_id")
 		}
 		return nil
 	}

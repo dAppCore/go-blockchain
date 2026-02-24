@@ -6,6 +6,7 @@
 package consensus
 
 import (
+	"errors"
 	"fmt"
 	"math/bits"
 
@@ -55,7 +56,7 @@ func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 
 	// Since hi1 should be 0 for reasonable block sizes, simplify:
 	if hi1 > 0 {
-		return 0, fmt.Errorf("consensus: reward overflow")
+		return 0, errors.New("consensus: reward overflow")
 	}
 	hi2, lo2 := bits.Mul64(baseReward, lo1)
 

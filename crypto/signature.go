@@ -8,7 +8,7 @@ package crypto
 import "C"
 
 import (
-	"fmt"
+	"errors"
 	"unsafe"
 )
 
@@ -22,7 +22,7 @@ func GenerateSignature(hash [32]byte, pub [32]byte, sec [32]byte) ([64]byte, err
 		(*C.uint8_t)(unsafe.Pointer(&sig[0])),
 	)
 	if rc != 0 {
-		return sig, fmt.Errorf("crypto: generate_signature failed")
+		return sig, errors.New("crypto: generate_signature failed")
 	}
 	return sig, nil
 }
@@ -60,7 +60,7 @@ func GenerateRingSignature(hash [32]byte, image [32]byte, pubs [][32]byte,
 		(*C.uint8_t)(unsafe.Pointer(&flatSigs[0])),
 	)
 	if rc != 0 {
-		return nil, fmt.Errorf("crypto: generate_ring_signature failed")
+		return nil, errors.New("crypto: generate_ring_signature failed")
 	}
 
 	sigs := make([][64]byte, n)

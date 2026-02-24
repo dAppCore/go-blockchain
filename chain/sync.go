@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -413,7 +414,7 @@ var aggregatedRE = regexp.MustCompile(`"AGGREGATED"\s*:\s*\{([^}]+)\}`)
 func parseBlockHeader(objectInJSON string) (*types.BlockHeader, error) {
 	m := aggregatedRE.FindStringSubmatch(objectInJSON)
 	if m == nil {
-		return nil, fmt.Errorf("AGGREGATED section not found in object_in_json")
+		return nil, errors.New("AGGREGATED section not found in object_in_json")
 	}
 
 	var hj blockHeaderJSON

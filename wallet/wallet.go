@@ -10,15 +10,16 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 
-	store "forge.lthn.ai/core/go-store"
 	"forge.lthn.ai/core/go-blockchain/chain"
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
 	"forge.lthn.ai/core/go-blockchain/wire"
+	store "forge.lthn.ai/core/go-store"
 )
 
 const (
@@ -165,7 +166,7 @@ func (w *Wallet) Balance() (confirmed, locked uint64, err error) {
 // Send constructs and submits a transaction.
 func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transaction, error) {
 	if w.builder == nil || w.client == nil {
-		return nil, fmt.Errorf("wallet: no RPC client configured")
+		return nil, errors.New("wallet: no RPC client configured")
 	}
 
 	chainHeight, err := w.chain.Height()
