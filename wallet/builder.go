@@ -164,13 +164,9 @@ func (b *V1Builder) buildInput(src *Transfer) (types.TxInputToKey, inputMeta, er
 	})
 
 	// Find real index after sorting.
-	realIdx := -1
-	for j, m := range ring {
-		if m.GlobalIndex == src.GlobalIndex {
-			realIdx = j
-			break
-		}
-	}
+	realIdx := slices.IndexFunc(ring, func(m RingMember) bool {
+		return m.GlobalIndex == src.GlobalIndex
+	})
 	if realIdx < 0 {
 		return types.TxInputToKey{}, inputMeta{}, errors.New("real output not found in ring")
 	}
