@@ -676,9 +676,132 @@ coverage.
 height 999,999,999 on mainnet. These heights will be updated when each fork is
 scheduled for activation on the live network.
 
+## Difficulty Computation
+
+Added local LWMA difficulty computation to the P2P sync pipeline. Previously,
+blocks fetched via P2P had `difficulty=0` hardcoded, causing
+`consensus.CheckDifficulty()` to skip validation and cumulative difficulty
+tracking to remain zero.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `config/config.go` | Added `BlockTarget = 120` constant (seconds) |
+| `chain/difficulty.go` | `Chain.NextDifficulty(height)` — reads up to 735 blocks of history, feeds `difficulty.NextDifficulty()` |
+| `chain/p2p_sync.go` | Replaced `difficulty=0` with `c.NextDifficulty(blockHeight)` |
+| `difficulty/difficulty.go` | Fixed LWMA algorithm to be hardfork-aware (target parameter) |
+
+### Key findings
+
+- **Lookback window.** The LWMA algorithm examines up to `BlocksCount` (735)
+  previous blocks for timestamps and cumulative difficulties. At chain heights
+  below 735, the full available history is used.
+
+- **Genesis case.** Height 0 returns difficulty 1 (no history to compute from).
+
+- **Validated against C++ daemon.** P2P-computed difficulties match
+  RPC-provided values for every block on testnet.
+
+---
+
+## V2+ Zarcanum Consensus
+
+Commits: `2026-02-22`
+
+Extended the consensus engine to handle v2+ (Zarcanum/HF4+) signature and
+proof verification. This covers the post-HF4 coinbase transactions with
+Bulletproofs++ range proofs.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `consensus/verify.go` | Added `verifyV2Signatures()` with CLSAG and proof dispatch |
+| `consensus/integration_test.go` | V2 coinbase verification against testnet block 101 |
+
+### Key findings
+
+- **BPP verified with real data.** `cn_bpp_verify` (Bulletproofs++, 1 delta,
+  `bpp_crypto_trait_ZC_out`) passes against a real testnet coinbase from
+  block 101 (post-HF4).
+
+- **BPPE, BGE, Zarcanum remain wired but untested.** These require spending
+  transaction data (not just coinbase) which does not yet exist on testnet.
+
+---
+
 ## TUI Dashboard (Phase 9)
 
-- `tui/` model library: Node wrapper, StatusModel, ExplorerModel, KeyHintsModel
-- `cmd/chain/` standalone binary with P2P sync
-- Uses core/cli Frame (bubbletea + lipgloss)
-- Block explorer with three views: block list, block detail, tx detail
+Commits: `2026-02-22`..`2026-02-23`
+
+Added a terminal dashboard for the Lethean Go node, rendered through the
+core/cli Frame (bubbletea + lipgloss) layout system. Runs as a standalone
+binary in `cmd/chain/`.
+
+### Architecture
+
+Model library (`tui/`) with a thin `cmd/chain/main.go` wiring layer (~175
+lines). The binary starts P2P sync in a background goroutine and runs the
+Frame TUI in the main goroutine.
+
+**Layout:** `"HCF"` — header (StatusModel), content (ExplorerModel), footer
+(KeyHintsModel).
+
+```
+┌─────────────────────────────────────────────────┐
+│ Header: StatusModel                             │
+│ ⛓ height 6,312 │ sync 100% │ diff 1.2M │ peers │
+├─────────────────────────────────────────────────┤
+│ Content: ExplorerModel                          │
+│ Block list / block detail / tx detail views     │
+├─────────────────────────────────────────────────┤
+│ Footer: KeyHintsModel                           │
+│ ↑/↓ select │ enter view │ esc back │ q quit    │
+└─────────────────────────────────────────────────┘
+```
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `tui/messages.go` | Custom bubbletea message types (`NodeStatusMsg`) |
+| `tui/node.go` | Node wrapper — polls chain state every 2s via bubbletea commands |
+| `tui/node_test.go` | Node wrapper tests |
+| `tui/status_model.go` | `StatusModel` — chain sync header (height, difficulty, peers) |
+| `tui/status_model_test.go` | Status model tests |
+| `tui/explorer_model.go` | `ExplorerModel` — block list, block detail, tx detail views |
+| `tui/explorer_model_test.go` | Explorer model navigation and view tests |
+| `tui/keyhints_model.go` | `KeyHintsModel` — context-sensitive footer key hints |
+| `tui/keyhints_model_test.go` | Key hints tests |
+| `cmd/chain/main.go` | Binary wiring: P2P sync goroutine + Frame TUI |
+
+### Data flow
+
+1. `cmd/chain/main.go` opens SQLite store, creates `chain.Chain`, starts P2P
+   sync loop in a goroutine (Levin handshake + block fetch, retry on failure).
+2. `Node` wrapper reads chain height, tip hash, difficulty, and timestamp via
+   bubbletea `Tick` commands every 2 seconds.
+3. `StatusModel` renders the header from `NodeStatusMsg` snapshots.
+4. `ExplorerModel` queries `chain.Chain` directly for block lists and detail
+   views (read-only SQLite).
+5. `KeyHintsModel` renders per-view navigation hints.
+
+### Navigation
+
+| View | Key | Action |
+|------|-----|--------|
+| Block list | `↑/↓` | Move cursor |
+| Block list | `PgUp/PgDn` | Scroll by page |
+| Block list | `Home` | Jump to chain tip |
+| Block list | `Enter` | Open block detail |
+| Block detail | `↑/↓` | Select transaction |
+| Block detail | `Enter` | Open tx detail |
+| Block detail | `Esc` | Back to block list |
+| Tx detail | `Esc` | Back to block detail |
+
+### Dependencies added
+
+- `forge.lthn.ai/core/cli` — Frame, FrameModel interface
+- `github.com/charmbracelet/bubbletea` (transitive via core/cli)
+- `github.com/charmbracelet/lipgloss` (transitive via core/cli)
