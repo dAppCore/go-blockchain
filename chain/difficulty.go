@@ -28,10 +28,7 @@ func (c *Chain) NextDifficulty(height uint64, forks []config.HardFork) (uint64, 
 	// LWMA needs N+1 entries (N solve-time intervals).
 	// Start from height 1 — genesis is excluded from the difficulty window.
 	maxLookback := difficulty.LWMAWindow + 1
-	lookback := height // height excludes genesis since we start from 1
-	if lookback > maxLookback {
-		lookback = maxLookback
-	}
+	lookback := min(height, maxLookback) // height excludes genesis since we start from 1
 
 	// Start from max(1, height - lookback) to exclude genesis.
 	startHeight := height - lookback

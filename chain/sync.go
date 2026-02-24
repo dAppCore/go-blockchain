@@ -67,10 +67,7 @@ func (c *Chain) Sync(ctx context.Context, client *rpc.Client, opts SyncOptions) 
 		}
 
 		remaining := remoteHeight - localHeight
-		batch := uint64(syncBatchSize)
-		if remaining < batch {
-			batch = remaining
-		}
+		batch := min(remaining, uint64(syncBatchSize))
 
 		blocks, err := client.GetBlocksDetails(localHeight, batch)
 		if err != nil {
