@@ -11,9 +11,10 @@ package wallet
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/crypto"
@@ -158,8 +159,8 @@ func (b *V1Builder) buildInput(src *Transfer) (types.TxInputToKey, inputMeta, er
 	})
 
 	// Sort by global index (consensus rule).
-	sort.Slice(ring, func(a, b int) bool {
-		return ring[a].GlobalIndex < ring[b].GlobalIndex
+	slices.SortFunc(ring, func(a, b RingMember) int {
+		return cmp.Compare(a.GlobalIndex, b.GlobalIndex)
 	})
 
 	// Find real index after sorting.

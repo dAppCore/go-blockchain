@@ -10,9 +10,10 @@
 package wallet
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 
 	"forge.lthn.ai/core/go-blockchain/chain"
@@ -193,8 +194,8 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 			spendable = append(spendable, tr)
 		}
 	}
-	sort.Slice(spendable, func(i, j int) bool {
-		return spendable[i].Amount > spendable[j].Amount
+	slices.SortFunc(spendable, func(a, b Transfer) int {
+		return cmp.Compare(b.Amount, a.Amount) // descending
 	})
 
 	var selected []Transfer
