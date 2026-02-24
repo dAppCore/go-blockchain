@@ -8,10 +8,11 @@
 package chain
 
 import (
+	"errors"
 	"fmt"
 
-	store "forge.lthn.ai/core/go-store"
 	"forge.lthn.ai/core/go-blockchain/types"
+	store "forge.lthn.ai/core/go-store"
 )
 
 // Chain manages blockchain storage and indexing.
@@ -41,7 +42,7 @@ func (c *Chain) TopBlock() (*types.Block, *BlockMeta, error) {
 		return nil, nil, err
 	}
 	if h == 0 {
-		return nil, nil, fmt.Errorf("chain: no blocks stored")
+		return nil, nil, errors.New("chain: no blocks stored")
 	}
 	return c.GetBlockByHeight(h - 1)
 }

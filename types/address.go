@@ -170,7 +170,7 @@ func base58Encode(data []byte) string {
 	fullBlocks := len(data) / 8
 	lastBlockSize := len(data) % 8
 
-	for i := 0; i < fullBlocks; i++ {
+	for i := range fullBlocks {
 		block := data[i*8 : (i+1)*8]
 		encoded := encodeBlock(block, 11)
 		result = append(result, encoded...)
@@ -227,7 +227,7 @@ func base58Decode(s string) ([]byte, error) {
 
 	var result []byte
 
-	for i := 0; i < fullBlocks; i++ {
+	for i := range fullBlocks {
 		blockStr := s[i*11 : (i+1)*11]
 		decoded, err := decodeBlock(blockStr, 8)
 		if err != nil {

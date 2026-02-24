@@ -7,7 +7,7 @@ package consensus
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/types"
@@ -50,7 +50,7 @@ func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, rec
 func medianTimestamp(timestamps []uint64) uint64 {
 	sorted := make([]uint64, len(timestamps))
 	copy(sorted, timestamps)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	slices.Sort(sorted)
 
 	n := len(sorted)
 	if n == 0 {

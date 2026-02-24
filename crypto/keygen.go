@@ -8,6 +8,7 @@ package crypto
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 )
@@ -51,7 +52,7 @@ func GenerateKeyDerivation(pub [32]byte, sec [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&d[0])),
 	)
 	if rc != 0 {
-		return d, fmt.Errorf("crypto: generate_key_derivation failed")
+		return d, errors.New("crypto: generate_key_derivation failed")
 	}
 	return d, nil
 }
@@ -66,7 +67,7 @@ func DerivePublicKey(derivation [32]byte, index uint64, base [32]byte) ([32]byte
 		(*C.uint8_t)(unsafe.Pointer(&derived[0])),
 	)
 	if rc != 0 {
-		return derived, fmt.Errorf("crypto: derive_public_key failed")
+		return derived, errors.New("crypto: derive_public_key failed")
 	}
 	return derived, nil
 }
@@ -81,7 +82,7 @@ func DeriveSecretKey(derivation [32]byte, index uint64, base [32]byte) ([32]byte
 		(*C.uint8_t)(unsafe.Pointer(&derived[0])),
 	)
 	if rc != 0 {
-		return derived, fmt.Errorf("crypto: derive_secret_key failed")
+		return derived, errors.New("crypto: derive_secret_key failed")
 	}
 	return derived, nil
 }

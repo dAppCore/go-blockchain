@@ -224,22 +224,13 @@ func (m *ExplorerModel) viewBlockList() string {
 	b.WriteByte('\n')
 
 	// Visible window centred on cursor.
-	visibleRows := m.height - 2 // header + bottom margin
-	if visibleRows < 1 {
-		visibleRows = 1
-	}
+	visibleRows := max(m.height-2, 1) // header + bottom margin
 
-	start := m.cursor - visibleRows/2
-	if start < 0 {
-		start = 0
-	}
+	start := max(m.cursor-visibleRows/2, 0)
 	end := start + visibleRows
 	if end > len(m.rows) {
 		end = len(m.rows)
-		start = end - visibleRows
-		if start < 0 {
-			start = 0
-		}
+		start = max(end-visibleRows, 0)
 	}
 
 	for i := start; i < end; i++ {
@@ -356,13 +347,10 @@ func (m *ExplorerModel) loadBlocks() {
 	}
 
 	// Show up to 1000 most recent blocks.
-	count := int(height)
-	if count > 1000 {
-		count = 1000
-	}
+	count := min(int(height), 1000)
 
 	rows := make([]blockRow, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		h := height - 1 - uint64(i)
 		blk, meta, err := m.chain.GetBlockByHeight(h)
 		if err != nil {
@@ -381,9 +369,5 @@ func (m *ExplorerModel) loadBlocks() {
 
 // pageSize returns the number of rows to jump for page up/down.
 func pageSize(height int) int {
-	n := height - 3
-	if n < 1 {
-		n = 1
-	}
-	return n
+	return max(height-3, 1)
 }

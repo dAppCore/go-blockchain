@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -43,12 +44,12 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 
 	expected := checksumIndex(words[:24])
 	if words[24] != words[expected] {
-		return key, fmt.Errorf("wallet: mnemonic checksum failed")
+		return key, errors.New("wallet: mnemonic checksum failed")
 	}
 
 	n := uint32(numWords)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		w1, ok1 := wordIndex[words[i*3]]
 		w2, ok2 := wordIndex[words[i*3+1]]
 		w3, ok3 := wordIndex[words[i*3+2]]

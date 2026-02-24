@@ -55,7 +55,7 @@ func (d *Decoder) ReadVarint() uint64 {
 	}
 	var val uint64
 	var shift uint
-	for i := 0; i < MaxVarintLen; i++ {
+	for range MaxVarintLen {
 		_, d.err = io.ReadFull(d.r, d.buf[:1])
 		if d.err != nil {
 			return 0

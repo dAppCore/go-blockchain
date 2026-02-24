@@ -6,6 +6,7 @@
 package consensus
 
 import (
+	"errors"
 	"fmt"
 
 	"forge.lthn.ai/core/go-blockchain/config"
@@ -222,7 +223,7 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 	// Verify BPP range proof if present.
 	if len(proofs.bppProofBytes) > 0 && len(proofs.bppCommitments) > 0 {
 		if !crypto.VerifyBPP(proofs.bppProofBytes, proofs.bppCommitments) {
-			return fmt.Errorf("consensus: BPP range proof verification failed")
+			return errors.New("consensus: BPP range proof verification failed")
 		}
 	}
 
