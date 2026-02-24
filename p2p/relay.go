@@ -252,7 +252,7 @@ func (r *ResponseChainEntry) Decode(data []byte) error {
 func splitHashes(blob []byte, size int) [][]byte {
 	n := len(blob) / size
 	out := make([][]byte, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		out[i] = blob[i*size : (i+1)*size]
 	}
 	return out

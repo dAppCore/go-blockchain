@@ -48,7 +48,7 @@ func (c *Chain) NextDifficulty(height uint64, forks []config.HardFork) (uint64, 
 	timestamps := make([]uint64, count)
 	cumulDiffs := make([]*big.Int, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		meta, err := c.getBlockMeta(startHeight + uint64(i))
 		if err != nil {
 			// Fewer blocks than expected — use what we have.

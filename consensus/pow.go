@@ -27,7 +27,7 @@ func CheckDifficulty(hash types.Hash, difficulty uint64) bool {
 	// Convert hash to big.Int (little-endian as per CryptoNote convention).
 	// Reverse to big-endian for big.Int.
 	var be [32]byte
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		be[i] = hash[31-i]
 	}
 	hashInt := new(big.Int).SetBytes(be[:])

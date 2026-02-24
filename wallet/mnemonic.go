@@ -49,7 +49,7 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 
 	n := uint32(numWords)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		w1, ok1 := wordIndex[words[i*3]]
 		w2, ok2 := wordIndex[words[i*3+1]]
 		w3, ok3 := wordIndex[words[i*3+2]]

@@ -79,7 +79,7 @@ type PeerlistEntry struct {
 func DecodePeerlist(blob []byte) []PeerlistEntry {
 	n := len(blob) / PeerlistEntrySize
 	entries := make([]PeerlistEntry, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		off := i * PeerlistEntrySize
 		entries[i] = PeerlistEntry{
 			IP:       binary.LittleEndian.Uint32(blob[off : off+4]),

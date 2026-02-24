@@ -362,7 +362,7 @@ func (m *ExplorerModel) loadBlocks() {
 	}
 
 	rows := make([]blockRow, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		h := height - 1 - uint64(i)
 		blk, meta, err := m.chain.GetBlockByHeight(h)
 		if err != nil {
