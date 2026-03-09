@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"forge.lthn.ai/core/go-blockchain/chain"
@@ -108,9 +109,16 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 	d.SetReady(true)
 	log.Println("Sync daemon started.")
 
-	go syncLoop(ctx, c, &cfg, forks, seed)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		syncLoop(ctx, c, &cfg, forks, seed)
+	}()
 
-	return d.Run(ctx)
+	err = d.Run(ctx)
+	wg.Wait() // Wait for syncLoop to finish before closing store.
+	return err
 }
 
 func stopSyncDaemon(dataDir string) error {
