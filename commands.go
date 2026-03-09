@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AddChainCommands registers the "chain" command group with explorer,
-// sync, and mine subcommands.
+// AddChainCommands registers the "chain" command group with explorer
+// and sync subcommands.
 func AddChainCommands(root *cobra.Command) {
 	var (
 		dataDir string
