@@ -1,0 +1,15 @@
+project: core-chain
+binary: core-chain
+main: ./cmd/core-chain
+
+targets:
+  - os: darwin
+    arch: arm64
+  - os: linux
+    arch: amd64
+
+ldflags:
+  - -s -w
+  - -X forge.lthn.ai/core/cli/pkg/cli.AppVersion={{.Version}}
+  - -X forge.lthn.ai/core/cli/pkg/cli.BuildCommit={{.Commit}}
+  - -X forge.lthn.ai/core/cli/pkg/cli.BuildDate={{.Date}}
