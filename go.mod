@@ -56,12 +56,12 @@ require (
 	modernc.org/sqlite v1.46.1 // indirect
 )
 
-replace forge.lthn.ai/core/cli => /home/claude/Code/core/cli
+replace forge.lthn.ai/core/cli => /Users/snider/Code/core/cli
 
-replace forge.lthn.ai/core/go => /home/claude/Code/core/go
+replace forge.lthn.ai/core/go => /Users/snider/Code/host-uk/core
 
-replace forge.lthn.ai/core/go-crypt => /home/claude/Code/core/go-crypt
+replace forge.lthn.ai/core/go-crypt => /Users/snider/Code/core/go-crypt
 
-replace forge.lthn.ai/core/go-p2p => /home/claude/Code/core/go-p2p
+replace forge.lthn.ai/core/go-p2p => /Users/snider/Code/core/go-p2p
 
-replace forge.lthn.ai/core/go-store => /home/claude/Code/core/go-store
+replace forge.lthn.ai/core/go-store => /Users/snider/Code/core/go-store
