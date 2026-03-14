@@ -3,8 +3,8 @@ module forge.lthn.ai/core/go-blockchain
 go 1.26.0
 
 require (
-	forge.lthn.ai/core/cli v0.1.0
-	forge.lthn.ai/core/go-p2p v0.0.0-00010101000000-000000000000
+	forge.lthn.ai/core/cli v0.3.0
+	forge.lthn.ai/core/go-p2p v0.1.2
 	forge.lthn.ai/core/go-process v0.1.2
 	forge.lthn.ai/core/go-store v0.1.3
 	github.com/charmbracelet/bubbletea v1.3.10
@@ -14,8 +14,12 @@ require (
 )
 
 require (
-	forge.lthn.ai/core/go v0.1.0 // indirect
+	forge.lthn.ai/core/go v0.3.0 // indirect
 	forge.lthn.ai/core/go-crypt v0.1.0 // indirect
+	forge.lthn.ai/core/go-i18n v0.1.0 // indirect
+	forge.lthn.ai/core/go-inference v0.0.2 // indirect
+	forge.lthn.ai/core/go-io v0.0.5 // indirect
+	forge.lthn.ai/core/go-log v0.0.1 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.2 // indirect
@@ -24,7 +28,6 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
-	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -32,7 +35,6 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -56,15 +58,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.46.1 // indirect
 )
-
-replace forge.lthn.ai/core/cli => /Users/snider/Code/core/cli
-
-replace forge.lthn.ai/core/go => /Users/snider/Code/host-uk/core
-
-replace forge.lthn.ai/core/go-crypt => /Users/snider/Code/core/go-crypt
-
-replace forge.lthn.ai/core/go-p2p => /Users/snider/Code/core/go-p2p
-
-replace forge.lthn.ai/core/go-process => /Users/snider/Code/core/go-process
-
-replace forge.lthn.ai/core/go-store => /Users/snider/Code/core/go-store
