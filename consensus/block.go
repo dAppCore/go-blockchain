@@ -125,12 +125,48 @@ func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSi
 	return nil
 }
 
+// expectedBlockMajorVersion returns the expected block major version for a
+// given height and fork schedule. This maps hardfork eras to block versions:
+//
+//	HF0 (genesis) -> 0
+//	HF1           -> 1
+//	HF3           -> 2
+//	HF4+          -> 3
+func expectedBlockMajorVersion(forks []config.HardFork, height uint64) uint8 {
+	if config.IsHardForkActive(forks, config.HF4Zarcanum, height) {
+		return config.CurrentBlockMajorVersion // 3
+	}
+	if config.IsHardForkActive(forks, config.HF3, height) {
+		return config.HF3BlockMajorVersion // 2
+	}
+	if config.IsHardForkActive(forks, config.HF1, height) {
+		return config.HF1BlockMajorVersion // 1
+	}
+	return config.BlockMajorVersionInitial // 0
+}
+
+// checkBlockVersion validates that the block's major version matches
+// what is expected at the given height in the fork schedule.
+func checkBlockVersion(blk *types.Block, forks []config.HardFork, height uint64) error {
+	expected := expectedBlockMajorVersion(forks, height)
+	if blk.MajorVersion != expected {
+		return fmt.Errorf("%w: got %d, want %d at height %d",
+			ErrBlockMajorVersion, blk.MajorVersion, expected, height)
+	}
+	return nil
+}
+
 // ValidateBlock performs full consensus validation on a block. It checks
-// the timestamp, miner transaction structure, and reward. Transaction
-// semantic validation for regular transactions should be done separately
-// via ValidateTransaction for each tx in the block.
+// the block version, timestamp, miner transaction structure, and reward.
+// Transaction semantic validation for regular transactions should be done
+// separately via ValidateTransaction for each tx in the block.
 func ValidateBlock(blk *types.Block, height, blockSize, medianSize, totalFees, adjustedTime uint64,
 	recentTimestamps []uint64, forks []config.HardFork) error {
+
+	// Block major version check.
+	if err := checkBlockVersion(blk, forks, height); err != nil {
+		return err
+	}
 
 	// Timestamp validation.
 	if err := CheckTimestamp(blk.Timestamp, blk.Flags, adjustedTime, recentTimestamps); err != nil {

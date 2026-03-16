@@ -156,7 +156,7 @@ func TestValidateBlock_Good(t *testing.T) {
 	height := uint64(100)
 	blk := &types.Block{
 		BlockHeader: types.BlockHeader{
-			MajorVersion: 1,
+			MajorVersion: 0, // pre-HF1 on mainnet
 			Timestamp:    now,
 			Flags:        0, // PoW
 		},
@@ -172,7 +172,7 @@ func TestValidateBlock_Bad_Timestamp(t *testing.T) {
 	height := uint64(100)
 	blk := &types.Block{
 		BlockHeader: types.BlockHeader{
-			MajorVersion: 1,
+			MajorVersion: 0, // pre-HF1 on mainnet
 			Timestamp:    now + config.BlockFutureTimeLimit + 100,
 			Flags:        0,
 		},
@@ -188,7 +188,7 @@ func TestValidateBlock_Bad_MinerTx(t *testing.T) {
 	height := uint64(100)
 	blk := &types.Block{
 		BlockHeader: types.BlockHeader{
-			MajorVersion: 1,
+			MajorVersion: 0, // pre-HF1 on mainnet
 			Timestamp:    now,
 			Flags:        0,
 		},
@@ -197,4 +197,103 @@ func TestValidateBlock_Bad_MinerTx(t *testing.T) {
 
 	err := ValidateBlock(blk, height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
 	assert.ErrorIs(t, err, ErrMinerTxHeight)
+}
+
+// --- Block major version tests (Task 10) ---
+
+func TestValidateBlock_MajorVersion_Good(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	tests := []struct {
+		name    string
+		forks   []config.HardFork
+		height  uint64
+		version uint8
+	}{
+		// Mainnet: pre-HF1 expects version 0.
+		{name: "mainnet_preHF1", forks: config.MainnetForks, height: 5000, version: 0},
+		// Mainnet: post-HF1 expects version 1.
+		{name: "mainnet_postHF1", forks: config.MainnetForks, height: 20000, version: 1},
+		// Testnet: HF1 active from genesis, HF3 active from genesis, expects version 2.
+		{name: "testnet_genesis", forks: config.TestnetForks, height: 5, version: 2},
+		// Testnet: post-HF4 (height > 100) expects version 3.
+		{name: "testnet_postHF4", forks: config.TestnetForks, height: 200, version: 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := &types.Block{
+				BlockHeader: types.BlockHeader{
+					MajorVersion: tt.version,
+					Timestamp:    now,
+					Flags:        0,
+				},
+				MinerTx: *validMinerTx(tt.height),
+			}
+			err := ValidateBlock(blk, tt.height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, tt.forks)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidateBlock_MajorVersion_Bad(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	tests := []struct {
+		name    string
+		forks   []config.HardFork
+		height  uint64
+		version uint8
+	}{
+		// Mainnet: pre-HF1 with wrong version 1.
+		{name: "mainnet_preHF1_v1", forks: config.MainnetForks, height: 5000, version: 1},
+		// Mainnet: post-HF1 with wrong version 0.
+		{name: "mainnet_postHF1_v0", forks: config.MainnetForks, height: 20000, version: 0},
+		// Mainnet: post-HF1 with wrong version 2.
+		{name: "mainnet_postHF1_v2", forks: config.MainnetForks, height: 20000, version: 2},
+		// Testnet: post-HF4 with wrong version 2.
+		{name: "testnet_postHF4_v2", forks: config.TestnetForks, height: 200, version: 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := &types.Block{
+				BlockHeader: types.BlockHeader{
+					MajorVersion: tt.version,
+					Timestamp:    now,
+					Flags:        0,
+				},
+				MinerTx: *validMinerTx(tt.height),
+			}
+			err := ValidateBlock(blk, tt.height, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, tt.forks)
+			assert.ErrorIs(t, err, ErrBlockMajorVersion)
+		})
+	}
+}
+
+func TestValidateBlock_MajorVersion_Ugly(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	// Boundary test: exactly at HF1 activation height (10080) on mainnet.
+	// HF1 activates at heights strictly greater than 10080, so at height
+	// 10080 itself HF1 is NOT active; version must be 0.
+	blk := &types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 0,
+			Timestamp:    now,
+			Flags:        0,
+		},
+		MinerTx: *validMinerTx(10080),
+	}
+	err := ValidateBlock(blk, 10080, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
+	require.NoError(t, err)
+
+	// At height 10081, HF1 IS active; version must be 1.
+	blk2 := &types.Block{
+		BlockHeader: types.BlockHeader{
+			MajorVersion: 1,
+			Timestamp:    now,
+			Flags:        0,
+		},
+		MinerTx: *validMinerTx(10081),
+	}
+	err = ValidateBlock(blk2, 10081, 1000, config.BlockGrantedFullRewardZone, 0, now, nil, config.MainnetForks)
+	require.NoError(t, err)
 }
