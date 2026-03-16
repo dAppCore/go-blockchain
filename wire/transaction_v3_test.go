@@ -137,3 +137,123 @@ func TestVariantVectorWithTag40_Good(t *testing.T) {
 		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(raw))
 	}
 }
+
+func buildAssetOperationProofBlob() []byte {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	// ver: uint8 = 1
+	enc.WriteUint8(1)
+	// gss: generic_schnorr_sig_s — 2 scalars (s, c) = 64 bytes
+	enc.WriteBytes(make([]byte, 64))
+	// asset_id: 32-byte hash
+	enc.WriteBytes(bytes.Repeat([]byte{0xCD}, 32))
+	// etc: vector<uint8> (empty)
+	enc.WriteVarint(0)
+
+	return buf.Bytes()
+}
+
+func TestReadAssetOperationProof_Good(t *testing.T) {
+	blob := buildAssetOperationProofBlob()
+	dec := NewDecoder(bytes.NewReader(blob))
+	got := readAssetOperationProof(dec)
+	if dec.Err() != nil {
+		t.Fatalf("readAssetOperationProof failed: %v", dec.Err())
+	}
+	if !bytes.Equal(got, blob) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(blob))
+	}
+}
+
+func TestReadAssetOperationProof_Bad(t *testing.T) {
+	dec := NewDecoder(bytes.NewReader([]byte{1}))
+	_ = readAssetOperationProof(dec)
+	if dec.Err() == nil {
+		t.Fatal("expected error for truncated asset operation proof")
+	}
+}
+
+func buildAssetOperationOwnershipProofBlob() []byte {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	// ver: uint8 = 1
+	enc.WriteUint8(1)
+	// gss: generic_schnorr_sig_s — 2 scalars = 64 bytes
+	enc.WriteBytes(make([]byte, 64))
+	// etc: vector<uint8> (empty)
+	enc.WriteVarint(0)
+
+	return buf.Bytes()
+}
+
+func TestReadAssetOperationOwnershipProof_Good(t *testing.T) {
+	blob := buildAssetOperationOwnershipProofBlob()
+	dec := NewDecoder(bytes.NewReader(blob))
+	got := readAssetOperationOwnershipProof(dec)
+	if dec.Err() != nil {
+		t.Fatalf("readAssetOperationOwnershipProof failed: %v", dec.Err())
+	}
+	if !bytes.Equal(got, blob) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(blob))
+	}
+}
+
+func buildAssetOperationOwnershipProofETHBlob() []byte {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	// ver: uint8 = 1
+	enc.WriteUint8(1)
+	// eth_sig: 65 bytes (r=32 + s=32 + v=1)
+	enc.WriteBytes(make([]byte, 65))
+	// etc: vector<uint8> (empty)
+	enc.WriteVarint(0)
+
+	return buf.Bytes()
+}
+
+func TestReadAssetOperationOwnershipProofETH_Good(t *testing.T) {
+	blob := buildAssetOperationOwnershipProofETHBlob()
+	dec := NewDecoder(bytes.NewReader(blob))
+	got := readAssetOperationOwnershipProofETH(dec)
+	if dec.Err() != nil {
+		t.Fatalf("readAssetOperationOwnershipProofETH failed: %v", dec.Err())
+	}
+	if !bytes.Equal(got, blob) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(blob))
+	}
+}
+
+func TestVariantVectorWithProofTags_Good(t *testing.T) {
+	// Build a variant vector with 3 elements: tags 49, 50, 51.
+	proofBlob := buildAssetOperationProofBlob()
+	ownershipBlob := buildAssetOperationOwnershipProofBlob()
+	ethBlob := buildAssetOperationOwnershipProofETHBlob()
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	// count = 3
+	enc.WriteVarint(3)
+	// tag 49
+	enc.WriteUint8(tagAssetOperationProof)
+	enc.WriteBytes(proofBlob)
+	// tag 50
+	enc.WriteUint8(tagAssetOperationOwnershipProof)
+	enc.WriteBytes(ownershipBlob)
+	// tag 51
+	enc.WriteUint8(tagAssetOperationOwnershipProofETH)
+	enc.WriteBytes(ethBlob)
+
+	raw := buf.Bytes()
+
+	dec := NewDecoder(bytes.NewReader(raw))
+	got := decodeRawVariantVector(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decodeRawVariantVector with proof tags failed: %v", dec.Err())
+	}
+	if !bytes.Equal(got, raw) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(raw))
+	}
+}

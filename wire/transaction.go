@@ -539,6 +539,11 @@ const (
 	// Asset descriptor operation (HF5).
 	tagAssetDescriptorOperation = 40 // asset_descriptor_operation
 
+	// Asset operation proof tags (HF5).
+	tagAssetOperationProof             = 49 // asset_operation_proof
+	tagAssetOperationOwnershipProof    = 50 // asset_operation_ownership_proof
+	tagAssetOperationOwnershipProofETH = 51 // asset_operation_ownership_proof_eth (Ethereum sig)
+
 	// Signature variant tags (signature_v).
 	tagNLSAGSig    = 42 // NLSAG_sig — vector<signature>
 	tagZCSig       = 43 // ZC_sig — 2 public_keys + CLSAG_GGX
@@ -610,6 +615,14 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 	// Asset descriptor operation (HF5)
 	case tagAssetDescriptorOperation:
 		return readAssetDescriptorOperation(dec)
+
+	// Asset operation proof variants (HF5)
+	case tagAssetOperationProof:
+		return readAssetOperationProof(dec)
+	case tagAssetOperationOwnershipProof:
+		return readAssetOperationOwnershipProof(dec)
+	case tagAssetOperationOwnershipProofETH:
+		return readAssetOperationOwnershipProofETH(dec)
 
 	// Signature variants
 	case tagNLSAGSig: // vector<signature> (64 bytes each)
@@ -928,6 +941,109 @@ func readAssetDescriptorBase(dec *Decoder) []byte {
 
 	// owner_key: 32 bytes (crypto::public_key)
 	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationProof reads asset_operation_proof (tag 49).
+// Structure (CHAIN_TRANSITION_VER, version 1):
+//
+//	ver (uint8) + gss (generic_schnorr_sig_s: 64 bytes)
+//	+ asset_id (32 bytes) + etc (vector<uint8>).
+func readAssetOperationProof(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// gss: generic_schnorr_sig_s — 2 scalars (s, c) = 64 bytes
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// asset_id: 32-byte hash
+	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationOwnershipProof reads asset_operation_ownership_proof (tag 50).
+// Structure (CHAIN_TRANSITION_VER, version 1):
+//
+//	ver (uint8) + gss (generic_schnorr_sig_s: 64 bytes)
+//	+ etc (vector<uint8>).
+func readAssetOperationOwnershipProof(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// gss: generic_schnorr_sig_s — 2 scalars (s, c) = 64 bytes
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationOwnershipProofETH reads asset_operation_ownership_proof_eth (tag 51).
+// Structure (CHAIN_TRANSITION_VER, version 1):
+//
+//	ver (uint8) + eth_sig (65 bytes: r(32) + s(32) + v(1))
+//	+ etc (vector<uint8>).
+func readAssetOperationOwnershipProofETH(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// eth_sig: crypto::eth_signature — r(32) + s(32) + v(1) = 65 bytes
+	b := dec.ReadBytes(65)
 	if dec.err != nil {
 		return nil
 	}
