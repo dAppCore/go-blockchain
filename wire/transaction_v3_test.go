@@ -257,3 +257,181 @@ func TestVariantVectorWithProofTags_Good(t *testing.T) {
 		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(got), len(raw))
 	}
 }
+
+func TestV3TransactionRoundTrip_Good(t *testing.T) {
+	// Build a v3 transaction with:
+	// - 1 coinbase input (TxInputGenesis at height 201)
+	// - 2 Zarcanum outputs
+	// - extra containing: public_key (tag 22) + zarcanum_tx_data_v1 (tag 39)
+	// - proofs containing: zc_balance_proof (tag 48)
+	// - hardfork_id = 5
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	// --- prefix ---
+	// version = 3
+	enc.WriteVarint(3)
+	// vin: 1 coinbase input
+	enc.WriteVarint(1) // input count
+	enc.WriteVariantTag(0) // txin_gen tag
+	enc.WriteVarint(201) // height
+
+	// extra: variant vector with 2 elements (public_key + zarcanum_tx_data_v1)
+	enc.WriteVarint(2)
+	// [0] public_key (tag 22): 32 bytes
+	enc.WriteUint8(tagPublicKey)
+	enc.WriteBytes(bytes.Repeat([]byte{0x11}, 32))
+	// [1] zarcanum_tx_data_v1 (tag 39): 8-byte LE fee
+	enc.WriteUint8(tagZarcanumTxDataV1)
+	enc.WriteUint64LE(10000)
+
+	// vout: 2 Zarcanum outputs
+	enc.WriteVarint(2)
+	for range 2 {
+		enc.WriteVariantTag(38) // OutputTypeZarcanum
+		enc.WriteBytes(make([]byte, 32)) // stealth_address
+		enc.WriteBytes(make([]byte, 32)) // concealing_point
+		enc.WriteBytes(make([]byte, 32)) // amount_commitment
+		enc.WriteBytes(make([]byte, 32)) // blinded_asset_id
+		enc.WriteUint64LE(0) // encrypted_amount
+		enc.WriteUint8(0) // mix_attr
+	}
+
+	// hardfork_id = 5
+	enc.WriteUint8(5)
+
+	// --- suffix ---
+	// attachment: empty
+	enc.WriteVarint(0)
+	// signatures: empty
+	enc.WriteVarint(0)
+	// proofs: 1 element — zc_balance_proof (tag 48, simplest: 96 bytes)
+	enc.WriteVarint(1)
+	enc.WriteUint8(tagZCBalanceProof)
+	enc.WriteBytes(make([]byte, 96))
+
+	blob := buf.Bytes()
+
+	// Decode
+	dec := NewDecoder(bytes.NewReader(blob))
+	tx := DecodeTransaction(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode failed: %v", dec.Err())
+	}
+
+	// Verify structural fields
+	if tx.Version != 3 {
+		t.Errorf("version: got %d, want 3", tx.Version)
+	}
+	if tx.HardforkID != 5 {
+		t.Errorf("hardfork_id: got %d, want 5", tx.HardforkID)
+	}
+	if len(tx.Vin) != 1 {
+		t.Fatalf("input count: got %d, want 1", len(tx.Vin))
+	}
+	if len(tx.Vout) != 2 {
+		t.Fatalf("output count: got %d, want 2", len(tx.Vout))
+	}
+
+	// Re-encode
+	var reenc bytes.Buffer
+	enc2 := NewEncoder(&reenc)
+	EncodeTransaction(enc2, &tx)
+	if enc2.Err() != nil {
+		t.Fatalf("encode failed: %v", enc2.Err())
+	}
+
+	got := reenc.Bytes()
+	if !bytes.Equal(got, blob) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes\ngot:  %x\nwant: %x",
+			len(got), len(blob), got[:min(len(got), 64)], blob[:min(len(blob), 64)])
+	}
+}
+
+func TestV3TransactionWithAssetOps_Good(t *testing.T) {
+	// Build a v3 transaction whose extra includes an asset_descriptor_operation (tag 40)
+	// and whose proofs include an asset_operation_proof (tag 49).
+	assetOpBlob := buildAssetDescriptorOpEmitBlob()
+	proofBlob := buildAssetOperationProofBlob()
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	// --- prefix ---
+	enc.WriteVarint(3) // version
+	// vin: 1 coinbase
+	enc.WriteVarint(1)
+	enc.WriteVariantTag(0) // txin_gen
+	enc.WriteVarint(250)   // height
+
+	// extra: 2 elements — public_key + asset_descriptor_operation
+	enc.WriteVarint(2)
+	enc.WriteUint8(tagPublicKey)
+	enc.WriteBytes(bytes.Repeat([]byte{0x22}, 32))
+	enc.WriteUint8(tagAssetDescriptorOperation)
+	enc.WriteBytes(assetOpBlob)
+
+	// vout: 2 Zarcanum outputs
+	enc.WriteVarint(2)
+	for range 2 {
+		enc.WriteVariantTag(38)
+		enc.WriteBytes(make([]byte, 32)) // stealth_address
+		enc.WriteBytes(make([]byte, 32)) // concealing_point
+		enc.WriteBytes(make([]byte, 32)) // amount_commitment
+		enc.WriteBytes(make([]byte, 32)) // blinded_asset_id
+		enc.WriteUint64LE(0)
+		enc.WriteUint8(0)
+	}
+
+	// hardfork_id = 5
+	enc.WriteUint8(5)
+
+	// --- suffix ---
+	enc.WriteVarint(0) // attachment
+	enc.WriteVarint(0) // signatures
+
+	// proofs: 2 elements — zc_balance_proof + asset_operation_proof
+	enc.WriteVarint(2)
+	enc.WriteUint8(tagZCBalanceProof)
+	enc.WriteBytes(make([]byte, 96))
+	enc.WriteUint8(tagAssetOperationProof)
+	enc.WriteBytes(proofBlob)
+
+	blob := buf.Bytes()
+
+	// Decode
+	dec := NewDecoder(bytes.NewReader(blob))
+	tx := DecodeTransaction(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode failed: %v", dec.Err())
+	}
+
+	if tx.Version != 3 {
+		t.Errorf("version: got %d, want 3", tx.Version)
+	}
+	if tx.HardforkID != 5 {
+		t.Errorf("hardfork_id: got %d, want 5", tx.HardforkID)
+	}
+
+	// Re-encode and compare
+	var reenc bytes.Buffer
+	enc2 := NewEncoder(&reenc)
+	EncodeTransaction(enc2, &tx)
+	if enc2.Err() != nil {
+		t.Fatalf("encode failed: %v", enc2.Err())
+	}
+
+	if !bytes.Equal(reenc.Bytes(), blob) {
+		t.Fatalf("round-trip mismatch: got %d bytes, want %d bytes", len(reenc.Bytes()), len(blob))
+	}
+}
+
+func TestV3TransactionDecode_Bad(t *testing.T) {
+	// Truncated v3 transaction — version varint only.
+	dec := NewDecoder(bytes.NewReader([]byte{0x03}))
+	_ = DecodeTransaction(dec)
+	if dec.Err() == nil {
+		t.Fatal("expected error for truncated v3 transaction")
+	}
+}
