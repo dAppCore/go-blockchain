@@ -252,9 +252,26 @@ func encodeOutputsV1(enc *Encoder, vout []types.TxOutput) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
 			// Target is a variant (txout_target_v)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			switch t := v.Target.(type) {
+			case types.TxOutToKey:
+				enc.WriteVariantTag(types.TargetTypeToKey)
+				enc.WriteBlob32((*[32]byte)(&t.Key))
+				enc.WriteUint8(t.MixAttr)
+			case types.TxOutMultisig:
+				enc.WriteVariantTag(types.TargetTypeMultisig)
+				enc.WriteVarint(t.MinimumSigs)
+				enc.WriteVarint(uint64(len(t.Keys)))
+				for k := range t.Keys {
+					enc.WriteBlob32((*[32]byte)(&t.Keys[k]))
+				}
+			case types.TxOutHTLC:
+				enc.WriteVariantTag(types.TargetTypeHTLC)
+				enc.WriteBlob32((*[32]byte)(&t.HTLCHash))
+				enc.WriteUint8(t.Flags)
+				enc.WriteVarint(t.Expiration)
+				enc.WriteBlob32((*[32]byte)(&t.PKRedeem))
+				enc.WriteBlob32((*[32]byte)(&t.PKRefund))
+			}
 		}
 	}
 }
@@ -274,8 +291,27 @@ func decodeOutputsV1(dec *Decoder) []types.TxOutput {
 		}
 		switch tag {
 		case types.TargetTypeToKey:
-			dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-			out.Target.MixAttr = dec.ReadUint8()
+			var t types.TxOutToKey
+			dec.ReadBlob32((*[32]byte)(&t.Key))
+			t.MixAttr = dec.ReadUint8()
+			out.Target = t
+		case types.TargetTypeMultisig:
+			var t types.TxOutMultisig
+			t.MinimumSigs = dec.ReadVarint()
+			keyCount := dec.ReadVarint()
+			t.Keys = make([]types.PublicKey, keyCount)
+			for k := uint64(0); k < keyCount; k++ {
+				dec.ReadBlob32((*[32]byte)(&t.Keys[k]))
+			}
+			out.Target = t
+		case types.TargetTypeHTLC:
+			var t types.TxOutHTLC
+			dec.ReadBlob32((*[32]byte)(&t.HTLCHash))
+			t.Flags = dec.ReadUint8()
+			t.Expiration = dec.ReadVarint()
+			dec.ReadBlob32((*[32]byte)(&t.PKRedeem))
+			dec.ReadBlob32((*[32]byte)(&t.PKRefund))
+			out.Target = t
 		default:
 			dec.err = coreerr.E("decodeOutputsV1", fmt.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
 			return vout
@@ -293,9 +329,26 @@ func encodeOutputsV2(enc *Encoder, vout []types.TxOutput) {
 		switch v := out.(type) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			switch t := v.Target.(type) {
+			case types.TxOutToKey:
+				enc.WriteVariantTag(types.TargetTypeToKey)
+				enc.WriteBlob32((*[32]byte)(&t.Key))
+				enc.WriteUint8(t.MixAttr)
+			case types.TxOutMultisig:
+				enc.WriteVariantTag(types.TargetTypeMultisig)
+				enc.WriteVarint(t.MinimumSigs)
+				enc.WriteVarint(uint64(len(t.Keys)))
+				for k := range t.Keys {
+					enc.WriteBlob32((*[32]byte)(&t.Keys[k]))
+				}
+			case types.TxOutHTLC:
+				enc.WriteVariantTag(types.TargetTypeHTLC)
+				enc.WriteBlob32((*[32]byte)(&t.HTLCHash))
+				enc.WriteUint8(t.Flags)
+				enc.WriteVarint(t.Expiration)
+				enc.WriteBlob32((*[32]byte)(&t.PKRedeem))
+				enc.WriteBlob32((*[32]byte)(&t.PKRefund))
+			}
 		case types.TxOutputZarcanum:
 			enc.WriteBlob32((*[32]byte)(&v.StealthAddress))
 			enc.WriteBlob32((*[32]byte)(&v.ConcealingPoint))
@@ -323,10 +376,30 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 			var out types.TxOutputBare
 			out.Amount = dec.ReadVarint()
 			targetTag := dec.ReadVariantTag()
-			if targetTag == types.TargetTypeToKey {
-				dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-				out.Target.MixAttr = dec.ReadUint8()
-			} else {
+			switch targetTag {
+			case types.TargetTypeToKey:
+				var t types.TxOutToKey
+				dec.ReadBlob32((*[32]byte)(&t.Key))
+				t.MixAttr = dec.ReadUint8()
+				out.Target = t
+			case types.TargetTypeMultisig:
+				var t types.TxOutMultisig
+				t.MinimumSigs = dec.ReadVarint()
+				keyCount := dec.ReadVarint()
+				t.Keys = make([]types.PublicKey, keyCount)
+				for k := uint64(0); k < keyCount; k++ {
+					dec.ReadBlob32((*[32]byte)(&t.Keys[k]))
+				}
+				out.Target = t
+			case types.TargetTypeHTLC:
+				var t types.TxOutHTLC
+				dec.ReadBlob32((*[32]byte)(&t.HTLCHash))
+				t.Flags = dec.ReadUint8()
+				t.Expiration = dec.ReadVarint()
+				dec.ReadBlob32((*[32]byte)(&t.PKRedeem))
+				dec.ReadBlob32((*[32]byte)(&t.PKRefund))
+				out.Target = t
+			default:
 				dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
 				return vout
 			}
