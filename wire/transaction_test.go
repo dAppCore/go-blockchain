@@ -590,3 +590,243 @@ func TestMultisigInputRoundTrip_Good(t *testing.T) {
 		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
 	}
 }
+
+func TestMultisigTargetV1RoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 5000,
+			Target: types.TxOutMultisig{
+				MinimumSigs: 2,
+				Keys:        []types.PublicKey{{0x01}, {0x02}, {0x03}},
+			},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	bare, ok := got.Vout[0].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[0] type: got %T, want TxOutputBare", got.Vout[0])
+	}
+	msig, ok := bare.Target.(types.TxOutMultisig)
+	if !ok {
+		t.Fatalf("target type: got %T, want TxOutMultisig", bare.Target)
+	}
+	if msig.MinimumSigs != 2 {
+		t.Errorf("MinimumSigs: got %d, want 2", msig.MinimumSigs)
+	}
+	if len(msig.Keys) != 3 {
+		t.Errorf("Keys count: got %d, want 3", len(msig.Keys))
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
+
+func TestHTLCTargetV1RoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 7000,
+			Target: types.TxOutHTLC{
+				HTLCHash:   types.Hash{0xCC},
+				Flags:      1, // RIPEMD160
+				Expiration: 20000,
+				PKRedeem:   types.PublicKey{0xDD},
+				PKRefund:   types.PublicKey{0xEE},
+			},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	bare, ok := got.Vout[0].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[0] type: got %T, want TxOutputBare", got.Vout[0])
+	}
+	htlc, ok := bare.Target.(types.TxOutHTLC)
+	if !ok {
+		t.Fatalf("target type: got %T, want TxOutHTLC", bare.Target)
+	}
+	if htlc.HTLCHash[0] != 0xCC {
+		t.Errorf("HTLCHash[0]: got 0x%02x, want 0xCC", htlc.HTLCHash[0])
+	}
+	if htlc.Flags != 1 {
+		t.Errorf("Flags: got %d, want 1", htlc.Flags)
+	}
+	if htlc.Expiration != 20000 {
+		t.Errorf("Expiration: got %d, want 20000", htlc.Expiration)
+	}
+	if htlc.PKRedeem[0] != 0xDD {
+		t.Errorf("PKRedeem[0]: got 0x%02x, want 0xDD", htlc.PKRedeem[0])
+	}
+	if htlc.PKRefund[0] != 0xEE {
+		t.Errorf("PKRefund[0]: got 0x%02x, want 0xEE", htlc.PKRefund[0])
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
+
+func TestMultisigTargetV2RoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPostHF4,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 5000,
+			Target: types.TxOutMultisig{
+				MinimumSigs: 2,
+				Keys:        []types.PublicKey{{0x01}, {0x02}},
+			},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	bare, ok := got.Vout[0].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[0] type: got %T, want TxOutputBare", got.Vout[0])
+	}
+	msig, ok := bare.Target.(types.TxOutMultisig)
+	if !ok {
+		t.Fatalf("target type: got %T, want TxOutMultisig", bare.Target)
+	}
+	if msig.MinimumSigs != 2 {
+		t.Errorf("MinimumSigs: got %d, want 2", msig.MinimumSigs)
+	}
+	if len(msig.Keys) != 2 {
+		t.Errorf("Keys count: got %d, want 2", len(msig.Keys))
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
+
+func TestHTLCTargetV2RoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPostHF4,
+		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 7000,
+			Target: types.TxOutHTLC{
+				HTLCHash:   types.Hash{0xCC},
+				Flags:      0, // SHA256
+				Expiration: 15000,
+				PKRedeem:   types.PublicKey{0xDD},
+				PKRefund:   types.PublicKey{0xEE},
+			},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	bare, ok := got.Vout[0].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[0] type: got %T, want TxOutputBare", got.Vout[0])
+	}
+	htlc, ok := bare.Target.(types.TxOutHTLC)
+	if !ok {
+		t.Fatalf("target type: got %T, want TxOutHTLC", bare.Target)
+	}
+	if htlc.HTLCHash[0] != 0xCC {
+		t.Errorf("HTLCHash[0]: got 0x%02x, want 0xCC", htlc.HTLCHash[0])
+	}
+	if htlc.Flags != 0 {
+		t.Errorf("Flags: got %d, want 0", htlc.Flags)
+	}
+	if htlc.Expiration != 15000 {
+		t.Errorf("Expiration: got %d, want 15000", htlc.Expiration)
+	}
+	if htlc.PKRedeem[0] != 0xDD {
+		t.Errorf("PKRedeem[0]: got 0x%02x, want 0xDD", htlc.PKRedeem[0])
+	}
+	if htlc.PKRefund[0] != 0xEE {
+		t.Errorf("PKRefund[0]: got 0x%02x, want 0xEE", htlc.PKRefund[0])
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
