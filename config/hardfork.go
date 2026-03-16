@@ -93,3 +93,15 @@ func IsHardForkActive(forks []HardFork, version uint8, height uint64) bool {
 	}
 	return false
 }
+
+// HardforkActivationHeight returns the activation height for the given
+// hardfork version. The fork becomes active at heights strictly greater
+// than the returned value. Returns (0, false) if the version is not found.
+func HardforkActivationHeight(forks []HardFork, version uint8) (uint64, bool) {
+	for _, hf := range forks {
+		if hf.Version == version {
+			return hf.Height, true
+		}
+	}
+	return 0, false
+}
