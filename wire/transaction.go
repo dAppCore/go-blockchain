@@ -536,6 +536,9 @@ const (
 	tagExtraAliasEntry        = 33 // extra_alias_entry — complex
 	tagZarcanumTxDataV1       = 39 // zarcanum_tx_data_v1 — varint (fee)
 
+	// Asset descriptor operation (HF5).
+	tagAssetDescriptorOperation = 40 // asset_descriptor_operation
+
 	// Signature variant tags (signature_v).
 	tagNLSAGSig    = 42 // NLSAG_sig — vector<signature>
 	tagZCSig       = 43 // ZC_sig — 2 public_keys + CLSAG_GGX
@@ -603,6 +606,10 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 	// Zarcanum extra variant
 	case tagZarcanumTxDataV1: // fee — FIELD(fee) → serialize_int → 8-byte LE
 		return dec.ReadBytes(8)
+
+	// Asset descriptor operation (HF5)
+	case tagAssetDescriptorOperation:
+		return readAssetDescriptorOperation(dec)
 
 	// Signature variants
 	case tagNLSAGSig: // vector<signature> (64 bytes each)
@@ -781,6 +788,158 @@ func readSignedParts(dec *Decoder) []byte {
 		return nil
 	}
 	raw = append(raw, EncodeVarint(v2)...)
+	return raw
+}
+
+// --- asset operation readers (HF5) ---
+
+// readAssetDescriptorOperation reads asset_descriptor_operation (tag 40).
+// Structure (CHAIN_TRANSITION_VER, version 0 and 1):
+//
+//	ver (uint8) + operation_type (uint8)
+//	+ opt_asset_id (uint8 marker + 32 bytes if present)
+//	+ opt_descriptor (uint8 marker + AssetDescriptorBase if present)
+//	+ amount_to_emit (uint64 LE) + amount_to_burn (uint64 LE)
+//	+ etc (vector<uint8>)
+//
+// AssetDescriptorBase:
+//
+//	ticker (string) + full_name (string) + total_max_supply (uint64 LE)
+//	+ current_supply (uint64 LE) + decimal_point (uint8) + meta_info (string)
+//	+ owner_key (32 bytes) + etc (vector<uint8>)
+func readAssetDescriptorOperation(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8 (CHAIN_TRANSITION_VER version byte)
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// operation_type: uint8
+	opType := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, opType)
+
+	// opt_asset_id: optional<hash> — uint8 marker, then 32 bytes if present
+	marker := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, marker)
+	if marker != 0 {
+		b := dec.ReadBytes(32)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+	}
+
+	// opt_descriptor: optional<AssetDescriptorBase>
+	marker = dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, marker)
+	if marker != 0 {
+		b := readAssetDescriptorBase(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+	}
+
+	// amount_to_emit: uint64 LE
+	b := dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// amount_to_burn: uint64 LE
+	b = dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetDescriptorBase reads the AssetDescriptorBase structure.
+// Wire: ticker (string) + full_name (string) + total_max_supply (uint64 LE)
+//
+//	+ current_supply (uint64 LE) + decimal_point (uint8) + meta_info (string)
+//	+ owner_key (32 bytes) + etc (vector<uint8>).
+func readAssetDescriptorBase(dec *Decoder) []byte {
+	var raw []byte
+
+	// ticker: string
+	s := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, s...)
+
+	// full_name: string
+	s = readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, s...)
+
+	// total_max_supply: uint64 LE
+	b := dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// current_supply: uint64 LE
+	b = dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// decimal_point: uint8
+	dp := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, dp)
+
+	// meta_info: string
+	s = readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, s...)
+
+	// owner_key: 32 bytes (crypto::public_key)
+	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
 	return raw
 }
 
