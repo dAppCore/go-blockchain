@@ -185,3 +185,47 @@ func ValidateBlock(blk *types.Block, height, blockSize, medianSize, totalFees, a
 
 	return nil
 }
+
+// IsPreHardforkFreeze reports whether the given height falls within the
+// pre-hardfork transaction freeze window for the specified fork version.
+// The freeze window is the PreHardforkTxFreezePeriod blocks immediately
+// before the fork activation height (inclusive).
+//
+// For a fork with activation height H (active at heights > H):
+//
+//	freeze applies at heights (H - period + 1) .. H
+//
+// Returns false if the fork version is not found or if the activation height
+// is too low for a meaningful freeze window.
+func IsPreHardforkFreeze(forks []config.HardFork, version uint8, height uint64) bool {
+	activationHeight, ok := config.HardforkActivationHeight(forks, version)
+	if !ok {
+		return false
+	}
+
+	// A fork at height 0 means active from genesis — no freeze window.
+	if activationHeight == 0 {
+		return false
+	}
+
+	// Guard against underflow: if activation height < period, freeze starts at 1.
+	freezeStart := uint64(1)
+	if activationHeight >= config.PreHardforkTxFreezePeriod {
+		freezeStart = activationHeight - config.PreHardforkTxFreezePeriod + 1
+	}
+
+	return height >= freezeStart && height <= activationHeight
+}
+
+// ValidateTransactionInBlock performs transaction validation including the
+// pre-hardfork freeze check. This wraps ValidateTransaction with an
+// additional check: during the freeze window before HF5, non-coinbase
+// transactions are rejected.
+func ValidateTransactionInBlock(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
+	// Pre-hardfork freeze: reject non-coinbase transactions in the freeze window.
+	if !isCoinbase(tx) && IsPreHardforkFreeze(forks, config.HF5, height) {
+		return fmt.Errorf("%w: height %d is within HF5 freeze window", ErrPreHardforkFreeze, height)
+	}
+
+	return ValidateTransaction(tx, txBlob, forks, height)
+}
