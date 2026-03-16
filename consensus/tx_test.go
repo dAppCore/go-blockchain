@@ -133,3 +133,161 @@ func TestValidateTransaction_NegativeFee(t *testing.T) {
 	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
 	assert.ErrorIs(t, err, ErrNegativeFee)
 }
+
+// --- HF1 gating tests (Task 7) ---
+
+func TestCheckInputTypes_HTLCPreHF1_Bad(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputHTLC{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 90, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000) // pre-HF1 (10080)
+	assert.ErrorIs(t, err, ErrInvalidInputType)
+}
+
+func TestCheckInputTypes_HTLCPostHF1_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputHTLC{
+				Amount:   100,
+				KeyImage: types.KeyImage{1},
+			},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 90, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 20000) // post-HF1
+	require.NoError(t, err)
+}
+
+func TestCheckInputTypes_MultisigPreHF1_Bad(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputMultisig{Amount: 100},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 90, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
+	assert.ErrorIs(t, err, ErrInvalidInputType)
+}
+
+func TestCheckOutputs_HTLCTargetPreHF1_Bad(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 90,
+				Target: types.TxOutHTLC{Expiration: 20000},
+			},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
+	assert.ErrorIs(t, err, ErrInvalidOutput)
+}
+
+func TestCheckOutputs_MultisigTargetPreHF1_Bad(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 90,
+				Target: types.TxOutMultisig{MinimumSigs: 2, Keys: []types.PublicKey{{1}, {2}}},
+			},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
+	assert.ErrorIs(t, err, ErrInvalidOutput)
+}
+
+func TestCheckOutputs_MultisigTargetPostHF1_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 90,
+				Target: types.TxOutMultisig{MinimumSigs: 2, Keys: []types.PublicKey{{1}, {2}}},
+			},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 20000) // post-HF1
+	require.NoError(t, err)
+}
+
+// --- Key image tests for HTLC (Task 8) ---
+
+func TestCheckKeyImages_HTLCDuplicate_Bad(t *testing.T) {
+	ki := types.KeyImage{0x42}
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputHTLC{Amount: 100, KeyImage: ki},
+			types.TxInputHTLC{Amount: 50, KeyImage: ki}, // duplicate
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 140, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 20000) // post-HF1
+	assert.ErrorIs(t, err, ErrDuplicateKeyImage)
+}
+
+func TestCheckKeyImages_HTLCAndToKeyDuplicate_Bad(t *testing.T) {
+	ki := types.KeyImage{0x42}
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: ki},
+			types.TxInputHTLC{Amount: 50, KeyImage: ki}, // duplicate across types
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 140, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 20000)
+	assert.ErrorIs(t, err, ErrDuplicateKeyImage)
+}
+
+func TestCheckOutputs_HTLCTargetPostHF1_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 90,
+				Target: types.TxOutHTLC{Expiration: 20000},
+			},
+		},
+	}
+	blob := make([]byte, 100)
+	err := ValidateTransaction(tx, blob, config.MainnetForks, 20000) // post-HF1
+	require.NoError(t, err)
+}

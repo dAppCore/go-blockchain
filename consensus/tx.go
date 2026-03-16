@@ -15,6 +15,7 @@ import (
 // ValidateTransaction performs semantic validation on a regular (non-coinbase)
 // transaction. Checks are ordered to match the C++ validate_tx_semantic().
 func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
+	hf1Active := config.IsHardForkActive(forks, config.HF1, height)
 	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 
 	// 1. Blob size.
@@ -31,12 +32,12 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 	}
 
 	// 3. Input types — TxInputGenesis not allowed in regular transactions.
-	if err := checkInputTypes(tx, hf4Active); err != nil {
+	if err := checkInputTypes(tx, hf1Active, hf4Active); err != nil {
 		return err
 	}
 
 	// 4. Output validation.
-	if err := checkOutputs(tx, hf4Active); err != nil {
+	if err := checkOutputs(tx, hf1Active, hf4Active); err != nil {
 		return err
 	}
 
@@ -63,15 +64,19 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 	return nil
 }
 
-func checkInputTypes(tx *types.Transaction, hf4Active bool) error {
+func checkInputTypes(tx *types.Transaction, hf1Active, hf4Active bool) error {
 	for _, vin := range tx.Vin {
 		switch vin.(type) {
 		case types.TxInputToKey:
 			// Always valid.
 		case types.TxInputGenesis:
 			return fmt.Errorf("%w: txin_gen in regular transaction", ErrInvalidInputType)
+		case types.TxInputHTLC, types.TxInputMultisig:
+			if !hf1Active {
+				return fmt.Errorf("%w: tag %d pre-HF1", ErrInvalidInputType, vin.InputType())
+			}
 		default:
-			// Future types (multisig, HTLC, ZC) — accept if HF4+.
+			// Future types (ZC, etc.) — accept if HF4+.
 			if !hf4Active {
 				return fmt.Errorf("%w: tag %d pre-HF4", ErrInvalidInputType, vin.InputType())
 			}
@@ -80,7 +85,7 @@ func checkInputTypes(tx *types.Transaction, hf4Active bool) error {
 	return nil
 }
 
-func checkOutputs(tx *types.Transaction, hf4Active bool) error {
+func checkOutputs(tx *types.Transaction, hf1Active, hf4Active bool) error {
 	if len(tx.Vout) == 0 {
 		return ErrNoOutputs
 	}
@@ -99,6 +104,16 @@ func checkOutputs(tx *types.Transaction, hf4Active bool) error {
 			if o.Amount == 0 {
 				return fmt.Errorf("%w: output %d has zero amount", ErrInvalidOutput, i)
 			}
+			// Check target type gating.
+			switch o.Target.(type) {
+			case types.TxOutToKey:
+				// Always valid.
+			case types.TxOutMultisig, types.TxOutHTLC:
+				if !hf1Active {
+					return fmt.Errorf("%w: output %d has target type %d pre-HF1",
+						ErrInvalidOutput, i, o.Target.TargetType())
+				}
+			}
 		case types.TxOutputZarcanum:
 			// Validated by proof verification.
 		}
@@ -110,14 +125,19 @@ func checkOutputs(tx *types.Transaction, hf4Active bool) error {
 func checkKeyImages(tx *types.Transaction) error {
 	seen := make(map[types.KeyImage]struct{})
 	for _, vin := range tx.Vin {
-		toKey, ok := vin.(types.TxInputToKey)
-		if !ok {
+		var ki types.KeyImage
+		switch v := vin.(type) {
+		case types.TxInputToKey:
+			ki = v.KeyImage
+		case types.TxInputHTLC:
+			ki = v.KeyImage
+		default:
 			continue
 		}
-		if _, exists := seen[toKey.KeyImage]; exists {
-			return fmt.Errorf("%w: %s", ErrDuplicateKeyImage, toKey.KeyImage)
+		if _, exists := seen[ki]; exists {
+			return fmt.Errorf("%w: %s", ErrDuplicateKeyImage, ki)
 		}
-		seen[toKey.KeyImage] = struct{}{}
+		seen[ki] = struct{}{}
 	}
 	return nil
 }
