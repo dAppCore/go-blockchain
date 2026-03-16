@@ -250,9 +250,12 @@ func encodeOutputsV1(enc *Encoder, vout []types.TxOutput) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
 			// Target is a variant (txout_target_v)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			switch tgt := v.Target.(type) {
+			case types.TxOutToKey:
+				enc.WriteVariantTag(types.TargetTypeToKey)
+				enc.WriteBlob32((*[32]byte)(&tgt.Key))
+				enc.WriteUint8(tgt.MixAttr)
+			}
 		}
 	}
 }
@@ -272,8 +275,10 @@ func decodeOutputsV1(dec *Decoder) []types.TxOutput {
 		}
 		switch tag {
 		case types.TargetTypeToKey:
-			dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-			out.Target.MixAttr = dec.ReadUint8()
+			var tgt types.TxOutToKey
+			dec.ReadBlob32((*[32]byte)(&tgt.Key))
+			tgt.MixAttr = dec.ReadUint8()
+			out.Target = tgt
 		default:
 			dec.err = fmt.Errorf("wire: unsupported target tag 0x%02x", tag)
 			return vout
@@ -291,9 +296,12 @@ func encodeOutputsV2(enc *Encoder, vout []types.TxOutput) {
 		switch v := out.(type) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			switch tgt := v.Target.(type) {
+			case types.TxOutToKey:
+				enc.WriteVariantTag(types.TargetTypeToKey)
+				enc.WriteBlob32((*[32]byte)(&tgt.Key))
+				enc.WriteUint8(tgt.MixAttr)
+			}
 		case types.TxOutputZarcanum:
 			enc.WriteBlob32((*[32]byte)(&v.StealthAddress))
 			enc.WriteBlob32((*[32]byte)(&v.ConcealingPoint))
@@ -322,8 +330,10 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 			out.Amount = dec.ReadVarint()
 			targetTag := dec.ReadVariantTag()
 			if targetTag == types.TargetTypeToKey {
-				dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-				out.Target.MixAttr = dec.ReadUint8()
+				var tgt types.TxOutToKey
+				dec.ReadBlob32((*[32]byte)(&tgt.Key))
+				tgt.MixAttr = dec.ReadUint8()
+				out.Target = tgt
 			} else {
 				dec.err = fmt.Errorf("wire: unsupported target tag 0x%02x", targetTag)
 				return vout

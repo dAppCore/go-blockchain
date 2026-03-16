@@ -126,13 +126,21 @@ func TestV1BuilderBasic(t *testing.T) {
 	}
 
 	// Output keys must be non-zero and unique.
-	if out0.Target.Key == (types.PublicKey{}) {
+	toKey0, ok := out0.Target.(types.TxOutToKey)
+	if !ok {
+		t.Fatalf("output 0 target type: got %T, want TxOutToKey", out0.Target)
+	}
+	toKey1, ok := out1.Target.(types.TxOutToKey)
+	if !ok {
+		t.Fatalf("output 1 target type: got %T, want TxOutToKey", out1.Target)
+	}
+	if toKey0.Key == (types.PublicKey{}) {
 		t.Error("output 0 key is zero")
 	}
-	if out1.Target.Key == (types.PublicKey{}) {
+	if toKey1.Key == (types.PublicKey{}) {
 		t.Error("output 1 key is zero")
 	}
-	if out0.Target.Key == out1.Target.Key {
+	if toKey0.Key == toKey1.Key {
 		t.Error("output keys are identical; derivation broken")
 	}
 

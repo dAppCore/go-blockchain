@@ -183,8 +183,9 @@ type TxOutputBare struct {
 	// Amount in atomic units.
 	Amount uint64
 
-	// Target is the one-time output destination (key + mix attribute).
-	Target TxOutToKey
+	// Target is the output destination. Before HF1 this is always TxOutToKey;
+	// after HF1 it may also be TxOutMultisig or TxOutHTLC.
+	Target TxOutTarget
 }
 
 // OutputType returns the wire variant tag for bare outputs.

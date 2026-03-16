@@ -325,7 +325,11 @@ func (m *ExplorerModel) viewTxDetail() string {
 		for i, out := range tx.Vout {
 			switch v := out.(type) {
 			case types.TxOutputBare:
-				b.WriteString(fmt.Sprintf("  [%d] bare amount=%d key=%x\n", i, v.Amount, v.Target.Key[:4]))
+				if toKey, ok := v.Target.(types.TxOutToKey); ok {
+					b.WriteString(fmt.Sprintf("  [%d] bare amount=%d key=%x\n", i, v.Amount, toKey.Key[:4]))
+				} else {
+					b.WriteString(fmt.Sprintf("  [%d] bare amount=%d target=%T\n", i, v.Amount, v.Target))
+				}
 			case types.TxOutputZarcanum:
 				b.WriteString(fmt.Sprintf("  [%d] zarcanum stealth=%x\n", i, v.StealthAddress[:4]))
 			default:

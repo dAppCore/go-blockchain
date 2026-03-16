@@ -65,8 +65,12 @@ func TestCoinbaseTxEncodeDecode_Good(t *testing.T) {
 	if bare.Amount != 1000000 {
 		t.Errorf("amount: got %d, want 1000000", bare.Amount)
 	}
-	if bare.Target.Key[0] != 0xDE || bare.Target.Key[1] != 0xAD {
-		t.Errorf("target key: got %x, want DE AD...", bare.Target.Key[:2])
+	toKey, ok := bare.Target.(types.TxOutToKey)
+	if !ok {
+		t.Fatalf("target type: got %T, want TxOutToKey", bare.Target)
+	}
+	if toKey.Key[0] != 0xDE || toKey.Key[1] != 0xAD {
+		t.Errorf("target key: got %x, want DE AD...", toKey.Key[:2])
 	}
 }
 

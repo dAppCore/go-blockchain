@@ -64,7 +64,11 @@ func (s *V1Scanner) ScanTransaction(tx *types.Transaction, txHash types.Hash,
 			continue
 		}
 
-		if types.PublicKey(expectedPub) != bare.Target.Key {
+		toKey, ok := bare.Target.(types.TxOutToKey)
+		if !ok {
+			continue
+		}
+		if types.PublicKey(expectedPub) != toKey.Key {
 			continue
 		}
 
