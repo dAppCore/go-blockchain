@@ -58,11 +58,13 @@ func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
 }
 
 // verifyV1Signatures checks NLSAG ring signatures for pre-HF4 transactions.
+// Both TxInputToKey and TxInputHTLC use NLSAG ring signatures.
 func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) error {
-	// Count key inputs.
+	// Count ring-sig inputs (TxInputToKey and TxInputHTLC).
 	var keyInputCount int
 	for _, vin := range tx.Vin {
-		if _, ok := vin.(types.TxInputToKey); ok {
+		switch vin.(type) {
+		case types.TxInputToKey, types.TxInputHTLC:
 			keyInputCount++
 		}
 	}
@@ -82,18 +84,31 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 
 	var sigIdx int
 	for _, vin := range tx.Vin {
-		inp, ok := vin.(types.TxInputToKey)
-		if !ok {
+		// Extract the common ring-sig fields from either input type.
+		var amount uint64
+		var keyOffsets []types.TxOutRef
+		var keyImage types.KeyImage
+
+		switch v := vin.(type) {
+		case types.TxInputToKey:
+			amount = v.Amount
+			keyOffsets = v.KeyOffsets
+			keyImage = v.KeyImage
+		case types.TxInputHTLC:
+			amount = v.Amount
+			keyOffsets = v.KeyOffsets
+			keyImage = v.KeyImage
+		default:
 			continue
 		}
 
 		// Extract absolute global indices from key offsets.
-		offsets := make([]uint64, len(inp.KeyOffsets))
-		for i, ref := range inp.KeyOffsets {
+		offsets := make([]uint64, len(keyOffsets))
+		for i, ref := range keyOffsets {
 			offsets[i] = ref.GlobalIndex
 		}
 
-		ringKeys, err := getRingOutputs(inp.Amount, offsets)
+		ringKeys, err := getRingOutputs(amount, offsets)
 		if err != nil {
 			return fmt.Errorf("consensus: failed to fetch ring outputs for input %d: %w",
 				sigIdx, err)
@@ -116,7 +131,7 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 			sigs[i] = [64]byte(s)
 		}
 
-		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(inp.KeyImage), pubs, sigs) {
+		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(keyImage), pubs, sigs) {
 			return fmt.Errorf("consensus: ring signature verification failed for input %d", sigIdx)
 		}
 
