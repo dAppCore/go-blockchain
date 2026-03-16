@@ -38,7 +38,7 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 		case types.TxOutputBare:
 			toKey, ok := out.Target.(types.TxOutToKey)
 			if !ok {
-				return nil, fmt.Errorf("ring output %d: unsupported target type %T", i, out.Target)
+				return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: unsupported target type %T", i, out.Target), nil)
 			}
 			pubs[i] = toKey.Key
 		default:
