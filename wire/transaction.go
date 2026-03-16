@@ -162,6 +162,21 @@ func encodeInputs(enc *Encoder, vin []types.TxInput) {
 			encodeKeyOffsets(enc, v.KeyOffsets)
 			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
 			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputHTLC:
+			// Wire order: hltc_origin (string) BEFORE parent fields (C++ quirk).
+			enc.WriteVarint(uint64(len(v.HTLCOrigin)))
+			if len(v.HTLCOrigin) > 0 {
+				enc.WriteBytes([]byte(v.HTLCOrigin))
+			}
+			enc.WriteVarint(v.Amount)
+			encodeKeyOffsets(enc, v.KeyOffsets)
+			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
+			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputMultisig:
+			enc.WriteVarint(v.Amount)
+			enc.WriteBlob32((*[32]byte)(&v.MultisigOutID))
+			enc.WriteVarint(v.SigsCount)
+			enc.WriteBytes(v.EtcDetails)
 		}
 	}
 }
@@ -191,6 +206,25 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 			var in types.TxInputZC
 			in.KeyOffsets = decodeKeyOffsets(dec)
 			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeHTLC:
+			var in types.TxInputHTLC
+			// Wire order: hltc_origin (string) BEFORE parent fields.
+			originLen := dec.ReadVarint()
+			if originLen > 0 && dec.Err() == nil {
+				in.HTLCOrigin = string(dec.ReadBytes(int(originLen)))
+			}
+			in.Amount = dec.ReadVarint()
+			in.KeyOffsets = decodeKeyOffsets(dec)
+			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeMultisig:
+			var in types.TxInputMultisig
+			in.Amount = dec.ReadVarint()
+			dec.ReadBlob32((*[32]byte)(&in.MultisigOutID))
+			in.SigsCount = dec.ReadVarint()
 			in.EtcDetails = decodeRawVariantVector(dec)
 			vin = append(vin, in)
 		default:

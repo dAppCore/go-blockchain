@@ -467,3 +467,126 @@ func TestRefByIDRoundTrip_Good(t *testing.T) {
 		t.Errorf("ref N: got %d, want 3", ref.N)
 	}
 }
+
+func TestHTLCInputRoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputHTLC{
+				HTLCOrigin: "test_origin",
+				Amount:     42000,
+				KeyOffsets: []types.TxOutRef{
+					{Tag: types.RefTypeGlobalIndex, GlobalIndex: 100},
+				},
+				KeyImage:   types.KeyImage{0xAA},
+				EtcDetails: EncodeVarint(0),
+			},
+		},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 41000,
+			Target: types.TxOutToKey{Key: types.PublicKey{0x01}},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	if len(got.Vin) != 1 {
+		t.Fatalf("vin count: got %d, want 1", len(got.Vin))
+	}
+	htlc, ok := got.Vin[0].(types.TxInputHTLC)
+	if !ok {
+		t.Fatalf("vin[0] type: got %T, want TxInputHTLC", got.Vin[0])
+	}
+	if htlc.HTLCOrigin != "test_origin" {
+		t.Errorf("HTLCOrigin: got %q, want %q", htlc.HTLCOrigin, "test_origin")
+	}
+	if htlc.Amount != 42000 {
+		t.Errorf("Amount: got %d, want 42000", htlc.Amount)
+	}
+	if htlc.KeyImage[0] != 0xAA {
+		t.Errorf("KeyImage[0]: got 0x%02x, want 0xAA", htlc.KeyImage[0])
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
+
+func TestMultisigInputRoundTrip_Good(t *testing.T) {
+	tx := types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputMultisig{
+				Amount:        50000,
+				MultisigOutID: types.Hash{0xBB},
+				SigsCount:     3,
+				EtcDetails:    EncodeVarint(0),
+			},
+		},
+		Vout: []types.TxOutput{types.TxOutputBare{
+			Amount: 49000,
+			Target: types.TxOutToKey{Key: types.PublicKey{0x02}},
+		}},
+		Extra: EncodeVarint(0),
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+
+	dec := NewDecoder(bytes.NewReader(buf.Bytes()))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	if len(got.Vin) != 1 {
+		t.Fatalf("vin count: got %d, want 1", len(got.Vin))
+	}
+	msig, ok := got.Vin[0].(types.TxInputMultisig)
+	if !ok {
+		t.Fatalf("vin[0] type: got %T, want TxInputMultisig", got.Vin[0])
+	}
+	if msig.Amount != 50000 {
+		t.Errorf("Amount: got %d, want 50000", msig.Amount)
+	}
+	if msig.MultisigOutID[0] != 0xBB {
+		t.Errorf("MultisigOutID[0]: got 0x%02x, want 0xBB", msig.MultisigOutID[0])
+	}
+	if msig.SigsCount != 3 {
+		t.Errorf("SigsCount: got %d, want 3", msig.SigsCount)
+	}
+
+	// Byte-level round-trip.
+	var rtBuf bytes.Buffer
+	enc2 := NewEncoder(&rtBuf)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+	if !bytes.Equal(rtBuf.Bytes(), buf.Bytes()) {
+		t.Errorf("round-trip mismatch:\n  got:  %x\n  want: %x", rtBuf.Bytes(), buf.Bytes())
+	}
+}
