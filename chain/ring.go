@@ -8,6 +8,8 @@ package chain
 import (
 	"fmt"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/consensus"
 	"forge.lthn.ai/core/go-blockchain/types"
 )
@@ -20,17 +22,16 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 	for i, gidx := range offsets {
 		txHash, outNo, err := c.GetOutput(amount, gidx)
 		if err != nil {
-			return nil, fmt.Errorf("ring output %d (amount=%d, gidx=%d): %w", i, amount, gidx, err)
+			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d (amount=%d, gidx=%d)", i, amount, gidx), err)
 		}
 
 		tx, _, err := c.GetTransaction(txHash)
 		if err != nil {
-			return nil, fmt.Errorf("ring output %d: tx %s: %w", i, txHash, err)
+			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: tx %s", i, txHash), err)
 		}
 
 		if int(outNo) >= len(tx.Vout) {
-			return nil, fmt.Errorf("ring output %d: tx %s has %d outputs, want index %d",
-				i, txHash, len(tx.Vout), outNo)
+			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
 		}
 
 		switch out := tx.Vout[outNo].(type) {
@@ -41,7 +42,7 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 			}
 			pubs[i] = toKey.Key
 		default:
-			return nil, fmt.Errorf("ring output %d: unsupported output type %T", i, out)
+			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: unsupported output type %T", i, out), nil)
 		}
 	}
 	return pubs, nil
@@ -57,17 +58,16 @@ func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, er
 	for i, gidx := range offsets {
 		txHash, outNo, err := c.GetOutput(0, gidx)
 		if err != nil {
-			return nil, fmt.Errorf("ZC ring output %d (gidx=%d): %w", i, gidx, err)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d (gidx=%d)", i, gidx), err)
 		}
 
 		tx, _, err := c.GetTransaction(txHash)
 		if err != nil {
-			return nil, fmt.Errorf("ZC ring output %d: tx %s: %w", i, txHash, err)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: tx %s", i, txHash), err)
 		}
 
 		if int(outNo) >= len(tx.Vout) {
-			return nil, fmt.Errorf("ZC ring output %d: tx %s has %d outputs, want index %d",
-				i, txHash, len(tx.Vout), outNo)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
 		}
 
 		switch out := tx.Vout[outNo].(type) {
@@ -78,7 +78,7 @@ func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, er
 				BlindedAssetID:   [32]byte(out.BlindedAssetID),
 			}
 		default:
-			return nil, fmt.Errorf("ZC ring output %d: expected TxOutputZarcanum, got %T", i, out)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: expected TxOutputZarcanum, got %T", i, out), nil)
 		}
 	}
 	return members, nil

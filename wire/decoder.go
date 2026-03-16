@@ -9,6 +9,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // Decoder reads consensus-critical binary data from an io.Reader.
@@ -80,7 +82,7 @@ func (d *Decoder) ReadBytes(n int) []byte {
 		return nil
 	}
 	if n < 0 || n > MaxBlobSize {
-		d.err = fmt.Errorf("wire: blob size %d exceeds maximum %d", n, MaxBlobSize)
+		d.err = coreerr.E("Decoder.ReadBytes", fmt.Sprintf("wire: blob size %d exceeds maximum %d", n, MaxBlobSize), nil)
 		return nil
 	}
 	buf := make([]byte, n)

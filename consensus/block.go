@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"slices"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/types"
 )
@@ -28,8 +30,8 @@ func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, rec
 		limit = config.PosBlockFutureTimeLimit
 	}
 	if blockTimestamp > adjustedTime+limit {
-		return fmt.Errorf("%w: %d > %d + %d", ErrTimestampFuture,
-			blockTimestamp, adjustedTime, limit)
+		return coreerr.E("CheckTimestamp", fmt.Sprintf("%d > %d + %d",
+			blockTimestamp, adjustedTime, limit), ErrTimestampFuture)
 	}
 
 	// Median check — only when we have enough history.
@@ -39,8 +41,8 @@ func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, rec
 
 	median := medianTimestamp(recentTimestamps)
 	if blockTimestamp < median {
-		return fmt.Errorf("%w: %d < median %d", ErrTimestampOld,
-			blockTimestamp, median)
+		return coreerr.E("CheckTimestamp", fmt.Sprintf("%d < median %d",
+			blockTimestamp, median), ErrTimestampOld)
 	}
 
 	return nil
@@ -64,16 +66,16 @@ func medianTimestamp(timestamps []uint64) uint64 {
 // 2 inputs (TxInputGenesis + stake input).
 func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFork) error {
 	if len(tx.Vin) == 0 {
-		return fmt.Errorf("%w: no inputs", ErrMinerTxInputs)
+		return coreerr.E("ValidateMinerTx", "no inputs", ErrMinerTxInputs)
 	}
 
 	// First input must be TxInputGenesis.
 	gen, ok := tx.Vin[0].(types.TxInputGenesis)
 	if !ok {
-		return fmt.Errorf("%w: first input is not txin_gen", ErrMinerTxInputs)
+		return coreerr.E("ValidateMinerTx", "first input is not txin_gen", ErrMinerTxInputs)
 	}
 	if gen.Height != height {
-		return fmt.Errorf("%w: got %d, expected %d", ErrMinerTxHeight, gen.Height, height)
+		return coreerr.E("ValidateMinerTx", fmt.Sprintf("got %d, expected %d", gen.Height, height), ErrMinerTxHeight)
 	}
 
 	// PoW blocks: exactly 1 input. PoS: exactly 2.
@@ -87,12 +89,12 @@ func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFo
 		default:
 			hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 			if !hf4Active {
-				return fmt.Errorf("%w: invalid PoS stake input type", ErrMinerTxInputs)
+				return coreerr.E("ValidateMinerTx", "invalid PoS stake input type", ErrMinerTxInputs)
 			}
 			// Post-HF4: accept ZC inputs.
 		}
 	} else {
-		return fmt.Errorf("%w: %d inputs (expected 1 or 2)", ErrMinerTxInputs, len(tx.Vin))
+		return coreerr.E("ValidateMinerTx", fmt.Sprintf("%d inputs (expected 1 or 2)", len(tx.Vin)), ErrMinerTxInputs)
 	}
 
 	return nil
@@ -119,7 +121,7 @@ func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSi
 	}
 
 	if outputSum > expected {
-		return fmt.Errorf("%w: outputs %d > expected %d", ErrRewardMismatch, outputSum, expected)
+		return coreerr.E("ValidateBlockReward", fmt.Sprintf("outputs %d > expected %d", outputSum, expected), ErrRewardMismatch)
 	}
 
 	return nil

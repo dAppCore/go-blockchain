@@ -7,8 +7,9 @@ package chain
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/types"
@@ -20,19 +21,18 @@ import (
 func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	currentHeight, err := c.Height()
 	if err != nil {
-		return fmt.Errorf("validate: get height: %w", err)
+		return coreerr.E("Chain.ValidateHeader", "validate: get height", err)
 	}
 
 	// Height sequence check.
 	if expectedHeight != currentHeight {
-		return fmt.Errorf("validate: expected height %d but chain is at %d",
-			expectedHeight, currentHeight)
+		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: expected height %d but chain is at %d", expectedHeight, currentHeight), nil)
 	}
 
 	// Genesis block: prev_id must be zero.
 	if expectedHeight == 0 {
 		if !b.PrevID.IsZero() {
-			return errors.New("validate: genesis block has non-zero prev_id")
+			return coreerr.E("Chain.ValidateHeader", "validate: genesis block has non-zero prev_id", nil)
 		}
 		return nil
 	}
@@ -40,11 +40,10 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	// Non-genesis: prev_id must match top block hash.
 	_, topMeta, err := c.TopBlock()
 	if err != nil {
-		return fmt.Errorf("validate: get top block: %w", err)
+		return coreerr.E("Chain.ValidateHeader", "validate: get top block", err)
 	}
 	if b.PrevID != topMeta.Hash {
-		return fmt.Errorf("validate: prev_id %s does not match top block %s",
-			b.PrevID, topMeta.Hash)
+		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: prev_id %s does not match top block %s", b.PrevID, topMeta.Hash), nil)
 	}
 
 	// Block size check.
@@ -52,8 +51,7 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	enc := wire.NewEncoder(&buf)
 	wire.EncodeBlock(enc, b)
 	if enc.Err() == nil && uint64(buf.Len()) > config.MaxBlockSize {
-		return fmt.Errorf("validate: block size %d exceeds max %d",
-			buf.Len(), config.MaxBlockSize)
+		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: block size %d exceeds max %d", buf.Len(), config.MaxBlockSize), nil)
 	}
 
 	return nil

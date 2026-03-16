@@ -5,7 +5,11 @@
 
 package rpc
 
-import "fmt"
+import (
+	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
+)
 
 // SubmitBlock submits a mined block to the daemon.
 // The hexBlob is the hex-encoded serialised block.
@@ -20,7 +24,7 @@ func (c *Client) SubmitBlock(hexBlob string) error {
 		return err
 	}
 	if resp.Status != "OK" {
-		return fmt.Errorf("submitblock: status %q", resp.Status)
+		return coreerr.E("Client.SubmitBlock", fmt.Sprintf("submitblock: status %q", resp.Status), nil)
 	}
 	return nil
 }
@@ -47,7 +51,7 @@ func (c *Client) GetBlockTemplate(walletAddr string) (*BlockTemplateResponse, er
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getblocktemplate: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetBlockTemplate", fmt.Sprintf("getblocktemplate: status %q", resp.Status), nil)
 	}
 	return &resp, nil
 }

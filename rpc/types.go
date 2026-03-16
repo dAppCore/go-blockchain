@@ -48,22 +48,22 @@ type DaemonInfo struct {
 
 // BlockDetails is a full block with metadata as returned by get_blocks_details.
 type BlockDetails struct {
-	Height         uint64   `json:"height"`
-	Timestamp      uint64   `json:"timestamp"`
-	ActualTimestamp uint64  `json:"actual_timestamp"`
-	BaseReward     uint64   `json:"base_reward"`
-	SummaryReward  uint64   `json:"summary_reward"`
-	TotalFee       uint64   `json:"total_fee"`
-	ID             string   `json:"id"`
-	PrevID         string   `json:"prev_id"`
+	Height                uint64   `json:"height"`
+	Timestamp             uint64   `json:"timestamp"`
+	ActualTimestamp       uint64   `json:"actual_timestamp"`
+	BaseReward            uint64   `json:"base_reward"`
+	SummaryReward         uint64   `json:"summary_reward"`
+	TotalFee              uint64   `json:"total_fee"`
+	ID                    string   `json:"id"`
+	PrevID                string   `json:"prev_id"`
 	Difficulty            string   `json:"difficulty"`
-	CumulativeDiffPrecise string  `json:"cumulative_diff_precise"`
-	Type           uint64   `json:"type"`
-	IsOrphan       bool     `json:"is_orphan"`
-	CumulativeSize uint64   `json:"block_cumulative_size"`
-	Blob           string   `json:"blob"`
-	ObjectInJSON   string   `json:"object_in_json"`
-	Transactions   []TxInfo `json:"transactions_details"`
+	CumulativeDiffPrecise string   `json:"cumulative_diff_precise"`
+	Type                  uint64   `json:"type"`
+	IsOrphan              bool     `json:"is_orphan"`
+	CumulativeSize        uint64   `json:"block_cumulative_size"`
+	Blob                  string   `json:"blob"`
+	ObjectInJSON          string   `json:"object_in_json"`
+	Transactions          []TxInfo `json:"transactions_details"`
 }
 
 // TxInfo is transaction metadata as returned by get_tx_details.

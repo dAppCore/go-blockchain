@@ -6,8 +6,9 @@
 package chain
 
 import (
-	"fmt"
 	"log"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/p2p"
 	levinpkg "forge.lthn.ai/core/go-p2p/node/levin"
@@ -39,10 +40,10 @@ func (c *LevinP2PConn) handleMessage(hdr levinpkg.Header, data []byte) error {
 		resp := p2p.TimedSyncRequest{PayloadData: c.localSync}
 		payload, err := resp.Encode()
 		if err != nil {
-			return fmt.Errorf("encode timed_sync response: %w", err)
+			return coreerr.E("LevinP2PConn.handleMessage", "encode timed_sync response", err)
 		}
 		if err := c.conn.WriteResponse(p2p.CommandTimedSync, payload, levinpkg.ReturnOK); err != nil {
-			return fmt.Errorf("write timed_sync response: %w", err)
+			return coreerr.E("LevinP2PConn.handleMessage", "write timed_sync response", err)
 		}
 		log.Printf("p2p: responded to timed_sync")
 		return nil
@@ -55,24 +56,24 @@ func (c *LevinP2PConn) RequestChain(blockIDs [][]byte) (uint64, [][]byte, error)
 	req := p2p.RequestChain{BlockIDs: blockIDs}
 	payload, err := req.Encode()
 	if err != nil {
-		return 0, nil, fmt.Errorf("encode request_chain: %w", err)
+		return 0, nil, coreerr.E("LevinP2PConn.RequestChain", "encode request_chain", err)
 	}
 
 	// Send as notification (expectResponse=false) per CryptoNote protocol.
 	if err := c.conn.WritePacket(p2p.CommandRequestChain, payload, false); err != nil {
-		return 0, nil, fmt.Errorf("write request_chain: %w", err)
+		return 0, nil, coreerr.E("LevinP2PConn.RequestChain", "write request_chain", err)
 	}
 
 	// Read until we get RESPONSE_CHAIN_ENTRY.
 	for {
 		hdr, data, err := c.conn.ReadPacket()
 		if err != nil {
-			return 0, nil, fmt.Errorf("read response_chain: %w", err)
+			return 0, nil, coreerr.E("LevinP2PConn.RequestChain", "read response_chain", err)
 		}
 		if hdr.Command == p2p.CommandResponseChain {
 			var resp p2p.ResponseChainEntry
 			if err := resp.Decode(data); err != nil {
-				return 0, nil, fmt.Errorf("decode response_chain: %w", err)
+				return 0, nil, coreerr.E("LevinP2PConn.RequestChain", "decode response_chain", err)
 			}
 			return resp.StartHeight, resp.BlockIDs, nil
 		}
@@ -86,23 +87,23 @@ func (c *LevinP2PConn) RequestObjects(blockHashes [][]byte) ([]BlockBlobEntry, e
 	req := p2p.RequestGetObjects{Blocks: blockHashes}
 	payload, err := req.Encode()
 	if err != nil {
-		return nil, fmt.Errorf("encode request_get_objects: %w", err)
+		return nil, coreerr.E("LevinP2PConn.RequestObjects", "encode request_get_objects", err)
 	}
 
 	if err := c.conn.WritePacket(p2p.CommandRequestObjects, payload, false); err != nil {
-		return nil, fmt.Errorf("write request_get_objects: %w", err)
+		return nil, coreerr.E("LevinP2PConn.RequestObjects", "write request_get_objects", err)
 	}
 
 	// Read until we get RESPONSE_GET_OBJECTS.
 	for {
 		hdr, data, err := c.conn.ReadPacket()
 		if err != nil {
-			return nil, fmt.Errorf("read response_get_objects: %w", err)
+			return nil, coreerr.E("LevinP2PConn.RequestObjects", "read response_get_objects", err)
 		}
 		if hdr.Command == p2p.CommandResponseObjects {
 			var resp p2p.ResponseGetObjects
 			if err := resp.Decode(data); err != nil {
-				return nil, fmt.Errorf("decode response_get_objects: %w", err)
+				return nil, coreerr.E("LevinP2PConn.RequestObjects", "decode response_get_objects", err)
 			}
 			entries := make([]BlockBlobEntry, len(resp.Blocks))
 			for i, b := range resp.Blocks {

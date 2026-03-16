@@ -6,9 +6,10 @@
 package consensus
 
 import (
-	"errors"
 	"fmt"
 	"math/bits"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 )
@@ -43,7 +44,7 @@ func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 	}
 
 	if blockSize > 2*effectiveMedian {
-		return 0, fmt.Errorf("consensus: block size %d too large for median %d", blockSize, effectiveMedian)
+		return 0, coreerr.E("BlockReward", fmt.Sprintf("consensus: block size %d too large for median %d", blockSize, effectiveMedian), nil)
 	}
 
 	// penalty = baseReward * (2*median - size) * size / median²
@@ -56,7 +57,7 @@ func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 
 	// Since hi1 should be 0 for reasonable block sizes, simplify:
 	if hi1 > 0 {
-		return 0, errors.New("consensus: reward overflow")
+		return 0, coreerr.E("BlockReward", "consensus: reward overflow", nil)
 	}
 	hi2, lo2 := bits.Mul64(baseReward, lo1)
 

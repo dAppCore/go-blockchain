@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	cli "forge.lthn.ai/core/cli/pkg/cli"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"forge.lthn.ai/core/go-blockchain/chain"
 	"forge.lthn.ai/core/go-blockchain/types"
@@ -23,7 +23,7 @@ var _ cli.FrameModel = (*ExplorerModel)(nil)
 type explorerView int
 
 const (
-	viewBlockList   explorerView = iota
+	viewBlockList explorerView = iota
 	viewBlockDetail
 	viewTxDetail
 )

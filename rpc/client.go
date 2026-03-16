@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // Client is a Lethean daemon RPC client.
@@ -66,10 +68,10 @@ type jsonRPCRequest struct {
 }
 
 type jsonRPCResponse struct {
-	JSONRPC string           `json:"jsonrpc"`
-	ID      json.RawMessage  `json:"id"`
-	Result  json.RawMessage  `json:"result"`
-	Error   *jsonRPCError    `json:"error,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id"`
+	Result  json.RawMessage `json:"result"`
+	Error   *jsonRPCError   `json:"error,omitempty"`
 }
 
 type jsonRPCError struct {
@@ -86,27 +88,27 @@ func (c *Client) call(method string, params any, result any) error {
 		Params:  params,
 	})
 	if err != nil {
-		return fmt.Errorf("marshal request: %w", err)
+		return coreerr.E("Client.call", "marshal request", err)
 	}
 
 	resp, err := c.httpClient.Post(c.url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("post %s: %w", method, err)
+		return coreerr.E("Client.call", fmt.Sprintf("post %s", method), err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http %d from %s", resp.StatusCode, method)
+		return coreerr.E("Client.call", fmt.Sprintf("http %d from %s", resp.StatusCode, method), nil)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read response: %w", err)
+		return coreerr.E("Client.call", "read response", err)
 	}
 
 	var rpcResp jsonRPCResponse
 	if err := json.Unmarshal(body, &rpcResp); err != nil {
-		return fmt.Errorf("unmarshal response: %w", err)
+		return coreerr.E("Client.call", "unmarshal response", err)
 	}
 
 	if rpcResp.Error != nil {
@@ -115,7 +117,7 @@ func (c *Client) call(method string, params any, result any) error {
 
 	if result != nil && len(rpcResp.Result) > 0 {
 		if err := json.Unmarshal(rpcResp.Result, result); err != nil {
-			return fmt.Errorf("unmarshal result: %w", err)
+			return coreerr.E("Client.call", "unmarshal result", err)
 		}
 	}
 	return nil
@@ -125,28 +127,28 @@ func (c *Client) call(method string, params any, result any) error {
 func (c *Client) legacyCall(path string, params any, result any) error {
 	reqBody, err := json.Marshal(params)
 	if err != nil {
-		return fmt.Errorf("marshal request: %w", err)
+		return coreerr.E("Client.legacyCall", "marshal request", err)
 	}
 
 	url := c.baseURL + path
 	resp, err := c.httpClient.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("post %s: %w", path, err)
+		return coreerr.E("Client.legacyCall", fmt.Sprintf("post %s", path), err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http %d from %s", resp.StatusCode, path)
+		return coreerr.E("Client.legacyCall", fmt.Sprintf("http %d from %s", resp.StatusCode, path), nil)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read response: %w", err)
+		return coreerr.E("Client.legacyCall", "read response", err)
 	}
 
 	if result != nil {
 		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("unmarshal response: %w", err)
+			return coreerr.E("Client.legacyCall", "unmarshal response", err)
 		}
 	}
 	return nil

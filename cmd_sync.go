@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/chain"
 	"forge.lthn.ai/core/go-process"
 	store "forge.lthn.ai/core/go-store"
@@ -56,7 +58,7 @@ func runSyncForeground(dataDir, seed string, testnet bool) error {
 	dbPath := filepath.Join(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return coreerr.E("runSyncForeground", "open store", err)
 	}
 	defer s.Close()
 
@@ -89,14 +91,14 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 	})
 
 	if err := d.Start(); err != nil {
-		return fmt.Errorf("daemon start: %w", err)
+		return coreerr.E("runSyncDaemon", "daemon start", err)
 	}
 
 	dbPath := filepath.Join(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
 		_ = d.Stop()
-		return fmt.Errorf("open store: %w", err)
+		return coreerr.E("runSyncDaemon", "open store", err)
 	}
 	defer s.Close()
 
@@ -125,16 +127,16 @@ func stopSyncDaemon(dataDir string) error {
 	pidFile := filepath.Join(dataDir, "sync.pid")
 	pid, running := process.ReadPID(pidFile)
 	if pid == 0 || !running {
-		return fmt.Errorf("no running sync daemon found")
+		return coreerr.E("stopSyncDaemon", "no running sync daemon found", nil)
 	}
 
 	proc, err := os.FindProcess(pid)
 	if err != nil {
-		return fmt.Errorf("find process %d: %w", pid, err)
+		return coreerr.E("stopSyncDaemon", fmt.Sprintf("find process %d", pid), err)
 	}
 
 	if err := proc.Signal(syscall.SIGTERM); err != nil {
-		return fmt.Errorf("signal process %d: %w", pid, err)
+		return coreerr.E("stopSyncDaemon", fmt.Sprintf("signal process %d", pid), err)
 	}
 
 	log.Printf("Sent SIGTERM to sync daemon (PID %d)", pid)

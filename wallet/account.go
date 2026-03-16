@@ -15,9 +15,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"golang.org/x/crypto/argon2"
 
@@ -64,7 +64,7 @@ type Account struct {
 func GenerateAccount() (*Account, error) {
 	spendPub, spendSec, err := crypto.GenerateKeys()
 	if err != nil {
-		return nil, fmt.Errorf("wallet: generate spend keys: %w", err)
+		return nil, coreerr.E("GenerateAccount", "wallet: generate spend keys", err)
 	}
 	return accountFromSpendKey(spendSec, spendPub)
 }
@@ -74,11 +74,11 @@ func GenerateAccount() (*Account, error) {
 func RestoreFromSeed(phrase string) (*Account, error) {
 	key, err := MnemonicDecode(phrase)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: restore from seed: %w", err)
+		return nil, coreerr.E("RestoreFromSeed", "wallet: restore from seed", err)
 	}
 	spendPub, err := crypto.SecretToPublic(key)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: spend pub from secret: %w", err)
+		return nil, coreerr.E("RestoreFromSeed", "wallet: spend pub from secret", err)
 	}
 	return accountFromSpendKey(key, spendPub)
 }
@@ -88,7 +88,7 @@ func RestoreFromSeed(phrase string) (*Account, error) {
 func RestoreViewOnly(viewSecret types.SecretKey, spendPublic types.PublicKey) (*Account, error) {
 	viewPub, err := crypto.SecretToPublic([32]byte(viewSecret))
 	if err != nil {
-		return nil, fmt.Errorf("wallet: view pub from secret: %w", err)
+		return nil, coreerr.E("RestoreViewOnly", "wallet: view pub from secret", err)
 	}
 	return &Account{
 		SpendPublicKey: spendPublic,
@@ -115,28 +115,28 @@ func (a *Account) Address() types.Address {
 func (a *Account) Save(s *store.Store, password string) error {
 	plaintext, err := json.Marshal(a)
 	if err != nil {
-		return fmt.Errorf("wallet: marshal account: %w", err)
+		return coreerr.E("Account.Save", "wallet: marshal account", err)
 	}
 
 	salt := make([]byte, saltLen)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
-		return fmt.Errorf("wallet: generate salt: %w", err)
+		return coreerr.E("Account.Save", "wallet: generate salt", err)
 	}
 
 	derived := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
 
 	block, err := aes.NewCipher(derived)
 	if err != nil {
-		return fmt.Errorf("wallet: aes cipher: %w", err)
+		return coreerr.E("Account.Save", "wallet: aes cipher", err)
 	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return fmt.Errorf("wallet: gcm: %w", err)
+		return coreerr.E("Account.Save", "wallet: gcm", err)
 	}
 
 	nonce := make([]byte, nonceLen)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return fmt.Errorf("wallet: generate nonce: %w", err)
+		return coreerr.E("Account.Save", "wallet: generate nonce", err)
 	}
 
 	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
@@ -154,16 +154,16 @@ func (a *Account) Save(s *store.Store, password string) error {
 func LoadAccount(s *store.Store, password string) (*Account, error) {
 	encoded, err := s.Get(groupAccount, keyAccount)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: load account: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: load account", err)
 	}
 
 	blob, err := hex.DecodeString(encoded)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: decode account hex: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: decode account hex", err)
 	}
 
 	if len(blob) < saltLen+nonceLen+1 {
-		return nil, errors.New("wallet: account data too short")
+		return nil, coreerr.E("LoadAccount", "wallet: account data too short", nil)
 	}
 
 	salt := blob[:saltLen]
@@ -174,21 +174,21 @@ func LoadAccount(s *store.Store, password string) (*Account, error) {
 
 	block, err := aes.NewCipher(derived)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: aes cipher: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: aes cipher", err)
 	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: gcm: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: gcm", err)
 	}
 
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: decrypt account: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: decrypt account", err)
 	}
 
 	var acc Account
 	if err := json.Unmarshal(plaintext, &acc); err != nil {
-		return nil, fmt.Errorf("wallet: unmarshal account: %w", err)
+		return nil, coreerr.E("LoadAccount", "wallet: unmarshal account", err)
 	}
 	return &acc, nil
 }
@@ -201,7 +201,7 @@ func accountFromSpendKey(spendSec, spendPub [32]byte) (*Account, error) {
 	crypto.ScReduce32(&viewSec)
 	viewPub, err := crypto.SecretToPublic(viewSec)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: view pub from secret: %w", err)
+		return nil, coreerr.E("accountFromSpendKey", "wallet: view pub from secret", err)
 	}
 	return &Account{
 		SpendPublicKey: types.PublicKey(spendPub),

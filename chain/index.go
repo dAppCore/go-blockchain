@@ -11,14 +11,16 @@ import (
 	"fmt"
 	"strconv"
 
-	store "forge.lthn.ai/core/go-store"
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/types"
+	store "forge.lthn.ai/core/go-store"
 )
 
 // MarkSpent records a key image as spent at the given block height.
 func (c *Chain) MarkSpent(ki types.KeyImage, height uint64) error {
 	if err := c.store.Set(groupSpentKeys, ki.String(), strconv.FormatUint(height, 10)); err != nil {
-		return fmt.Errorf("chain: mark spent %s: %w", ki, err)
+		return coreerr.E("Chain.MarkSpent", fmt.Sprintf("chain: mark spent %s", ki), err)
 	}
 	return nil
 }
@@ -30,7 +32,7 @@ func (c *Chain) IsSpent(ki types.KeyImage) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("chain: check spent %s: %w", ki, err)
+		return false, coreerr.E("Chain.IsSpent", fmt.Sprintf("chain: check spent %s", ki), err)
 	}
 	return true, nil
 }
@@ -46,7 +48,7 @@ func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64,
 	grp := outputGroup(amount)
 	count, err := c.store.Count(grp)
 	if err != nil {
-		return 0, fmt.Errorf("chain: output count: %w", err)
+		return 0, coreerr.E("Chain.PutOutput", "chain: output count", err)
 	}
 	gindex := uint64(count)
 
@@ -56,12 +58,12 @@ func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64,
 	}
 	val, err := json.Marshal(entry)
 	if err != nil {
-		return 0, fmt.Errorf("chain: marshal output: %w", err)
+		return 0, coreerr.E("Chain.PutOutput", "chain: marshal output", err)
 	}
 
 	key := strconv.FormatUint(gindex, 10)
 	if err := c.store.Set(grp, key, string(val)); err != nil {
-		return 0, fmt.Errorf("chain: store output: %w", err)
+		return 0, coreerr.E("Chain.PutOutput", "chain: store output", err)
 	}
 	return gindex, nil
 }
@@ -73,18 +75,18 @@ func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, err
 	val, err := c.store.Get(grp, key)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			return types.Hash{}, 0, fmt.Errorf("chain: output %d:%d not found", amount, gindex)
+			return types.Hash{}, 0, coreerr.E("Chain.GetOutput", fmt.Sprintf("chain: output %d:%d not found", amount, gindex), nil)
 		}
-		return types.Hash{}, 0, fmt.Errorf("chain: get output: %w", err)
+		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: get output", err)
 	}
 
 	var entry outputEntry
 	if err := json.Unmarshal([]byte(val), &entry); err != nil {
-		return types.Hash{}, 0, fmt.Errorf("chain: unmarshal output: %w", err)
+		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: unmarshal output", err)
 	}
 	hash, err := types.HashFromHex(entry.TxID)
 	if err != nil {
-		return types.Hash{}, 0, fmt.Errorf("chain: parse output tx_id: %w", err)
+		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: parse output tx_id", err)
 	}
 	return hash, entry.OutNo, nil
 }
@@ -93,7 +95,7 @@ func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, err
 func (c *Chain) OutputCount(amount uint64) (uint64, error) {
 	n, err := c.store.Count(outputGroup(amount))
 	if err != nil {
-		return 0, fmt.Errorf("chain: output count: %w", err)
+		return 0, coreerr.E("Chain.OutputCount", "chain: output count", err)
 	}
 	return uint64(n), nil
 }

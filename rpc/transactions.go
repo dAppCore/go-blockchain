@@ -5,7 +5,11 @@
 
 package rpc
 
-import "fmt"
+import (
+	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
+)
 
 // GetTxDetails returns detailed information about a transaction.
 func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
@@ -20,7 +24,7 @@ func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("get_tx_details: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetTxDetails", fmt.Sprintf("get_tx_details: status %q", resp.Status), nil)
 	}
 	return &resp.TxInfo, nil
 }
@@ -41,7 +45,7 @@ func (c *Client) GetTransactions(hashes []string) (txsHex []string, missed []str
 		return nil, nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, nil, fmt.Errorf("gettransactions: status %q", resp.Status)
+		return nil, nil, coreerr.E("Client.GetTransactions", fmt.Sprintf("gettransactions: status %q", resp.Status), nil)
 	}
 	return resp.TxsAsHex, resp.MissedTx, nil
 }

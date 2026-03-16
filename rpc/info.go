@@ -5,7 +5,11 @@
 
 package rpc
 
-import "fmt"
+import (
+	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
+)
 
 // GetInfo returns the daemon status.
 // Uses flags=0 for the cheapest query (no expensive calculations).
@@ -21,7 +25,7 @@ func (c *Client) GetInfo() (*DaemonInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getinfo: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetInfo", fmt.Sprintf("getinfo: status %q", resp.Status), nil)
 	}
 	return &resp.DaemonInfo, nil
 }
@@ -37,7 +41,7 @@ func (c *Client) GetHeight() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, fmt.Errorf("getheight: status %q", resp.Status)
+		return 0, coreerr.E("Client.GetHeight", fmt.Sprintf("getheight: status %q", resp.Status), nil)
 	}
 	return resp.Height, nil
 }
@@ -52,7 +56,7 @@ func (c *Client) GetBlockCount() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, fmt.Errorf("getblockcount: status %q", resp.Status)
+		return 0, coreerr.E("Client.GetBlockCount", fmt.Sprintf("getblockcount: status %q", resp.Status), nil)
 	}
 	return resp.Count, nil
 }

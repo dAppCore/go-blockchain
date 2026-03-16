@@ -8,10 +8,8 @@
 package chain
 
 import (
-	"errors"
-	"fmt"
-
 	"forge.lthn.ai/core/go-blockchain/types"
+	coreerr "forge.lthn.ai/core/go-log"
 	store "forge.lthn.ai/core/go-store"
 )
 
@@ -29,7 +27,7 @@ func New(s *store.Store) *Chain {
 func (c *Chain) Height() (uint64, error) {
 	n, err := c.store.Count(groupBlocks)
 	if err != nil {
-		return 0, fmt.Errorf("chain: height: %w", err)
+		return 0, coreerr.E("Chain.Height", "chain: height", err)
 	}
 	return uint64(n), nil
 }
@@ -42,7 +40,7 @@ func (c *Chain) TopBlock() (*types.Block, *BlockMeta, error) {
 		return nil, nil, err
 	}
 	if h == 0 {
-		return nil, nil, errors.New("chain: no blocks stored")
+		return nil, nil, coreerr.E("Chain.TopBlock", "chain: no blocks stored", nil)
 	}
 	return c.GetBlockByHeight(h - 1)
 }

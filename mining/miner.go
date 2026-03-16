@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/consensus"
 	"forge.lthn.ai/core/go-blockchain/crypto"
 	"forge.lthn.ai/core/go-blockchain/rpc"
@@ -139,18 +141,18 @@ func (m *Miner) Start(ctx context.Context) error {
 		// Parse difficulty.
 		diff, err := strconv.ParseUint(tmpl.Difficulty, 10, 64)
 		if err != nil {
-			return fmt.Errorf("mining: invalid difficulty %q: %w", tmpl.Difficulty, err)
+			return coreerr.E("Miner.Start", fmt.Sprintf("mining: invalid difficulty %q", tmpl.Difficulty), err)
 		}
 
 		// Decode the block template blob.
 		blobBytes, err := hex.DecodeString(tmpl.BlockTemplateBlob)
 		if err != nil {
-			return fmt.Errorf("mining: invalid template blob hex: %w", err)
+			return coreerr.E("Miner.Start", "mining: invalid template blob hex", err)
 		}
 		dec := wire.NewDecoder(bytes.NewReader(blobBytes))
 		block := wire.DecodeBlock(dec)
 		if dec.Err() != nil {
-			return fmt.Errorf("mining: decode template: %w", dec.Err())
+			return coreerr.E("Miner.Start", "mining: decode template", dec.Err())
 		}
 
 		// Update stats.
@@ -202,7 +204,7 @@ func (m *Miner) mine(ctx context.Context, block *types.Block, headerHash [32]byt
 
 		powHash, err := crypto.RandomXHash(RandomXKey, input[:])
 		if err != nil {
-			return fmt.Errorf("mining: RandomX hash: %w", err)
+			return coreerr.E("Miner.mine", "mining: RandomX hash", err)
 		}
 
 		m.hashCount.Add(1)
@@ -215,12 +217,12 @@ func (m *Miner) mine(ctx context.Context, block *types.Block, headerHash [32]byt
 			enc := wire.NewEncoder(&buf)
 			wire.EncodeBlock(enc, block)
 			if enc.Err() != nil {
-				return fmt.Errorf("mining: encode solution: %w", enc.Err())
+				return coreerr.E("Miner.mine", "mining: encode solution", enc.Err())
 			}
 
 			hexBlob := hex.EncodeToString(buf.Bytes())
 			if err := m.provider.SubmitBlock(hexBlob); err != nil {
-				return fmt.Errorf("mining: submit block: %w", err)
+				return coreerr.E("Miner.mine", "mining: submit block", err)
 			}
 
 			m.blocksFound.Add(1)

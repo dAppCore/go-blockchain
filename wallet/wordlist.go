@@ -1640,4 +1640,3 @@ func init() {
 		wordIndex[w] = i
 	}
 }
-

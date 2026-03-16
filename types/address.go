@@ -10,9 +10,10 @@
 package types
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"golang.org/x/crypto/sha3"
 
@@ -81,24 +82,24 @@ func (a *Address) Encode(prefix uint64) string {
 func DecodeAddress(s string) (*Address, uint64, error) {
 	raw, err := base58Decode(s)
 	if err != nil {
-		return nil, 0, fmt.Errorf("types: base58 decode failed: %w", err)
+		return nil, 0, coreerr.E("DecodeAddress", "types: base58 decode failed", err)
 	}
 
 	// The minimum size is: 1 byte prefix varint + 32 + 32 + 1 flags + 4 checksum = 70.
 	if len(raw) < 70 {
-		return nil, 0, errors.New("types: address data too short")
+		return nil, 0, coreerr.E("DecodeAddress", "types: address data too short", nil)
 	}
 
 	// Decode the prefix varint.
 	prefix, prefixLen, err := decodeVarint(raw)
 	if err != nil {
-		return nil, 0, fmt.Errorf("types: invalid address prefix varint: %w", err)
+		return nil, 0, coreerr.E("DecodeAddress", "types: invalid address prefix varint", err)
 	}
 
 	// After the prefix we need exactly 32+32+1+4 = 69 bytes.
 	remaining := raw[prefixLen:]
 	if len(remaining) != 69 {
-		return nil, 0, fmt.Errorf("types: unexpected address data length: want 69 bytes after prefix, got %d", len(remaining))
+		return nil, 0, coreerr.E("DecodeAddress", fmt.Sprintf("types: unexpected address data length: want 69 bytes after prefix, got %d", len(remaining)), nil)
 	}
 
 	// Validate checksum: Keccak-256 of everything except the last 4 bytes.
@@ -109,7 +110,7 @@ func DecodeAddress(s string) (*Address, uint64, error) {
 		expectedChecksum[1] != actualChecksum[1] ||
 		expectedChecksum[2] != actualChecksum[2] ||
 		expectedChecksum[3] != actualChecksum[3] {
-		return nil, 0, errors.New("types: address checksum mismatch")
+		return nil, 0, coreerr.E("DecodeAddress", "types: address checksum mismatch", nil)
 	}
 
 	addr := &Address{}
@@ -214,7 +215,7 @@ func encodeBlock(block []byte, encodedSize int) []byte {
 // base58Decode decodes a CryptoNote base58 string back into raw bytes.
 func base58Decode(s string) ([]byte, error) {
 	if len(s) == 0 {
-		return nil, errors.New("types: empty base58 string")
+		return nil, coreerr.E("base58Decode", "types: empty base58 string", nil)
 	}
 
 	fullBlocks := len(s) / 11
@@ -222,7 +223,7 @@ func base58Decode(s string) ([]byte, error) {
 
 	// Validate that the last block size maps to a valid byte count.
 	if lastBlockChars > 0 && base58ReverseBlockSizes[lastBlockChars] < 0 {
-		return nil, fmt.Errorf("types: invalid base58 string length %d", len(s))
+		return nil, coreerr.E("base58Decode", fmt.Sprintf("types: invalid base58 string length %d", len(s)), nil)
 	}
 
 	var result []byte
@@ -257,7 +258,7 @@ func decodeBlock(s string, byteCount int) ([]byte, error) {
 	for _, c := range []byte(s) {
 		idx := base58CharIndex(c)
 		if idx < 0 {
-			return nil, fmt.Errorf("types: invalid base58 character %q", c)
+			return nil, coreerr.E("decodeBlock", fmt.Sprintf("types: invalid base58 character %q", c), nil)
 		}
 		num.Mul(num, base)
 		num.Add(num, big.NewInt(int64(idx)))
@@ -266,7 +267,7 @@ func decodeBlock(s string, byteCount int) ([]byte, error) {
 	// Convert to fixed-size byte array, big-endian.
 	raw := num.Bytes()
 	if len(raw) > byteCount {
-		return nil, fmt.Errorf("types: base58 block overflow: decoded %d bytes, expected %d", len(raw), byteCount)
+		return nil, coreerr.E("decodeBlock", fmt.Sprintf("types: base58 block overflow: decoded %d bytes, expected %d", len(raw), byteCount), nil)
 	}
 
 	// Pad with leading zeroes if necessary.
@@ -310,7 +311,7 @@ func encodeVarint(v uint64) []byte {
 
 func decodeVarint(data []byte) (uint64, int, error) {
 	if len(data) == 0 {
-		return 0, 0, errors.New("types: cannot decode varint from empty data")
+		return 0, 0, coreerr.E("decodeVarint", "types: cannot decode varint from empty data", nil)
 	}
 	var v uint64
 	for i := 0; i < len(data) && i < 10; i++ {
@@ -319,5 +320,5 @@ func decodeVarint(data []byte) (uint64, int, error) {
 			return v, i + 1, nil
 		}
 	}
-	return 0, 0, errors.New("types: varint overflow")
+	return 0, 0, coreerr.E("decodeVarint", "types: varint overflow", nil)
 }

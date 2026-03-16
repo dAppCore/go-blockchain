@@ -6,8 +6,9 @@
 package consensus
 
 import (
-	"errors"
 	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/crypto"
@@ -58,20 +59,17 @@ func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
 }
 
 // verifyV1Signatures checks NLSAG ring signatures for pre-HF4 transactions.
-// Both TxInputToKey and TxInputHTLC use NLSAG ring signatures.
 func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) error {
-	// Count ring-sig inputs (TxInputToKey and TxInputHTLC).
+	// Count key inputs.
 	var keyInputCount int
 	for _, vin := range tx.Vin {
-		switch vin.(type) {
-		case types.TxInputToKey, types.TxInputHTLC:
+		if _, ok := vin.(types.TxInputToKey); ok {
 			keyInputCount++
 		}
 	}
 
 	if len(tx.Signatures) != keyInputCount {
-		return fmt.Errorf("consensus: signature count %d != input count %d",
-			len(tx.Signatures), keyInputCount)
+		return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: signature count %d != input count %d", len(tx.Signatures), keyInputCount), nil)
 	}
 
 	// Actual NLSAG verification requires the crypto bridge and ring outputs.
@@ -84,40 +82,25 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 
 	var sigIdx int
 	for _, vin := range tx.Vin {
-		// Extract the common ring-sig fields from either input type.
-		var amount uint64
-		var keyOffsets []types.TxOutRef
-		var keyImage types.KeyImage
-
-		switch v := vin.(type) {
-		case types.TxInputToKey:
-			amount = v.Amount
-			keyOffsets = v.KeyOffsets
-			keyImage = v.KeyImage
-		case types.TxInputHTLC:
-			amount = v.Amount
-			keyOffsets = v.KeyOffsets
-			keyImage = v.KeyImage
-		default:
+		inp, ok := vin.(types.TxInputToKey)
+		if !ok {
 			continue
 		}
 
 		// Extract absolute global indices from key offsets.
-		offsets := make([]uint64, len(keyOffsets))
-		for i, ref := range keyOffsets {
+		offsets := make([]uint64, len(inp.KeyOffsets))
+		for i, ref := range inp.KeyOffsets {
 			offsets[i] = ref.GlobalIndex
 		}
 
-		ringKeys, err := getRingOutputs(amount, offsets)
+		ringKeys, err := getRingOutputs(inp.Amount, offsets)
 		if err != nil {
-			return fmt.Errorf("consensus: failed to fetch ring outputs for input %d: %w",
-				sigIdx, err)
+			return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: failed to fetch ring outputs for input %d", sigIdx), err)
 		}
 
 		ringSigs := tx.Signatures[sigIdx]
 		if len(ringSigs) != len(ringKeys) {
-			return fmt.Errorf("consensus: input %d has %d signatures but ring size %d",
-				sigIdx, len(ringSigs), len(ringKeys))
+			return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: input %d has %d signatures but ring size %d", sigIdx, len(ringSigs), len(ringKeys)), nil)
 		}
 
 		// Convert typed slices to raw byte arrays for the crypto bridge.
@@ -131,8 +114,8 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 			sigs[i] = [64]byte(s)
 		}
 
-		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(keyImage), pubs, sigs) {
-			return fmt.Errorf("consensus: ring signature verification failed for input %d", sigIdx)
+		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(inp.KeyImage), pubs, sigs) {
+			return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: ring signature verification failed for input %d", sigIdx), nil)
 		}
 
 		sigIdx++
@@ -146,13 +129,12 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 	// Parse the signature variant vector.
 	sigEntries, err := parseV2Signatures(tx.SignaturesRaw)
 	if err != nil {
-		return fmt.Errorf("consensus: %w", err)
+		return coreerr.E("verifyV2Signatures", "consensus", err)
 	}
 
 	// Match signatures to inputs: each input must have a corresponding signature.
 	if len(sigEntries) != len(tx.Vin) {
-		return fmt.Errorf("consensus: V2 signature count %d != input count %d",
-			len(sigEntries), len(tx.Vin))
+		return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: V2 signature count %d != input count %d", len(sigEntries), len(tx.Vin)), nil)
 	}
 
 	// Validate that ZC inputs have ZC_sig and vice versa.
@@ -160,13 +142,11 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 		switch vin.(type) {
 		case types.TxInputZC:
 			if sigEntries[i].tag != types.SigTypeZC {
-				return fmt.Errorf("consensus: input %d is ZC but signature tag is 0x%02x",
-					i, sigEntries[i].tag)
+				return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: input %d is ZC but signature tag is 0x%02x", i, sigEntries[i].tag), nil)
 			}
 		case types.TxInputToKey:
 			if sigEntries[i].tag != types.SigTypeNLSAG && sigEntries[i].tag != types.SigTypeVoid {
-				return fmt.Errorf("consensus: input %d is to_key but signature tag is 0x%02x",
-					i, sigEntries[i].tag)
+				return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: input %d is to_key but signature tag is 0x%02x", i, sigEntries[i].tag), nil)
 			}
 		}
 	}
@@ -190,7 +170,7 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 
 		zc := sigEntries[i].zcSig
 		if zc == nil {
-			return fmt.Errorf("consensus: input %d: missing ZC_sig data", i)
+			return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: input %d: missing ZC_sig data", i), nil)
 		}
 
 		// Extract absolute global indices from key offsets.
@@ -201,12 +181,11 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 
 		ringMembers, err := getZCRingOutputs(offsets)
 		if err != nil {
-			return fmt.Errorf("consensus: failed to fetch ZC ring outputs for input %d: %w", i, err)
+			return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: failed to fetch ZC ring outputs for input %d", i), err)
 		}
 
 		if len(ringMembers) != zc.ringSize {
-			return fmt.Errorf("consensus: input %d: ring size %d from chain != %d from sig",
-				i, len(ringMembers), zc.ringSize)
+			return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: input %d: ring size %d from chain != %d from sig", i, len(ringMembers), zc.ringSize), nil)
 		}
 
 		// Build flat ring: [stealth(32) | commitment(32) | blinded_asset_id(32)] per entry.
@@ -225,20 +204,20 @@ func verifyV2Signatures(tx *types.Transaction, getZCRingOutputs ZCRingOutputsFn)
 			[32]byte(zcIn.KeyImage),
 			zc.clsagFlatSig,
 		) {
-			return fmt.Errorf("consensus: CLSAG GGX verification failed for input %d", i)
+			return coreerr.E("verifyV2Signatures", fmt.Sprintf("consensus: CLSAG GGX verification failed for input %d", i), nil)
 		}
 	}
 
 	// Parse and verify proofs.
 	proofs, err := parseV2Proofs(tx.Proofs)
 	if err != nil {
-		return fmt.Errorf("consensus: %w", err)
+		return coreerr.E("verifyV2Signatures", "consensus", err)
 	}
 
 	// Verify BPP range proof if present.
 	if len(proofs.bppProofBytes) > 0 && len(proofs.bppCommitments) > 0 {
 		if !crypto.VerifyBPP(proofs.bppProofBytes, proofs.bppCommitments) {
-			return errors.New("consensus: BPP range proof verification failed")
+			return coreerr.E("verifyV2Signatures", "consensus: BPP range proof verification failed", nil)
 		}
 	}
 
@@ -279,8 +258,7 @@ func verifyBGEProofs(tx *types.Transaction, sigEntries []v2SigEntry,
 	}
 
 	if len(proofs.bgeProofs) != len(outputAssetIDs) {
-		return fmt.Errorf("consensus: BGE proof count %d != Zarcanum output count %d",
-			len(proofs.bgeProofs), len(outputAssetIDs))
+		return coreerr.E("verifyBGEProofs", fmt.Sprintf("consensus: BGE proof count %d != Zarcanum output count %d", len(proofs.bgeProofs), len(outputAssetIDs)), nil)
 	}
 
 	// Collect pseudo-out asset IDs from ZC signatures and expand to full points.
@@ -296,7 +274,7 @@ func verifyBGEProofs(tx *types.Transaction, sigEntries []v2SigEntry,
 	for i, p := range pseudoOutAssetIDs {
 		full, err := crypto.PointMul8(p)
 		if err != nil {
-			return fmt.Errorf("consensus: mul8 pseudo-out asset ID %d: %w", i, err)
+			return coreerr.E("verifyBGEProofs", fmt.Sprintf("consensus: mul8 pseudo-out asset ID %d", i), err)
 		}
 		mul8PseudoOuts[i] = full
 	}
@@ -307,7 +285,7 @@ func verifyBGEProofs(tx *types.Transaction, sigEntries []v2SigEntry,
 		// mul8 the output's blinded asset ID.
 		mul8Out, err := crypto.PointMul8(outAssetID)
 		if err != nil {
-			return fmt.Errorf("consensus: mul8 output asset ID %d: %w", j, err)
+			return coreerr.E("verifyBGEProofs", fmt.Sprintf("consensus: mul8 output asset ID %d", j), err)
 		}
 
 		// ring[i] = mul8(pseudo_out_i) - mul8(output_j)
@@ -315,13 +293,13 @@ func verifyBGEProofs(tx *types.Transaction, sigEntries []v2SigEntry,
 		for i, mul8Pseudo := range mul8PseudoOuts {
 			diff, err := crypto.PointSub(mul8Pseudo, mul8Out)
 			if err != nil {
-				return fmt.Errorf("consensus: BGE ring[%d][%d] sub: %w", j, i, err)
+				return coreerr.E("verifyBGEProofs", fmt.Sprintf("consensus: BGE ring[%d][%d] sub", j, i), err)
 			}
 			ring[i] = diff
 		}
 
 		if !crypto.VerifyBGE(context, ring, proofs.bgeProofs[j]) {
-			return fmt.Errorf("consensus: BGE proof verification failed for output %d", j)
+			return coreerr.E("verifyBGEProofs", fmt.Sprintf("consensus: BGE proof verification failed for output %d", j), nil)
 		}
 	}
 

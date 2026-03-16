@@ -5,19 +5,23 @@
 
 package rpc
 
-import "fmt"
+import (
+	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
+)
 
 // GetLastBlockHeader returns the header of the most recent block.
 func (c *Client) GetLastBlockHeader() (*BlockHeader, error) {
 	var resp struct {
 		BlockHeader BlockHeader `json:"block_header"`
-		Status      string     `json:"status"`
+		Status      string      `json:"status"`
 	}
 	if err := c.call("getlastblockheader", struct{}{}, &resp); err != nil {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getlastblockheader: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetLastBlockHeader", fmt.Sprintf("getlastblockheader: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
@@ -29,13 +33,13 @@ func (c *Client) GetBlockHeaderByHeight(height uint64) (*BlockHeader, error) {
 	}{Height: height}
 	var resp struct {
 		BlockHeader BlockHeader `json:"block_header"`
-		Status      string     `json:"status"`
+		Status      string      `json:"status"`
 	}
 	if err := c.call("getblockheaderbyheight", params, &resp); err != nil {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getblockheaderbyheight: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetBlockHeaderByHeight", fmt.Sprintf("getblockheaderbyheight: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
@@ -47,13 +51,13 @@ func (c *Client) GetBlockHeaderByHash(hash string) (*BlockHeader, error) {
 	}{Hash: hash}
 	var resp struct {
 		BlockHeader BlockHeader `json:"block_header"`
-		Status      string     `json:"status"`
+		Status      string      `json:"status"`
 	}
 	if err := c.call("getblockheaderbyhash", params, &resp); err != nil {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getblockheaderbyhash: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetBlockHeaderByHash", fmt.Sprintf("getblockheaderbyhash: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
@@ -73,7 +77,7 @@ func (c *Client) GetBlocksDetails(heightStart, count uint64) ([]BlockDetails, er
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("get_blocks_details: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetBlocksDetails", fmt.Sprintf("get_blocks_details: status %q", resp.Status), nil)
 	}
 	return resp.Blocks, nil
 }

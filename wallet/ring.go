@@ -12,6 +12,8 @@ package wallet
 import (
 	"fmt"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/rpc"
 	"forge.lthn.ai/core/go-blockchain/types"
 )
@@ -42,7 +44,7 @@ func NewRPCRingSelector(client *rpc.Client) *RPCRingSelector {
 func (s *RPCRingSelector) SelectRing(amount uint64, realGlobalIndex uint64, ringSize int) ([]RingMember, error) {
 	outs, err := s.client.GetRandomOutputs(amount, ringSize+5)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: get random outputs: %w", err)
+		return nil, coreerr.E("RPCRingSelector.SelectRing", "wallet: get random outputs", err)
 	}
 
 	var members []RingMember
@@ -68,8 +70,7 @@ func (s *RPCRingSelector) SelectRing(amount uint64, realGlobalIndex uint64, ring
 	}
 
 	if len(members) < ringSize {
-		return nil, fmt.Errorf("wallet: insufficient decoys: got %d, need %d",
-			len(members), ringSize)
+		return nil, coreerr.E("RPCRingSelector.SelectRing", fmt.Sprintf("wallet: insufficient decoys: got %d, need %d", len(members), ringSize), nil)
 	}
 	return members, nil
 }

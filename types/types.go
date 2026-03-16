@@ -15,6 +15,8 @@ package types
 import (
 	"encoding/hex"
 	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // Hash is a 256-bit (32-byte) hash value, typically produced by Keccak-256.
@@ -40,10 +42,10 @@ func HashFromHex(s string) (Hash, error) {
 	var h Hash
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return h, fmt.Errorf("types: invalid hex for hash: %w", err)
+		return h, coreerr.E("HashFromHex", "types: invalid hex for hash", err)
 	}
 	if len(b) != 32 {
-		return h, fmt.Errorf("types: hash hex must be 64 characters, got %d", len(s))
+		return h, coreerr.E("HashFromHex", fmt.Sprintf("types: hash hex must be 64 characters, got %d", len(s)), nil)
 	}
 	copy(h[:], b)
 	return h, nil
@@ -65,10 +67,10 @@ func PublicKeyFromHex(s string) (PublicKey, error) {
 	var pk PublicKey
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return pk, fmt.Errorf("types: invalid hex for public key: %w", err)
+		return pk, coreerr.E("PublicKeyFromHex", "types: invalid hex for public key", err)
 	}
 	if len(b) != 32 {
-		return pk, fmt.Errorf("types: public key hex must be 64 characters, got %d", len(s))
+		return pk, coreerr.E("PublicKeyFromHex", fmt.Sprintf("types: public key hex must be 64 characters, got %d", len(s)), nil)
 	}
 	copy(pk[:], b)
 	return pk, nil

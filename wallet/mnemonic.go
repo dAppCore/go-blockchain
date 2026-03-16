@@ -2,10 +2,11 @@ package wallet
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 const numWords = 1626
@@ -13,7 +14,7 @@ const numWords = 1626
 // MnemonicEncode converts a 32-byte secret key to a 25-word mnemonic phrase.
 func MnemonicEncode(key []byte) (string, error) {
 	if len(key) != 32 {
-		return "", fmt.Errorf("wallet: mnemonic encode requires 32 bytes, got %d", len(key))
+		return "", coreerr.E("MnemonicEncode", fmt.Sprintf("wallet: mnemonic encode requires 32 bytes, got %d", len(key)), nil)
 	}
 
 	words := make([]string, 0, 25)
@@ -39,12 +40,12 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 
 	words := strings.Fields(phrase)
 	if len(words) != 25 {
-		return key, fmt.Errorf("wallet: mnemonic requires 25 words, got %d", len(words))
+		return key, coreerr.E("MnemonicDecode", fmt.Sprintf("wallet: mnemonic requires 25 words, got %d", len(words)), nil)
 	}
 
 	expected := checksumIndex(words[:24])
 	if words[24] != words[expected] {
-		return key, errors.New("wallet: mnemonic checksum failed")
+		return key, coreerr.E("MnemonicDecode", "wallet: mnemonic checksum failed", nil)
 	}
 
 	n := uint32(numWords)
@@ -61,7 +62,7 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 			if !ok3 {
 				word = words[i*3+2]
 			}
-			return key, fmt.Errorf("wallet: unknown mnemonic word %q", word)
+			return key, coreerr.E("MnemonicDecode", fmt.Sprintf("wallet: unknown mnemonic word %q", word), nil)
 		}
 
 		val := uint32(w1) +

@@ -14,6 +14,8 @@ import (
 	"net"
 	"time"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/chain"
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/p2p"
@@ -54,7 +56,7 @@ func syncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, fork
 func syncOnce(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, opts chain.SyncOptions, seed string) error {
 	conn, err := net.DialTimeout("tcp", seed, 10*time.Second)
 	if err != nil {
-		return fmt.Errorf("dial %s: %w", seed, err)
+		return coreerr.E("syncOnce", fmt.Sprintf("dial %s", seed), err)
 	}
 	defer conn.Close()
 
@@ -81,23 +83,23 @@ func syncOnce(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, opts
 	}
 	payload, err := p2p.EncodeHandshakeRequest(&req)
 	if err != nil {
-		return fmt.Errorf("encode handshake: %w", err)
+		return coreerr.E("syncOnce", "encode handshake", err)
 	}
 	if err := lc.WritePacket(p2p.CommandHandshake, payload, true); err != nil {
-		return fmt.Errorf("write handshake: %w", err)
+		return coreerr.E("syncOnce", "write handshake", err)
 	}
 
 	hdr, data, err := lc.ReadPacket()
 	if err != nil {
-		return fmt.Errorf("read handshake: %w", err)
+		return coreerr.E("syncOnce", "read handshake", err)
 	}
 	if hdr.Command != uint32(p2p.CommandHandshake) {
-		return fmt.Errorf("unexpected command %d", hdr.Command)
+		return coreerr.E("syncOnce", fmt.Sprintf("unexpected command %d", hdr.Command), nil)
 	}
 
 	var resp p2p.HandshakeResponse
 	if err := resp.Decode(data); err != nil {
-		return fmt.Errorf("decode handshake: %w", err)
+		return coreerr.E("syncOnce", "decode handshake", err)
 	}
 
 	localSync := p2p.CoreSyncData{

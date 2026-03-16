@@ -6,9 +6,11 @@
 package blockchain
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+
+	coreio "forge.lthn.ai/core/go-io"
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"github.com/spf13/cobra"
@@ -60,8 +62,8 @@ func defaultDataDir() string {
 }
 
 func ensureDataDir(dataDir string) error {
-	if err := os.MkdirAll(dataDir, 0o755); err != nil {
-		return fmt.Errorf("create data dir: %w", err)
+	if err := coreio.Local.EnsureDir(dataDir); err != nil {
+		return coreerr.E("ensureDataDir", "create data dir", err)
 	}
 	return nil
 }

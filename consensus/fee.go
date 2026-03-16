@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"math"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/types"
 )
 
@@ -31,7 +33,7 @@ func TxFee(tx *types.Transaction) (uint64, error) {
 	}
 
 	if outputSum > inputSum {
-		return 0, fmt.Errorf("%w: inputs=%d, outputs=%d", ErrNegativeFee, inputSum, outputSum)
+		return 0, coreerr.E("TxFee", fmt.Sprintf("inputs=%d, outputs=%d", inputSum, outputSum), ErrNegativeFee)
 	}
 
 	return inputSum - outputSum, nil

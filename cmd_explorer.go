@@ -7,11 +7,12 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	cli "forge.lthn.ai/core/cli/pkg/cli"
 	store "forge.lthn.ai/core/go-store"
@@ -40,7 +41,7 @@ func runExplorer(dataDir, seed string, testnet bool) error {
 	dbPath := filepath.Join(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return coreerr.E("runExplorer", "open store", err)
 	}
 	defer s.Close()
 
@@ -68,7 +69,7 @@ func runExplorer(dataDir, seed string, testnet bool) error {
 	frame.Footer(hints)
 	frame.Run()
 
-	cancel()   // Signal syncLoop to stop.
+	cancel()  // Signal syncLoop to stop.
 	wg.Wait() // Wait for it before closing store.
 	return nil
 }

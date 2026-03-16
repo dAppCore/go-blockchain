@@ -8,12 +8,14 @@ package rpc
 import (
 	"encoding/hex"
 	"fmt"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // RandomOutputEntry is a decoy output returned by getrandom_outs.
 type RandomOutputEntry struct {
 	GlobalIndex uint64 `json:"global_index"`
-	PublicKey    string `json:"public_key"`
+	PublicKey   string `json:"public_key"`
 }
 
 // GetRandomOutputs fetches random decoy outputs for ring construction.
@@ -33,7 +35,7 @@ func (c *Client) GetRandomOutputs(amount uint64, count int) ([]RandomOutputEntry
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, fmt.Errorf("getrandom_outs: status %q", resp.Status)
+		return nil, coreerr.E("Client.GetRandomOutputs", fmt.Sprintf("getrandom_outs: status %q", resp.Status), nil)
 	}
 	return resp.Outs, nil
 }
@@ -53,7 +55,7 @@ func (c *Client) SendRawTransaction(txBlob []byte) error {
 		return err
 	}
 	if resp.Status != "OK" {
-		return fmt.Errorf("sendrawtransaction: status %q", resp.Status)
+		return coreerr.E("Client.SendRawTransaction", fmt.Sprintf("sendrawtransaction: status %q", resp.Status), nil)
 	}
 	return nil
 }

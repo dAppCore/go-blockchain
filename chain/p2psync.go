@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // P2PConnection abstracts the P2P communication needed for block sync.
@@ -44,7 +46,7 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 
 		localHeight, err := c.Height()
 		if err != nil {
-			return fmt.Errorf("p2p sync: get height: %w", err)
+			return coreerr.E("Chain.P2PSync", "p2p sync: get height", err)
 		}
 
 		peerHeight := conn.PeerHeight()
@@ -55,7 +57,7 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 		// Build sparse chain history.
 		history, err := c.SparseChainHistory()
 		if err != nil {
-			return fmt.Errorf("p2p sync: build history: %w", err)
+			return coreerr.E("Chain.P2PSync", "p2p sync: build history", err)
 		}
 
 		// Convert Hash to []byte for P2P.
@@ -69,7 +71,7 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 		// Request chain entry.
 		startHeight, blockIDs, err := conn.RequestChain(historyBytes)
 		if err != nil {
-			return fmt.Errorf("p2p sync: request chain: %w", err)
+			return coreerr.E("Chain.P2PSync", "p2p sync: request chain", err)
 		}
 
 		if len(blockIDs) == 0 {
@@ -106,7 +108,7 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 
 			entries, err := conn.RequestObjects(batch)
 			if err != nil {
-				return fmt.Errorf("p2p sync: request objects: %w", err)
+				return coreerr.E("Chain.P2PSync", "p2p sync: request objects", err)
 			}
 
 			currentHeight := fetchStart + uint64(i)
@@ -118,12 +120,12 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 
 				blockDiff, err := c.NextDifficulty(blockHeight, opts.Forks)
 				if err != nil {
-					return fmt.Errorf("p2p sync: compute difficulty for block %d: %w", blockHeight, err)
+					return coreerr.E("Chain.P2PSync", fmt.Sprintf("p2p sync: compute difficulty for block %d", blockHeight), err)
 				}
 
 				if err := c.processBlockBlobs(entry.Block, entry.Txs,
 					blockHeight, blockDiff, opts); err != nil {
-					return fmt.Errorf("p2p sync: process block %d: %w", blockHeight, err)
+					return coreerr.E("Chain.P2PSync", fmt.Sprintf("p2p sync: process block %d", blockHeight), err)
 				}
 			}
 		}

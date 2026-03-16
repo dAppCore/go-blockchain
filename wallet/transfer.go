@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	store "forge.lthn.ai/core/go-store"
 
 	"forge.lthn.ai/core/go-blockchain/config"
@@ -66,7 +68,7 @@ func (t *Transfer) IsSpendable(chainHeight uint64, _ bool) bool {
 func putTransfer(s *store.Store, tr *Transfer) error {
 	val, err := json.Marshal(tr)
 	if err != nil {
-		return fmt.Errorf("wallet: marshal transfer: %w", err)
+		return coreerr.E("putTransfer", "wallet: marshal transfer", err)
 	}
 	return s.Set(groupTransfers, tr.KeyImage.String(), string(val))
 }
@@ -75,11 +77,11 @@ func putTransfer(s *store.Store, tr *Transfer) error {
 func getTransfer(s *store.Store, ki types.KeyImage) (*Transfer, error) {
 	val, err := s.Get(groupTransfers, ki.String())
 	if err != nil {
-		return nil, fmt.Errorf("wallet: get transfer %s: %w", ki, err)
+		return nil, coreerr.E("getTransfer", fmt.Sprintf("wallet: get transfer %s", ki), err)
 	}
 	var tr Transfer
 	if err := json.Unmarshal([]byte(val), &tr); err != nil {
-		return nil, fmt.Errorf("wallet: unmarshal transfer: %w", err)
+		return nil, coreerr.E("getTransfer", "wallet: unmarshal transfer", err)
 	}
 	return &tr, nil
 }
@@ -100,7 +102,7 @@ func markTransferSpent(s *store.Store, ki types.KeyImage, height uint64) error {
 func listTransfers(s *store.Store) ([]Transfer, error) {
 	pairs, err := s.GetAll(groupTransfers)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: list transfers: %w", err)
+		return nil, coreerr.E("listTransfers", "wallet: list transfers", err)
 	}
 	transfers := make([]Transfer, 0, len(pairs))
 	for _, val := range pairs {

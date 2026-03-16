@@ -26,8 +26,8 @@ func (d *CoreSyncData) MarshalSection() levin.Section {
 		"current_height":           levin.Uint64Val(d.CurrentHeight),
 		"top_id":                   levin.StringVal(d.TopID[:]),
 		"last_checkpoint_height":   levin.Uint64Val(d.LastCheckpointHeight),
-		"core_time":               levin.Uint64Val(d.CoreTime),
-		"client_version":          levin.StringVal([]byte(d.ClientVersion)),
+		"core_time":                levin.Uint64Val(d.CoreTime),
+		"client_version":           levin.StringVal([]byte(d.ClientVersion)),
 		"non_pruning_mode_enabled": levin.BoolVal(d.NonPruningMode),
 	}
 }

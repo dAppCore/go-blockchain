@@ -10,10 +10,9 @@
 package wallet
 
 import (
-	"fmt"
-
 	"forge.lthn.ai/core/go-blockchain/crypto"
 	"forge.lthn.ai/core/go-blockchain/types"
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // Signer produces signatures for transaction inputs.
@@ -35,7 +34,7 @@ func (s *NLSAGSigner) SignInput(prefixHash types.Hash, ephemeral KeyPair,
 	ki, err := crypto.GenerateKeyImage(
 		[32]byte(ephemeral.Public), [32]byte(ephemeral.Secret))
 	if err != nil {
-		return nil, fmt.Errorf("wallet: key image: %w", err)
+		return nil, coreerr.E("NLSAGSigner.SignInput", "wallet: key image", err)
 	}
 
 	pubs := make([][32]byte, len(ring))
@@ -47,7 +46,7 @@ func (s *NLSAGSigner) SignInput(prefixHash types.Hash, ephemeral KeyPair,
 		[32]byte(prefixHash), ki, pubs,
 		[32]byte(ephemeral.Secret), realIndex)
 	if err != nil {
-		return nil, fmt.Errorf("wallet: ring signature: %w", err)
+		return nil, coreerr.E("NLSAGSigner.SignInput", "wallet: ring signature", err)
 	}
 
 	sigs := make([]types.Signature, len(rawSigs))

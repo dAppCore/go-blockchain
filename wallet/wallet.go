@@ -11,10 +11,11 @@ package wallet
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/chain"
 	"forge.lthn.ai/core/go-blockchain/rpc"
@@ -70,13 +71,13 @@ func (w *Wallet) Sync() error {
 
 	chainHeight, err := w.chain.Height()
 	if err != nil {
-		return fmt.Errorf("wallet: chain height: %w", err)
+		return coreerr.E("Wallet.Sync", "wallet: chain height", err)
 	}
 
 	for h := lastScanned; h < chainHeight; h++ {
 		blk, _, err := w.chain.GetBlockByHeight(h)
 		if err != nil {
-			return fmt.Errorf("wallet: get block %d: %w", h, err)
+			return coreerr.E("Wallet.Sync", fmt.Sprintf("wallet: get block %d", h), err)
 		}
 
 		// Scan miner tx.
@@ -115,7 +116,7 @@ func (w *Wallet) scanTx(tx *types.Transaction, blockHeight uint64) error {
 	}
 	for i := range transfers {
 		if err := putTransfer(w.store, &transfers[i]); err != nil {
-			return fmt.Errorf("wallet: store transfer: %w", err)
+			return coreerr.E("Wallet.scanTx", "wallet: store transfer", err)
 		}
 	}
 
@@ -167,7 +168,7 @@ func (w *Wallet) Balance() (confirmed, locked uint64, err error) {
 // Send constructs and submits a transaction.
 func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transaction, error) {
 	if w.builder == nil || w.client == nil {
-		return nil, errors.New("wallet: no RPC client configured")
+		return nil, coreerr.E("Wallet.Send", "wallet: no RPC client configured", nil)
 	}
 
 	chainHeight, err := w.chain.Height()
@@ -208,8 +209,7 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 		}
 	}
 	if selectedSum < needed {
-		return nil, fmt.Errorf("wallet: insufficient balance: have %d, need %d",
-			selectedSum, needed)
+		return nil, coreerr.E("Wallet.Send", fmt.Sprintf("wallet: insufficient balance: have %d, need %d", selectedSum, needed), nil)
 	}
 
 	req := &BuildRequest{
@@ -230,7 +230,7 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 	}
 
 	if err := w.client.SendRawTransaction(blob); err != nil {
-		return nil, fmt.Errorf("wallet: submit tx: %w", err)
+		return nil, coreerr.E("Wallet.Send", "wallet: submit tx", err)
 	}
 
 	// Optimistically mark sources as spent.

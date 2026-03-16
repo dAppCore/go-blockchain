@@ -12,9 +12,10 @@ package wallet
 import (
 	"bytes"
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
+
+	coreerr "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/crypto"
@@ -82,15 +83,14 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 		destTotal += dst.Amount
 	}
 	if sourceTotal < destTotal+req.Fee {
-		return nil, fmt.Errorf("wallet: insufficient funds: have %d, need %d",
-			sourceTotal, destTotal+req.Fee)
+		return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: insufficient funds: have %d, need %d", sourceTotal, destTotal+req.Fee), nil)
 	}
 	change := sourceTotal - destTotal - req.Fee
 
 	// 2. Generate one-time TX key pair.
 	txPub, txSec, err := crypto.GenerateKeys()
 	if err != nil {
-		return nil, fmt.Errorf("wallet: generate tx keys: %w", err)
+		return nil, coreerr.E("V1Builder.Build", "wallet: generate tx keys", err)
 	}
 
 	tx := &types.Transaction{Version: types.VersionPreHF4}
@@ -101,7 +101,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for i, src := range req.Sources {
 		input, meta, buildErr := b.buildInput(&src)
 		if buildErr != nil {
-			return nil, fmt.Errorf("wallet: input %d: %w", i, buildErr)
+			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: input %d", i), buildErr)
 		}
 		tx.Vin = append(tx.Vin, input)
 		metas[i] = meta
@@ -112,7 +112,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for _, dst := range req.Destinations {
 		out, outErr := deriveOutput(txSec, dst.Address, outputIdx, dst.Amount)
 		if outErr != nil {
-			return nil, fmt.Errorf("wallet: output %d: %w", outputIdx, outErr)
+			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: output %d", outputIdx), outErr)
 		}
 		tx.Vout = append(tx.Vout, out)
 		outputIdx++
@@ -122,7 +122,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	if change > 0 {
 		out, outErr := deriveOutput(txSec, req.SenderAddress, outputIdx, change)
 		if outErr != nil {
-			return nil, fmt.Errorf("wallet: change output: %w", outErr)
+			return nil, coreerr.E("V1Builder.Build", "wallet: change output", outErr)
 		}
 		tx.Vout = append(tx.Vout, out)
 	}
@@ -136,7 +136,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for i, meta := range metas {
 		sigs, signErr := b.signer.SignInput(prefixHash, meta.ephemeral, meta.ring, meta.realIndex)
 		if signErr != nil {
-			return nil, fmt.Errorf("wallet: sign input %d: %w", i, signErr)
+			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: sign input %d", i), signErr)
 		}
 		tx.Signatures = append(tx.Signatures, sigs)
 	}
@@ -168,7 +168,7 @@ func (b *V1Builder) buildInput(src *Transfer) (types.TxInputToKey, inputMeta, er
 		return m.GlobalIndex == src.GlobalIndex
 	})
 	if realIdx < 0 {
-		return types.TxInputToKey{}, inputMeta{}, errors.New("real output not found in ring")
+		return types.TxInputToKey{}, inputMeta{}, coreerr.E("V1Builder.buildInput", "real output not found in ring", nil)
 	}
 
 	// Build key offsets and public key list.
@@ -203,13 +203,13 @@ func deriveOutput(txSec [32]byte, addr types.Address, index uint64, amount uint6
 	derivation, err := crypto.GenerateKeyDerivation(
 		[32]byte(addr.ViewPublicKey), txSec)
 	if err != nil {
-		return types.TxOutputBare{}, fmt.Errorf("key derivation: %w", err)
+		return types.TxOutputBare{}, coreerr.E("deriveOutput", "key derivation", err)
 	}
 
 	ephPub, err := crypto.DerivePublicKey(
 		derivation, index, [32]byte(addr.SpendPublicKey))
 	if err != nil {
-		return types.TxOutputBare{}, fmt.Errorf("derive public key: %w", err)
+		return types.TxOutputBare{}, coreerr.E("deriveOutput", "derive public key", err)
 	}
 
 	return types.TxOutputBare{
@@ -224,7 +224,7 @@ func SerializeTransaction(tx *types.Transaction) ([]byte, error) {
 	enc := wire.NewEncoder(&buf)
 	wire.EncodeTransaction(enc, tx)
 	if err := enc.Err(); err != nil {
-		return nil, fmt.Errorf("wallet: encode tx: %w", err)
+		return nil, coreerr.E("SerializeTransaction", "wallet: encode tx", err)
 	}
 	return buf.Bytes(), nil
 }

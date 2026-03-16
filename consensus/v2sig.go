@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"fmt"
 
+	coreerr "forge.lthn.ai/core/go-log"
+
 	"forge.lthn.ai/core/go-blockchain/types"
 	"forge.lthn.ai/core/go-blockchain/wire"
 )
@@ -38,14 +40,14 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 	dec := wire.NewDecoder(bytes.NewReader(raw))
 	count := dec.ReadVarint()
 	if dec.Err() != nil {
-		return nil, fmt.Errorf("read sig count: %w", dec.Err())
+		return nil, coreerr.E("parseV2Signatures", "read sig count", dec.Err())
 	}
 
 	entries := make([]v2SigEntry, 0, count)
 	for i := uint64(0); i < count; i++ {
 		tag := dec.ReadUint8()
 		if dec.Err() != nil {
-			return nil, fmt.Errorf("read sig tag %d: %w", i, dec.Err())
+			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("read sig tag %d", i), dec.Err())
 		}
 
 		entry := v2SigEntry{tag: tag}
@@ -54,7 +56,7 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 		case types.SigTypeZC:
 			zc, err := parseZCSig(dec)
 			if err != nil {
-				return nil, fmt.Errorf("parse ZC_sig %d: %w", i, err)
+				return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("parse ZC_sig %d", i), err)
 			}
 			entry.zcSig = zc
 
@@ -74,11 +76,11 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 			skipZarcanumSig(dec)
 
 		default:
-			return nil, fmt.Errorf("unsupported sig tag 0x%02x", tag)
+			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("unsupported sig tag 0x%02x", tag), nil)
 		}
 
 		if dec.Err() != nil {
-			return nil, fmt.Errorf("parse sig %d (tag 0x%02x): %w", i, tag, dec.Err())
+			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("parse sig %d (tag 0x%02x)", i, tag), dec.Err())
 		}
 		entries = append(entries, entry)
 	}
@@ -117,7 +119,7 @@ func parseZCSig(dec *wire.Decoder) (*zcSigData, error) {
 	}
 
 	if rgCount != rxCount {
-		return nil, fmt.Errorf("CLSAG r_g count %d != r_x count %d", rgCount, rxCount)
+		return nil, coreerr.E("parseZCSig", fmt.Sprintf("CLSAG r_g count %d != r_x count %d", rgCount, rxCount), nil)
 	}
 	zc.ringSize = int(rgCount)
 
@@ -155,9 +157,9 @@ func skipZarcanumSig(dec *wire.Decoder) {
 	_ = dec.ReadBytes(32)
 
 	// CLSAG_GGXXG: c(32) + vec(r_g) + vec(r_x) + K1(32) + K2(32) + K3(32) + K4(32).
-	_ = dec.ReadBytes(32) // c
-	skipVecOfPoints(dec)  // r_g
-	skipVecOfPoints(dec)  // r_x
+	_ = dec.ReadBytes(32)  // c
+	skipVecOfPoints(dec)   // r_g
+	skipVecOfPoints(dec)   // r_x
 	_ = dec.ReadBytes(128) // K1+K2+K3+K4
 }
 
@@ -196,48 +198,48 @@ func parseV2Proofs(raw []byte) (*v2ProofData, error) {
 	dec := wire.NewDecoder(bytes.NewReader(raw))
 	count := dec.ReadVarint()
 	if dec.Err() != nil {
-		return nil, fmt.Errorf("read proof count: %w", dec.Err())
+		return nil, coreerr.E("parseV2Proofs", "read proof count", dec.Err())
 	}
 
 	var data v2ProofData
 	for i := uint64(0); i < count; i++ {
 		tag := dec.ReadUint8()
 		if dec.Err() != nil {
-			return nil, fmt.Errorf("read proof tag %d: %w", i, dec.Err())
+			return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("read proof tag %d", i), dec.Err())
 		}
 
 		switch tag {
 		case 46: // zc_asset_surjection_proof: varint(nBGE) + nBGE * BGE_proof
 			nBGE := dec.ReadVarint()
 			if dec.Err() != nil {
-				return nil, fmt.Errorf("parse BGE count: %w", dec.Err())
+				return nil, coreerr.E("parseV2Proofs", "parse BGE count", dec.Err())
 			}
 			data.bgeProofs = make([][]byte, nBGE)
 			for j := uint64(0); j < nBGE; j++ {
 				data.bgeProofs[j] = readBGEProofBytes(dec)
 				if dec.Err() != nil {
-					return nil, fmt.Errorf("parse BGE proof %d: %w", j, dec.Err())
+					return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("parse BGE proof %d", j), dec.Err())
 				}
 			}
 
 		case 47: // zc_outs_range_proof: bpp_serialized + aggregation_proof
 			data.bppProofBytes = readBPPBytes(dec)
 			if dec.Err() != nil {
-				return nil, fmt.Errorf("parse BPP proof: %w", dec.Err())
+				return nil, coreerr.E("parseV2Proofs", "parse BPP proof", dec.Err())
 			}
 			data.bppCommitments = readAggregationCommitments(dec)
 			if dec.Err() != nil {
-				return nil, fmt.Errorf("parse aggregation proof: %w", dec.Err())
+				return nil, coreerr.E("parseV2Proofs", "parse aggregation proof", dec.Err())
 			}
 
 		case 48: // zc_balance_proof: 96 bytes (c, y0, y1)
 			data.balanceProof = dec.ReadBytes(96)
 			if dec.Err() != nil {
-				return nil, fmt.Errorf("parse balance proof: %w", dec.Err())
+				return nil, coreerr.E("parseV2Proofs", "parse balance proof", dec.Err())
 			}
 
 		default:
-			return nil, fmt.Errorf("unsupported proof tag 0x%02x", tag)
+			return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("unsupported proof tag 0x%02x", tag), nil)
 		}
 	}
 
