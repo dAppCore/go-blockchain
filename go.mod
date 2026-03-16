@@ -3,10 +3,12 @@ module forge.lthn.ai/core/go-blockchain
 go 1.26.0
 
 require (
-	forge.lthn.ai/core/cli v0.3.1
-	forge.lthn.ai/core/go-p2p v0.1.3
-	forge.lthn.ai/core/go-process v0.2.3
-	forge.lthn.ai/core/go-store v0.1.6
+	forge.lthn.ai/core/cli v0.3.5
+	forge.lthn.ai/core/go-io v0.1.5
+	forge.lthn.ai/core/go-log v0.0.4
+	forge.lthn.ai/core/go-p2p v0.1.5
+	forge.lthn.ai/core/go-process v0.2.7
+	forge.lthn.ai/core/go-store v0.1.8
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
@@ -15,12 +17,8 @@ require (
 
 require (
 	forge.lthn.ai/core/go v0.3.1 // indirect
-	forge.lthn.ai/core/go-crypt v0.1.7 // indirect
-	forge.lthn.ai/core/go-i18n v0.1.4 // indirect
-	forge.lthn.ai/core/go-inference v0.1.4 // indirect
-	forge.lthn.ai/core/go-io v0.1.2 // indirect
-	forge.lthn.ai/core/go-log v0.0.4 // indirect
-	github.com/ProtonMail/go-crypto v1.4.0 // indirect
+	forge.lthn.ai/core/go-i18n v0.1.6 // indirect
+	forge.lthn.ai/core/go-inference v0.1.5 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
@@ -29,7 +27,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
@@ -55,5 +52,5 @@ require (
 	modernc.org/libc v1.70.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.46.1 // indirect
+	modernc.org/sqlite v1.46.2 // indirect
 )
