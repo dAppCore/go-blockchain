@@ -765,6 +765,163 @@ func TestMultisigTargetV2RoundTrip_Good(t *testing.T) {
 	}
 }
 
+func TestHF1MixedTxRoundTrip_Good(t *testing.T) {
+	// Construct a v1 transaction with HTLC input, multisig input, multisig output,
+	// and HTLC output target -- covering all HF1 types in a single round-trip.
+	tx := types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{
+				Amount: 100000,
+				KeyOffsets: []types.TxOutRef{
+					{Tag: types.RefTypeGlobalIndex, GlobalIndex: 42},
+				},
+				KeyImage:   types.KeyImage{0x01},
+				EtcDetails: EncodeVarint(0),
+			},
+			types.TxInputHTLC{
+				HTLCOrigin: "htlc_preimage_data",
+				Amount:     50000,
+				KeyOffsets: []types.TxOutRef{
+					{Tag: types.RefTypeGlobalIndex, GlobalIndex: 99},
+				},
+				KeyImage:   types.KeyImage{0x02},
+				EtcDetails: EncodeVarint(0),
+			},
+			types.TxInputMultisig{
+				Amount:        30000,
+				MultisigOutID: types.Hash{0xFF},
+				SigsCount:     2,
+				EtcDetails:    EncodeVarint(0),
+			},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{
+				Amount: 70000,
+				Target: types.TxOutToKey{Key: types.PublicKey{0xAA}},
+			},
+			types.TxOutputBare{
+				Amount: 50000,
+				Target: types.TxOutMultisig{
+					MinimumSigs: 2,
+					Keys:        []types.PublicKey{{0xBB}, {0xCC}},
+				},
+			},
+			types.TxOutputBare{
+				Amount: 40000,
+				Target: types.TxOutHTLC{
+					HTLCHash:   types.Hash{0xDD},
+					Flags:      0,
+					Expiration: 15000,
+					PKRedeem:   types.PublicKey{0xEE},
+					PKRefund:   types.PublicKey{0xFF},
+				},
+			},
+		},
+		Extra: EncodeVarint(0),
+	}
+
+	// Encode.
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	EncodeTransactionPrefix(enc, &tx)
+	if enc.Err() != nil {
+		t.Fatalf("encode error: %v", enc.Err())
+	}
+	encoded := buf.Bytes()
+
+	// Decode.
+	dec := NewDecoder(bytes.NewReader(encoded))
+	got := DecodeTransactionPrefix(dec)
+	if dec.Err() != nil {
+		t.Fatalf("decode error: %v", dec.Err())
+	}
+
+	// Verify inputs.
+	if len(got.Vin) != 3 {
+		t.Fatalf("vin count: got %d, want 3", len(got.Vin))
+	}
+
+	if _, ok := got.Vin[0].(types.TxInputToKey); !ok {
+		t.Errorf("vin[0]: got %T, want TxInputToKey", got.Vin[0])
+	}
+
+	htlcIn, ok := got.Vin[1].(types.TxInputHTLC)
+	if !ok {
+		t.Fatalf("vin[1]: got %T, want TxInputHTLC", got.Vin[1])
+	}
+	if htlcIn.HTLCOrigin != "htlc_preimage_data" {
+		t.Errorf("HTLCOrigin: got %q, want %q", htlcIn.HTLCOrigin, "htlc_preimage_data")
+	}
+	if htlcIn.Amount != 50000 {
+		t.Errorf("HTLC Amount: got %d, want 50000", htlcIn.Amount)
+	}
+
+	msigIn, ok := got.Vin[2].(types.TxInputMultisig)
+	if !ok {
+		t.Fatalf("vin[2]: got %T, want TxInputMultisig", got.Vin[2])
+	}
+	if msigIn.Amount != 30000 {
+		t.Errorf("Multisig Amount: got %d, want 30000", msigIn.Amount)
+	}
+	if msigIn.SigsCount != 2 {
+		t.Errorf("SigsCount: got %d, want 2", msigIn.SigsCount)
+	}
+
+	// Verify outputs.
+	if len(got.Vout) != 3 {
+		t.Fatalf("vout count: got %d, want 3", len(got.Vout))
+	}
+
+	bare0, ok := got.Vout[0].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[0]: got %T, want TxOutputBare", got.Vout[0])
+	}
+	if _, ok := bare0.Target.(types.TxOutToKey); !ok {
+		t.Errorf("vout[0] target: got %T, want TxOutToKey", bare0.Target)
+	}
+
+	bare1, ok := got.Vout[1].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[1]: got %T, want TxOutputBare", got.Vout[1])
+	}
+	msigTgt, ok := bare1.Target.(types.TxOutMultisig)
+	if !ok {
+		t.Fatalf("vout[1] target: got %T, want TxOutMultisig", bare1.Target)
+	}
+	if msigTgt.MinimumSigs != 2 {
+		t.Errorf("MinimumSigs: got %d, want 2", msigTgt.MinimumSigs)
+	}
+	if len(msigTgt.Keys) != 2 {
+		t.Errorf("Keys count: got %d, want 2", len(msigTgt.Keys))
+	}
+
+	bare2, ok := got.Vout[2].(types.TxOutputBare)
+	if !ok {
+		t.Fatalf("vout[2]: got %T, want TxOutputBare", got.Vout[2])
+	}
+	htlcTgt, ok := bare2.Target.(types.TxOutHTLC)
+	if !ok {
+		t.Fatalf("vout[2] target: got %T, want TxOutHTLC", bare2.Target)
+	}
+	if htlcTgt.Expiration != 15000 {
+		t.Errorf("Expiration: got %d, want 15000", htlcTgt.Expiration)
+	}
+
+	// Re-encode and verify bit-identical.
+	var buf2 bytes.Buffer
+	enc2 := NewEncoder(&buf2)
+	EncodeTransactionPrefix(enc2, &got)
+	if enc2.Err() != nil {
+		t.Fatalf("re-encode error: %v", enc2.Err())
+	}
+
+	if !bytes.Equal(encoded, buf2.Bytes()) {
+		t.Errorf("round-trip not bit-identical: encoded %d bytes, re-encoded %d bytes",
+			len(encoded), len(buf2.Bytes()))
+	}
+}
+
 func TestHTLCTargetV2RoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPostHF4,
