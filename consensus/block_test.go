@@ -201,6 +201,155 @@ func TestValidateBlock_Bad_MinerTx(t *testing.T) {
 
 // --- Block major version tests (Task 10) ---
 
+func TestExpectedBlockMajorVersion_Good(t *testing.T) {
+	tests := []struct {
+		name   string
+		forks  []config.HardFork
+		height uint64
+		want   uint8
+	}{
+		// --- Mainnet ---
+		{
+			name:   "mainnet/genesis",
+			forks:  config.MainnetForks,
+			height: 0,
+			want:   config.BlockMajorVersionInitial, // 0
+		},
+		{
+			name:   "mainnet/pre_HF1",
+			forks:  config.MainnetForks,
+			height: 5000,
+			want:   config.BlockMajorVersionInitial, // 0
+		},
+		{
+			name:   "mainnet/at_HF1_boundary",
+			forks:  config.MainnetForks,
+			height: 10080,
+			want:   config.BlockMajorVersionInitial, // 0 (fork at height > 10080)
+		},
+		{
+			name:   "mainnet/post_HF1",
+			forks:  config.MainnetForks,
+			height: 10081,
+			want:   config.HF1BlockMajorVersion, // 1
+		},
+		{
+			name:   "mainnet/well_past_HF1",
+			forks:  config.MainnetForks,
+			height: 100000,
+			want:   config.HF1BlockMajorVersion, // 1 (HF3 not yet active)
+		},
+
+		// --- Testnet (HF3 active from genesis) ---
+		{
+			name:   "testnet/genesis",
+			forks:  config.TestnetForks,
+			height: 0,
+			want:   config.HF3BlockMajorVersion, // 2 (HF3 at 0)
+		},
+		{
+			name:   "testnet/pre_HF4",
+			forks:  config.TestnetForks,
+			height: 50,
+			want:   config.HF3BlockMajorVersion, // 2 (HF4 at >100)
+		},
+		{
+			name:   "testnet/post_HF4",
+			forks:  config.TestnetForks,
+			height: 101,
+			want:   config.CurrentBlockMajorVersion, // 3
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expectedBlockMajorVersion(tt.forks, tt.height)
+			if got != tt.want {
+				t.Errorf("expectedBlockMajorVersion(%d) = %d, want %d", tt.height, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckBlockVersion_Good(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	// Correct version at each mainnet/testnet era.
+	tests := []struct {
+		name    string
+		version uint8
+		height  uint64
+		forks   []config.HardFork
+	}{
+		{"mainnet/v0_pre_HF1", config.BlockMajorVersionInitial, 5000, config.MainnetForks},
+		{"mainnet/v1_post_HF1", config.HF1BlockMajorVersion, 10081, config.MainnetForks},
+		{"testnet/v2_genesis", config.HF3BlockMajorVersion, 0, config.TestnetForks},
+		{"testnet/v3_post_HF4", config.CurrentBlockMajorVersion, 101, config.TestnetForks},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := &types.Block{
+				BlockHeader: types.BlockHeader{
+					MajorVersion: tt.version,
+					Timestamp:    now,
+					Flags:        0,
+				},
+			}
+			err := checkBlockVersion(blk, tt.forks, tt.height)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestCheckBlockVersion_Bad(t *testing.T) {
+	now := uint64(time.Now().Unix())
+	tests := []struct {
+		name    string
+		version uint8
+		height  uint64
+		forks   []config.HardFork
+	}{
+		{"mainnet/v1_pre_HF1", config.HF1BlockMajorVersion, 5000, config.MainnetForks},
+		{"mainnet/v0_post_HF1", config.BlockMajorVersionInitial, 10081, config.MainnetForks},
+		{"mainnet/v2_post_HF1", config.HF3BlockMajorVersion, 10081, config.MainnetForks},
+		{"testnet/v1_genesis", config.HF1BlockMajorVersion, 0, config.TestnetForks},
+		{"testnet/v2_post_HF4", config.HF3BlockMajorVersion, 101, config.TestnetForks},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := &types.Block{
+				BlockHeader: types.BlockHeader{
+					MajorVersion: tt.version,
+					Timestamp:    now,
+					Flags:        0,
+				},
+			}
+			err := checkBlockVersion(blk, tt.forks, tt.height)
+			assert.ErrorIs(t, err, ErrBlockVersion)
+		})
+	}
+}
+
+func TestCheckBlockVersion_Ugly(t *testing.T) {
+	now := uint64(time.Now().Unix())
+
+	// Version 255 should never be valid at any height.
+	blk := &types.Block{
+		BlockHeader: types.BlockHeader{MajorVersion: 255, Timestamp: now},
+	}
+	err := checkBlockVersion(blk, config.MainnetForks, 0)
+	assert.ErrorIs(t, err, ErrBlockVersion)
+
+	err = checkBlockVersion(blk, config.MainnetForks, 10081)
+	assert.ErrorIs(t, err, ErrBlockVersion)
+
+	// Version 0 at the exact HF1 boundary (height 10080 -- fork not yet active).
+	blk0 := &types.Block{
+		BlockHeader: types.BlockHeader{MajorVersion: config.BlockMajorVersionInitial, Timestamp: now},
+	}
+	err = checkBlockVersion(blk0, config.MainnetForks, 10080)
+	require.NoError(t, err)
+}
+
 func TestValidateBlock_MajorVersion_Good(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	tests := []struct {

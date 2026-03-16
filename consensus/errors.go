@@ -36,4 +36,9 @@ var (
 	ErrMinerTxUnlock      = errors.New("consensus: miner transaction unlock time invalid")
 	ErrRewardMismatch     = errors.New("consensus: block reward mismatch")
 	ErrMinerTxProofs      = errors.New("consensus: miner transaction proof count invalid")
+
+	// ErrBlockVersion is an alias for ErrBlockMajorVersion, used by
+	// checkBlockVersion when the block major version does not match
+	// the expected version for the height in the hardfork schedule.
+	ErrBlockVersion = ErrBlockMajorVersion
 )
