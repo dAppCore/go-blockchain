@@ -160,6 +160,18 @@ func encodeInputs(enc *Encoder, vin []types.TxInput) {
 			encodeKeyOffsets(enc, v.KeyOffsets)
 			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
 			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputHTLC:
+			// Wire order: HTLCOrigin (string) is serialised before parent fields.
+			encodeStringField(enc, v.HTLCOrigin)
+			enc.WriteVarint(v.Amount)
+			encodeKeyOffsets(enc, v.KeyOffsets)
+			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
+			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputMultisig:
+			enc.WriteVarint(v.Amount)
+			enc.WriteBlob32((*[32]byte)(&v.MultisigOutID))
+			enc.WriteVarint(v.SigsCount)
+			enc.WriteBytes(v.EtcDetails)
 		case types.TxInputZC:
 			encodeKeyOffsets(enc, v.KeyOffsets)
 			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
@@ -187,6 +199,21 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 			in.Amount = dec.ReadVarint()
 			in.KeyOffsets = decodeKeyOffsets(dec)
 			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeHTLC:
+			var in types.TxInputHTLC
+			in.HTLCOrigin = decodeStringField(dec)
+			in.Amount = dec.ReadVarint()
+			in.KeyOffsets = decodeKeyOffsets(dec)
+			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeMultisig:
+			var in types.TxInputMultisig
+			in.Amount = dec.ReadVarint()
+			dec.ReadBlob32((*[32]byte)(&in.MultisigOutID))
+			in.SigsCount = dec.ReadVarint()
 			in.EtcDetails = decodeRawVariantVector(dec)
 			vin = append(vin, in)
 		case types.InputTypeZC:
@@ -503,6 +530,12 @@ const (
 	tagVoidSig     = 44 // void_sig — empty
 	tagZarcanumSig = 45 // zarcanum_sig — complex
 
+	// Asset operation tags (HF5 confidential assets).
+	tagAssetDescriptorOperation        = 40 // asset_descriptor_operation
+	tagAssetOperationProof             = 49 // asset_operation_proof
+	tagAssetOperationOwnershipProof    = 50 // asset_operation_ownership_proof
+	tagAssetOperationOwnershipProofETH = 51 // asset_operation_ownership_proof_eth
+
 	// Proof variant tags (proof_v).
 	tagZCAssetSurjectionProof = 46 // vector<BGE_proof_s>
 	tagZCOutsRangeProof       = 47 // bpp_serialized + aggregation_proof
@@ -575,6 +608,16 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 	case tagZarcanumSig: // complex: 10 scalars + bppe + public_key + CLSAG_GGXXG
 		return readZarcanumSig(dec)
 
+	// Asset operation variants (HF5)
+	case tagAssetDescriptorOperation:
+		return readAssetDescriptorOperation(dec)
+	case tagAssetOperationProof:
+		return readAssetOperationProof(dec)
+	case tagAssetOperationOwnershipProof:
+		return readAssetOperationOwnershipProof(dec)
+	case tagAssetOperationOwnershipProofETH:
+		return readAssetOperationOwnershipProofETH(dec)
+
 	// Proof variants
 	case tagZCAssetSurjectionProof: // vector<BGE_proof_s>
 		return readZCAssetSurjectionProof(dec)
@@ -587,6 +630,28 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		dec.err = coreerr.E("readVariantElementData", fmt.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
 		return nil
 	}
+}
+
+// encodeStringField writes a string as a varint length prefix followed by
+// the UTF-8 bytes.
+func encodeStringField(enc *Encoder, s string) {
+	enc.WriteVarint(uint64(len(s)))
+	if len(s) > 0 {
+		enc.WriteBytes([]byte(s))
+	}
+}
+
+// decodeStringField reads a varint-prefixed string and returns the Go string.
+func decodeStringField(dec *Decoder) string {
+	length := dec.ReadVarint()
+	if dec.err != nil || length == 0 {
+		return ""
+	}
+	data := dec.ReadBytes(int(length))
+	if dec.err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 // readStringBlob reads a varint-prefixed string and returns the raw bytes
@@ -960,6 +1025,226 @@ func readZarcanumSig(dec *Decoder) []byte {
 		return nil
 	}
 	raw = append(raw, v...)
+	return raw
+}
+
+// --- proof variant readers ---
+
+// --- HF5 asset operation readers ---
+
+// readAssetDescriptorOperation reads asset_descriptor_operation (tag 40).
+// Wire: version(uint8) + operation_type(uint8) + opt_asset_id(uint8 marker
+// + 32 bytes if present) + opt_descriptor(uint8 marker + descriptor if
+// present) + amount_to_emit(uint64 LE) + amount_to_burn(uint64 LE) +
+// etc(vector<uint8>).
+//
+// Descriptor (AssetDescriptorBase): ticker(string) + full_name(string) +
+// total_max_supply(uint64 LE) + current_supply(uint64 LE) +
+// decimal_point(uint8) + meta_info(string) + owner_key(32 bytes) +
+// etc(vector<uint8>).
+func readAssetDescriptorOperation(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// operation_type: uint8
+	opType := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, opType)
+
+	// opt_asset_id: uint8 presence marker + 32 bytes if present
+	assetMarker := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, assetMarker)
+	if assetMarker != 0 {
+		b := dec.ReadBytes(32)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+	}
+
+	// opt_descriptor: uint8 presence marker + descriptor if present
+	descMarker := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, descMarker)
+	if descMarker != 0 {
+		// AssetDescriptorBase
+		// ticker: string
+		s := readStringBlob(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, s...)
+		// full_name: string
+		s = readStringBlob(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, s...)
+		// total_max_supply: uint64 LE
+		b := dec.ReadBytes(8)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+		// current_supply: uint64 LE
+		b = dec.ReadBytes(8)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+		// decimal_point: uint8
+		dp := dec.ReadUint8()
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, dp)
+		// meta_info: string
+		s = readStringBlob(dec)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, s...)
+		// owner_key: 32 bytes
+		b = dec.ReadBytes(32)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+		// etc: vector<uint8>
+		v := readVariantVectorFixed(dec, 1)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, v...)
+	}
+
+	// amount_to_emit: uint64 LE
+	b := dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// amount_to_burn: uint64 LE
+	b = dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationProof reads asset_operation_proof (tag 49).
+// Wire: version(uint8) + generic_schnorr_sig_s(64 bytes) + asset_id(32 bytes)
+// + etc(vector<uint8>).
+func readAssetOperationProof(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// gss: generic_schnorr_sig_s — 2 scalars (s, c) = 64 bytes
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// asset_id: 32-byte hash
+	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationOwnershipProof reads asset_operation_ownership_proof (tag 50).
+// Wire: version(uint8) + generic_schnorr_sig_s(64 bytes) + etc(vector<uint8>).
+func readAssetOperationOwnershipProof(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// gss: generic_schnorr_sig_s — 2 scalars (s, c) = 64 bytes
+	b := dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
+	return raw
+}
+
+// readAssetOperationOwnershipProofETH reads asset_operation_ownership_proof_eth
+// (tag 51). Wire: version(uint8) + eth_sig(65 bytes) + etc(vector<uint8>).
+func readAssetOperationOwnershipProofETH(dec *Decoder) []byte {
+	var raw []byte
+
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+
+	// eth_sig: 65 bytes (r=32 + s=32 + v=1)
+	b := dec.ReadBytes(65)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+
 	return raw
 }
 

@@ -60,16 +60,18 @@ func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
 
 // verifyV1Signatures checks NLSAG ring signatures for pre-HF4 transactions.
 func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) error {
-	// Count key inputs.
-	var keyInputCount int
+	// Count ring-signing inputs (TxInputToKey and TxInputHTLC contribute
+	// ring signatures; TxInputMultisig does not).
+	var ringInputCount int
 	for _, vin := range tx.Vin {
-		if _, ok := vin.(types.TxInputToKey); ok {
-			keyInputCount++
+		switch vin.(type) {
+		case types.TxInputToKey, types.TxInputHTLC:
+			ringInputCount++
 		}
 	}
 
-	if len(tx.Signatures) != keyInputCount {
-		return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: signature count %d != input count %d", len(tx.Signatures), keyInputCount), nil)
+	if len(tx.Signatures) != ringInputCount {
+		return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: signature count %d != input count %d", len(tx.Signatures), ringInputCount), nil)
 	}
 
 	// Actual NLSAG verification requires the crypto bridge and ring outputs.
@@ -82,18 +84,31 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 
 	var sigIdx int
 	for _, vin := range tx.Vin {
-		inp, ok := vin.(types.TxInputToKey)
-		if !ok {
-			continue
+		// Extract amount and key offsets from ring-signing input types.
+		var amount uint64
+		var keyOffsets []types.TxOutRef
+		var keyImage types.KeyImage
+
+		switch v := vin.(type) {
+		case types.TxInputToKey:
+			amount = v.Amount
+			keyOffsets = v.KeyOffsets
+			keyImage = v.KeyImage
+		case types.TxInputHTLC:
+			amount = v.Amount
+			keyOffsets = v.KeyOffsets
+			keyImage = v.KeyImage
+		default:
+			continue // TxInputMultisig and others do not use NLSAG
 		}
 
 		// Extract absolute global indices from key offsets.
-		offsets := make([]uint64, len(inp.KeyOffsets))
-		for i, ref := range inp.KeyOffsets {
+		offsets := make([]uint64, len(keyOffsets))
+		for i, ref := range keyOffsets {
 			offsets[i] = ref.GlobalIndex
 		}
 
-		ringKeys, err := getRingOutputs(inp.Amount, offsets)
+		ringKeys, err := getRingOutputs(amount, offsets)
 		if err != nil {
 			return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: failed to fetch ring outputs for input %d", sigIdx), err)
 		}
@@ -114,7 +129,7 @@ func verifyV1Signatures(tx *types.Transaction, getRingOutputs RingOutputsFn) err
 			sigs[i] = [64]byte(s)
 		}
 
-		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(inp.KeyImage), pubs, sigs) {
+		if !crypto.CheckRingSignature([32]byte(prefixHash), [32]byte(keyImage), pubs, sigs) {
 			return coreerr.E("verifyV1Signatures", fmt.Sprintf("consensus: ring signature verification failed for input %d", sigIdx), nil)
 		}
 

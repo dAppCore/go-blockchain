@@ -219,8 +219,9 @@ func TestChain_GetBlockByHeight_NotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("GetBlockByHeight(99): expected error, got nil")
 	}
-	if got := err.Error(); got != "chain: block 99 not found" {
-		t.Errorf("error message: got %q, want %q", got, "chain: block 99 not found")
+	want := "Chain.GetBlockByHeight: chain: block 99 not found"
+	if got := err.Error(); got != want {
+		t.Errorf("error message: got %q, want %q", got, want)
 	}
 }
 

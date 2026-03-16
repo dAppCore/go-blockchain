@@ -19,6 +19,11 @@ import (
 func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
 	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 
+	// 0. Transaction version.
+	if err := checkTxVersion(tx, forks, height); err != nil {
+		return err
+	}
+
 	// 1. Blob size.
 	if uint64(len(txBlob)) >= config.MaxTransactionBlobSize {
 		return coreerr.E("ValidateTransaction", fmt.Sprintf("%d bytes", len(txBlob)), ErrTxTooLarge)
@@ -32,13 +37,15 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 		return coreerr.E("ValidateTransaction", fmt.Sprintf("%d", len(tx.Vin)), ErrTooManyInputs)
 	}
 
+	hf1Active := config.IsHardForkActive(forks, config.HF1, height)
+
 	// 3. Input types — TxInputGenesis not allowed in regular transactions.
-	if err := checkInputTypes(tx, hf4Active); err != nil {
+	if err := checkInputTypes(tx, hf1Active, hf4Active); err != nil {
 		return err
 	}
 
 	// 4. Output validation.
-	if err := checkOutputs(tx, hf4Active); err != nil {
+	if err := checkOutputs(tx, hf1Active, hf4Active); err != nil {
 		return err
 	}
 
@@ -65,15 +72,43 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 	return nil
 }
 
-func checkInputTypes(tx *types.Transaction, hf4Active bool) error {
+// checkTxVersion validates that the transaction version is appropriate for the
+// current hardfork era.
+//
+// After HF5: transaction version must be >= VersionPostHF5 (3).
+// Before HF5: transaction version 3 is rejected (too early).
+func checkTxVersion(tx *types.Transaction, forks []config.HardFork, height uint64) error {
+	hf5Active := config.IsHardForkActive(forks, config.HF5, height)
+
+	if hf5Active && tx.Version < types.VersionPostHF5 {
+		return coreerr.E("checkTxVersion",
+			fmt.Sprintf("version %d too low after HF5 at height %d", tx.Version, height),
+			ErrTxVersionInvalid)
+	}
+
+	if !hf5Active && tx.Version >= types.VersionPostHF5 {
+		return coreerr.E("checkTxVersion",
+			fmt.Sprintf("version %d not allowed before HF5 at height %d", tx.Version, height),
+			ErrTxVersionInvalid)
+	}
+
+	return nil
+}
+
+func checkInputTypes(tx *types.Transaction, hf1Active, hf4Active bool) error {
 	for _, vin := range tx.Vin {
 		switch vin.(type) {
 		case types.TxInputToKey:
 			// Always valid.
 		case types.TxInputGenesis:
 			return coreerr.E("checkInputTypes", "txin_gen in regular transaction", ErrInvalidInputType)
+		case types.TxInputHTLC, types.TxInputMultisig:
+			// HTLC and multisig inputs require at least HF1.
+			if !hf1Active {
+				return coreerr.E("checkInputTypes", fmt.Sprintf("tag %d pre-HF1", vin.InputType()), ErrInvalidInputType)
+			}
 		default:
-			// Future types (multisig, HTLC, ZC) — accept if HF4+.
+			// Future types (ZC) — accept if HF4+.
 			if !hf4Active {
 				return coreerr.E("checkInputTypes", fmt.Sprintf("tag %d pre-HF4", vin.InputType()), ErrInvalidInputType)
 			}
@@ -82,7 +117,7 @@ func checkInputTypes(tx *types.Transaction, hf4Active bool) error {
 	return nil
 }
 
-func checkOutputs(tx *types.Transaction, hf4Active bool) error {
+func checkOutputs(tx *types.Transaction, hf1Active, hf4Active bool) error {
 	if len(tx.Vout) == 0 {
 		return ErrNoOutputs
 	}
@@ -101,6 +136,13 @@ func checkOutputs(tx *types.Transaction, hf4Active bool) error {
 			if o.Amount == 0 {
 				return coreerr.E("checkOutputs", fmt.Sprintf("output %d has zero amount", i), ErrInvalidOutput)
 			}
+			// HTLC and Multisig output targets require at least HF1.
+			switch o.Target.(type) {
+			case types.TxOutHTLC, types.TxOutMultisig:
+				if !hf1Active {
+					return coreerr.E("checkOutputs", fmt.Sprintf("output %d: HTLC/multisig target pre-HF1", i), ErrInvalidOutput)
+				}
+			}
 		case types.TxOutputZarcanum:
 			// Validated by proof verification.
 		}
@@ -112,14 +154,19 @@ func checkOutputs(tx *types.Transaction, hf4Active bool) error {
 func checkKeyImages(tx *types.Transaction) error {
 	seen := make(map[types.KeyImage]struct{})
 	for _, vin := range tx.Vin {
-		toKey, ok := vin.(types.TxInputToKey)
-		if !ok {
+		var ki types.KeyImage
+		switch v := vin.(type) {
+		case types.TxInputToKey:
+			ki = v.KeyImage
+		case types.TxInputHTLC:
+			ki = v.KeyImage
+		default:
 			continue
 		}
-		if _, exists := seen[toKey.KeyImage]; exists {
-			return coreerr.E("checkKeyImages", toKey.KeyImage.String(), ErrDuplicateKeyImage)
+		if _, exists := seen[ki]; exists {
+			return coreerr.E("checkKeyImages", ki.String(), ErrDuplicateKeyImage)
 		}
-		seen[toKey.KeyImage] = struct{}{}
+		seen[ki] = struct{}{}
 	}
 	return nil
 }
