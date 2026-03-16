@@ -30,3 +30,24 @@ func TestTxOutHTLC_TargetType_Good(t *testing.T) {
 		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeHTLC)
 	}
 }
+
+func TestTxInputHTLC_InputType_Good(t *testing.T) {
+	var input TxInput = TxInputHTLC{
+		HTLCOrigin: "test",
+		Amount:     1000,
+		KeyImage:   KeyImage{1},
+	}
+	if input.InputType() != InputTypeHTLC {
+		t.Errorf("InputType: got %d, want %d", input.InputType(), InputTypeHTLC)
+	}
+}
+
+func TestTxInputMultisig_InputType_Good(t *testing.T) {
+	var input TxInput = TxInputMultisig{
+		Amount:    500,
+		SigsCount: 2,
+	}
+	if input.InputType() != InputTypeMultisig {
+		t.Errorf("InputType: got %d, want %d", input.InputType(), InputTypeMultisig)
+	}
+}

@@ -202,6 +202,31 @@ type TxInputZC struct {
 // InputType returns the wire variant tag for ZC inputs.
 func (t TxInputZC) InputType() uint8 { return InputTypeZC }
 
+// TxInputHTLC extends TxInputToKey with an HTLC origin hash (HF1+).
+// Wire order: HTLCOrigin (string) serialised BEFORE parent fields (C++ quirk).
+// Carries Amount, KeyOffsets, KeyImage, EtcDetails -- same as TxInputToKey.
+type TxInputHTLC struct {
+	HTLCOrigin string // C++ field: hltc_origin (transposed in source)
+	Amount     uint64
+	KeyOffsets []TxOutRef
+	KeyImage   KeyImage
+	EtcDetails []byte // opaque variant vector
+}
+
+// InputType returns the wire variant tag for HTLC inputs.
+func (t TxInputHTLC) InputType() uint8 { return InputTypeHTLC }
+
+// TxInputMultisig spends from a multisig output (HF1+).
+type TxInputMultisig struct {
+	Amount        uint64
+	MultisigOutID Hash   // 32-byte hash identifying the multisig output
+	SigsCount     uint64
+	EtcDetails    []byte // opaque variant vector
+}
+
+// InputType returns the wire variant tag for multisig inputs.
+func (t TxInputMultisig) InputType() uint8 { return InputTypeMultisig }
+
 // TxOutputBare is a transparent (pre-Zarcanum) transaction output.
 type TxOutputBare struct {
 	// Amount in atomic units.
