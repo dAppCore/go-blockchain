@@ -20,6 +20,8 @@ var (
 	ErrInvalidOutput     = errors.New("consensus: invalid output")
 	ErrDuplicateKeyImage = errors.New("consensus: duplicate key image in transaction")
 	ErrInvalidExtra      = errors.New("consensus: invalid extra field")
+	ErrTxVersionInvalid  = errors.New("consensus: invalid transaction version for current hardfork")
+	ErrPreHardforkFreeze = errors.New("consensus: non-coinbase transaction rejected during pre-hardfork freeze")
 
 	// Transaction economic errors.
 	ErrInputOverflow  = errors.New("consensus: input amount overflow")

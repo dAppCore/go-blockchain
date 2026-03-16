@@ -18,6 +18,11 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 	hf1Active := config.IsHardForkActive(forks, config.HF1, height)
 	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 
+	// 0. Transaction version for current hardfork.
+	if err := checkTxVersion(tx, forks, height); err != nil {
+		return err
+	}
+
 	// 1. Blob size.
 	if uint64(len(txBlob)) >= config.MaxTransactionBlobSize {
 		return fmt.Errorf("%w: %d bytes", ErrTxTooLarge, len(txBlob))
@@ -116,6 +121,29 @@ func checkOutputs(tx *types.Transaction, hf1Active, hf4Active bool) error {
 			}
 		case types.TxOutputZarcanum:
 			// Validated by proof verification.
+		}
+	}
+
+	return nil
+}
+
+// checkTxVersion validates that the transaction version is correct for the
+// current hardfork era. After HF5, version must be 3. Before HF5, version 3
+// is rejected.
+func checkTxVersion(tx *types.Transaction, forks []config.HardFork, height uint64) error {
+	hf5Active := config.IsHardForkActive(forks, config.HF5, height)
+
+	if hf5Active {
+		// After HF5: must be version 3.
+		if tx.Version != types.VersionPostHF5 {
+			return fmt.Errorf("%w: got version %d, require %d after HF5",
+				ErrTxVersionInvalid, tx.Version, types.VersionPostHF5)
+		}
+	} else {
+		// Before HF5: version 3 is not allowed.
+		if tx.Version >= types.VersionPostHF5 {
+			return fmt.Errorf("%w: version %d not allowed before HF5",
+				ErrTxVersionInvalid, tx.Version)
 		}
 	}
 
