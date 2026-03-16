@@ -71,3 +71,52 @@ func TestTxFee_Ugly(t *testing.T) {
 	_, err := TxFee(tx)
 	assert.ErrorIs(t, err, ErrInputOverflow)
 }
+
+// --- HTLC and multisig fee tests (Task 8) ---
+
+func TestTxFee_HTLCInput_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputHTLC{Amount: 100, KeyImage: types.KeyImage{1}},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 90, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	fee, err := TxFee(tx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(10), fee)
+}
+
+func TestTxFee_MultisigInput_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputMultisig{Amount: 200},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 150, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	fee, err := TxFee(tx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(50), fee)
+}
+
+func TestTxFee_MixedInputs_Good(t *testing.T) {
+	tx := &types.Transaction{
+		Version: types.VersionPreHF4,
+		Vin: []types.TxInput{
+			types.TxInputToKey{Amount: 100, KeyImage: types.KeyImage{1}},
+			types.TxInputHTLC{Amount: 50, KeyImage: types.KeyImage{2}},
+			types.TxInputMultisig{Amount: 30},
+		},
+		Vout: []types.TxOutput{
+			types.TxOutputBare{Amount: 170, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
+		},
+	}
+	fee, err := TxFee(tx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(10), fee) // 180 - 170
+}

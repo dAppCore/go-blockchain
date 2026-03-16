@@ -46,18 +46,26 @@ func isCoinbase(tx *types.Transaction) bool {
 	return ok
 }
 
-// sumInputs totals all TxInputToKey amounts, checking for overflow.
+// sumInputs totals all transparent input amounts, checking for overflow.
+// Covers TxInputToKey, TxInputHTLC, and TxInputMultisig.
 func sumInputs(tx *types.Transaction) (uint64, error) {
 	var total uint64
 	for _, vin := range tx.Vin {
-		toKey, ok := vin.(types.TxInputToKey)
-		if !ok {
+		var amount uint64
+		switch v := vin.(type) {
+		case types.TxInputToKey:
+			amount = v.Amount
+		case types.TxInputHTLC:
+			amount = v.Amount
+		case types.TxInputMultisig:
+			amount = v.Amount
+		default:
 			continue
 		}
-		if total > math.MaxUint64-toKey.Amount {
+		if total > math.MaxUint64-amount {
 			return 0, ErrInputOverflow
 		}
-		total += toKey.Amount
+		total += amount
 	}
 	return total, nil
 }
