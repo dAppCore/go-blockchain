@@ -115,12 +115,21 @@ type TxInputGenesis struct {
 // InputType returns the wire variant tag for genesis inputs.
 func (t TxInputGenesis) InputType() uint8 { return InputTypeGenesis }
 
+// TxOutTarget is the interface implemented by all output target types
+// within a TxOutputBare. Each target variant has a unique wire tag.
+type TxOutTarget interface {
+	TargetType() uint8
+}
+
 // TxOutToKey is the txout_to_key target variant. On the wire it is
 // serialised as a 33-byte packed blob: 32-byte public key + 1-byte mix_attr.
 type TxOutToKey struct {
 	Key     PublicKey
 	MixAttr uint8
 }
+
+// TargetType returns the wire variant tag for to_key targets.
+func (t TxOutToKey) TargetType() uint8 { return TargetTypeToKey }
 
 // TxOutRef is one element of a txin_to_key key_offsets vector.
 // Each element is a variant: either a uint64 global index or a ref_by_id.
