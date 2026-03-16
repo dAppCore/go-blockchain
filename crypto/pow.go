@@ -10,6 +10,8 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // RandomXHash computes the RandomX PoW hash. The key is the cache
@@ -23,7 +25,7 @@ func RandomXHash(key, input []byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&output[0])),
 	)
 	if ret != 0 {
-		return output, fmt.Errorf("crypto: RandomX hash failed with code %d", ret)
+		return output, coreerr.E("RandomXHash", fmt.Sprintf("RandomX hash failed with code %d", ret), nil)
 	}
 	return output, nil
 }

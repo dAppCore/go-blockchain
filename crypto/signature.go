@@ -8,8 +8,9 @@ package crypto
 import "C"
 
 import (
-	"errors"
 	"unsafe"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // GenerateSignature creates a standard (non-ring) signature.
@@ -22,7 +23,7 @@ func GenerateSignature(hash [32]byte, pub [32]byte, sec [32]byte) ([64]byte, err
 		(*C.uint8_t)(unsafe.Pointer(&sig[0])),
 	)
 	if rc != 0 {
-		return sig, errors.New("crypto: generate_signature failed")
+		return sig, coreerr.E("GenerateSignature", "generate_signature failed", nil)
 	}
 	return sig, nil
 }
@@ -60,7 +61,7 @@ func GenerateRingSignature(hash [32]byte, image [32]byte, pubs [][32]byte,
 		(*C.uint8_t)(unsafe.Pointer(&flatSigs[0])),
 	)
 	if rc != 0 {
-		return nil, errors.New("crypto: generate_ring_signature failed")
+		return nil, coreerr.E("GenerateRingSignature", "generate_ring_signature failed", nil)
 	}
 
 	sigs := make([][64]byte, n)

@@ -8,9 +8,10 @@ package crypto
 import "C"
 
 import (
-	"errors"
 	"fmt"
 	"unsafe"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // GenerateKeys creates a new random key pair.
@@ -20,7 +21,7 @@ func GenerateKeys() (pub [32]byte, sec [32]byte, err error) {
 		(*C.uint8_t)(unsafe.Pointer(&sec[0])),
 	)
 	if rc != 0 {
-		err = fmt.Errorf("crypto: generate_keys failed (rc=%d)", rc)
+		err = coreerr.E("GenerateKeys", fmt.Sprintf("generate_keys failed (rc=%d)", rc), nil)
 	}
 	return
 }
@@ -33,7 +34,7 @@ func SecretToPublic(sec [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&pub[0])),
 	)
 	if rc != 0 {
-		return pub, fmt.Errorf("crypto: secret_to_public failed (rc=%d)", rc)
+		return pub, coreerr.E("SecretToPublic", fmt.Sprintf("secret_to_public failed (rc=%d)", rc), nil)
 	}
 	return pub, nil
 }
@@ -52,7 +53,7 @@ func GenerateKeyDerivation(pub [32]byte, sec [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&d[0])),
 	)
 	if rc != 0 {
-		return d, errors.New("crypto: generate_key_derivation failed")
+		return d, coreerr.E("GenerateKeyDerivation", "generate_key_derivation failed", nil)
 	}
 	return d, nil
 }
@@ -67,7 +68,7 @@ func DerivePublicKey(derivation [32]byte, index uint64, base [32]byte) ([32]byte
 		(*C.uint8_t)(unsafe.Pointer(&derived[0])),
 	)
 	if rc != 0 {
-		return derived, errors.New("crypto: derive_public_key failed")
+		return derived, coreerr.E("DerivePublicKey", "derive_public_key failed", nil)
 	}
 	return derived, nil
 }
@@ -82,7 +83,7 @@ func DeriveSecretKey(derivation [32]byte, index uint64, base [32]byte) ([32]byte
 		(*C.uint8_t)(unsafe.Pointer(&derived[0])),
 	)
 	if rc != 0 {
-		return derived, errors.New("crypto: derive_secret_key failed")
+		return derived, coreerr.E("DeriveSecretKey", "derive_secret_key failed", nil)
 	}
 	return derived, nil
 }
