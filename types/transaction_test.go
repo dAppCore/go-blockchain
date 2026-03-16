@@ -13,3 +13,20 @@ func TestTxOutToKey_TargetType_Good(t *testing.T) {
 		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeToKey)
 	}
 }
+
+func TestTxOutMultisig_TargetType_Good(t *testing.T) {
+	var target TxOutTarget = TxOutMultisig{MinimumSigs: 2, Keys: []PublicKey{{1}, {2}}}
+	if target.TargetType() != TargetTypeMultisig {
+		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeMultisig)
+	}
+}
+
+func TestTxOutHTLC_TargetType_Good(t *testing.T) {
+	var target TxOutTarget = TxOutHTLC{
+		Flags:      0,
+		Expiration: 10080,
+	}
+	if target.TargetType() != TargetTypeHTLC {
+		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeHTLC)
+	}
+}

@@ -131,6 +131,30 @@ type TxOutToKey struct {
 // TargetType returns the wire variant tag for to_key targets.
 func (t TxOutToKey) TargetType() uint8 { return TargetTypeToKey }
 
+// TxOutMultisig is the txout_multisig target variant (HF1+).
+// Spendable when minimum_sigs of the listed keys sign.
+type TxOutMultisig struct {
+	MinimumSigs uint64
+	Keys        []PublicKey
+}
+
+// TargetType returns the wire variant tag for multisig targets.
+func (t TxOutMultisig) TargetType() uint8 { return TargetTypeMultisig }
+
+// TxOutHTLC is the txout_htlc target variant (HF1+).
+// Hash Time-Locked Contract: redeemable with hash preimage before
+// expiration, refundable after expiration.
+type TxOutHTLC struct {
+	HTLCHash   Hash      // 32-byte hash lock
+	Flags      uint8     // bit 0: 0=SHA256, 1=RIPEMD160
+	Expiration uint64    // block height deadline
+	PKRedeem   PublicKey // recipient key (can redeem before expiration)
+	PKRefund   PublicKey // sender key (can refund after expiration)
+}
+
+// TargetType returns the wire variant tag for HTLC targets.
+func (t TxOutHTLC) TargetType() uint8 { return TargetTypeHTLC }
+
 // TxOutRef is one element of a txin_to_key key_offsets vector.
 // Each element is a variant: either a uint64 global index or a ref_by_id.
 type TxOutRef struct {
