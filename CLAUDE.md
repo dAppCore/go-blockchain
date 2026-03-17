@@ -40,8 +40,8 @@ go test -tags integration ./...                 # integration tests (need C++ te
 - `go test -race ./...`, `go vet ./...`, and `go mod tidy` must all pass before commit
 - Conventional commits: `type(scope): description`
 - Co-Author trailer: `Co-Authored-By: Charon <charon@lethean.io>`
-- Error strings: `package: description` format (e.g. `types: invalid hex for hash`)
-- Error wrapping: `fmt.Errorf("package: description: %w", err)`
+- Error handling: `coreerr.E("Caller", "description", err)` via `coreerr "forge.lthn.ai/core/go-log"` — not `fmt.Errorf` or `errors.New`
+- File I/O: `coreio "forge.lthn.ai/core/go-io"` — not `os.ReadFile`/`os.WriteFile`
 - Import order: stdlib, then `golang.org/x`, then `forge.lthn.ai`, blank lines between groups
 - No emojis in code or comments
 

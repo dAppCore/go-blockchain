@@ -8,8 +8,10 @@ package consensus
 import (
 	"bytes"
 	"encoding/hex"
-	"os"
+	"strings"
 	"testing"
+
+	coreio "forge.lthn.ai/core/go-io"
 
 	"forge.lthn.ai/core/go-blockchain/config"
 	"forge.lthn.ai/core/go-blockchain/types"
@@ -21,10 +23,10 @@ import (
 // loadTestTx loads and decodes a hex-encoded transaction from testdata.
 func loadTestTx(t *testing.T, filename string) *types.Transaction {
 	t.Helper()
-	hexData, err := os.ReadFile(filename)
+	hexStr, err := coreio.Read(coreio.Local, filename)
 	require.NoError(t, err, "read %s", filename)
 
-	blob, err := hex.DecodeString(string(bytes.TrimSpace(hexData)))
+	blob, err := hex.DecodeString(strings.TrimSpace(hexStr))
 	require.NoError(t, err, "decode hex")
 
 	dec := wire.NewDecoder(bytes.NewReader(blob))

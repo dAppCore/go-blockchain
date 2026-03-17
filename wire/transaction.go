@@ -164,6 +164,18 @@ func encodeInputs(enc *Encoder, vin []types.TxInput) {
 			encodeKeyOffsets(enc, v.KeyOffsets)
 			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
 			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputHTLC:
+			// Wire order: HTLCOrigin string BEFORE parent fields (C++ quirk).
+			encodeString(enc, v.HTLCOrigin)
+			enc.WriteVarint(v.Amount)
+			encodeKeyOffsets(enc, v.KeyOffsets)
+			enc.WriteBlob32((*[32]byte)(&v.KeyImage))
+			enc.WriteBytes(v.EtcDetails)
+		case types.TxInputMultisig:
+			enc.WriteVarint(v.Amount)
+			enc.WriteBlob32((*[32]byte)(&v.MultisigOutID))
+			enc.WriteVarint(v.SigsCount)
+			enc.WriteBytes(v.EtcDetails)
 		}
 	}
 }
@@ -193,6 +205,21 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 			var in types.TxInputZC
 			in.KeyOffsets = decodeKeyOffsets(dec)
 			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeHTLC:
+			var in types.TxInputHTLC
+			in.HTLCOrigin = decodeString(dec)
+			in.Amount = dec.ReadVarint()
+			in.KeyOffsets = decodeKeyOffsets(dec)
+			dec.ReadBlob32((*[32]byte)(&in.KeyImage))
+			in.EtcDetails = decodeRawVariantVector(dec)
+			vin = append(vin, in)
+		case types.InputTypeMultisig:
+			var in types.TxInputMultisig
+			in.Amount = dec.ReadVarint()
+			dec.ReadBlob32((*[32]byte)(&in.MultisigOutID))
+			in.SigsCount = dec.ReadVarint()
 			in.EtcDetails = decodeRawVariantVector(dec)
 			vin = append(vin, in)
 		default:
@@ -241,6 +268,87 @@ func decodeKeyOffsets(dec *Decoder) []types.TxOutRef {
 	return refs
 }
 
+// --- string encoding ---
+
+// encodeString writes a varint-prefixed string.
+func encodeString(enc *Encoder, s string) {
+	enc.WriteVarint(uint64(len(s)))
+	if len(s) > 0 {
+		enc.WriteBytes([]byte(s))
+	}
+}
+
+// decodeString reads a varint-prefixed string.
+func decodeString(dec *Decoder) string {
+	n := dec.ReadVarint()
+	if n == 0 || dec.Err() != nil {
+		return ""
+	}
+	data := dec.ReadBytes(int(n))
+	if dec.Err() != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// --- output targets ---
+
+// encodeTarget serialises a txout_target_v variant (tag + fields).
+func encodeTarget(enc *Encoder, target types.TxOutTarget) {
+	enc.WriteVariantTag(target.TargetType())
+	switch t := target.(type) {
+	case types.TxOutToKey:
+		enc.WriteBlob32((*[32]byte)(&t.Key))
+		enc.WriteUint8(t.MixAttr)
+	case types.TxOutMultisig:
+		enc.WriteVarint(t.MinimumSigs)
+		enc.WriteVarint(uint64(len(t.Keys)))
+		for i := range t.Keys {
+			enc.WriteBlob32((*[32]byte)(&t.Keys[i]))
+		}
+	case types.TxOutHTLC:
+		enc.WriteBlob32((*[32]byte)(&t.HTLCHash))
+		enc.WriteUint8(t.Flags)
+		enc.WriteVarint(t.Expiration)
+		enc.WriteBlob32((*[32]byte)(&t.PKRedeem))
+		enc.WriteBlob32((*[32]byte)(&t.PKRefund))
+	}
+}
+
+// decodeTarget deserialises a txout_target_v from the given tag.
+// Returns nil for unsupported tags (caller should set dec.err).
+func decodeTarget(dec *Decoder, tag uint8) types.TxOutTarget {
+	switch tag {
+	case types.TargetTypeToKey:
+		var t types.TxOutToKey
+		dec.ReadBlob32((*[32]byte)(&t.Key))
+		t.MixAttr = dec.ReadUint8()
+		return t
+	case types.TargetTypeMultisig:
+		var t types.TxOutMultisig
+		t.MinimumSigs = dec.ReadVarint()
+		n := dec.ReadVarint()
+		if dec.Err() != nil {
+			return nil
+		}
+		t.Keys = make([]types.PublicKey, n)
+		for i := uint64(0); i < n; i++ {
+			dec.ReadBlob32((*[32]byte)(&t.Keys[i]))
+		}
+		return t
+	case types.TargetTypeHTLC:
+		var t types.TxOutHTLC
+		dec.ReadBlob32((*[32]byte)(&t.HTLCHash))
+		t.Flags = dec.ReadUint8()
+		t.Expiration = dec.ReadVarint()
+		dec.ReadBlob32((*[32]byte)(&t.PKRedeem))
+		dec.ReadBlob32((*[32]byte)(&t.PKRefund))
+		return t
+	default:
+		return nil
+	}
+}
+
 // --- outputs ---
 
 // encodeOutputsV1 serialises v0/v1 outputs. In v0/v1, outputs are tx_out_bare
@@ -251,10 +359,7 @@ func encodeOutputsV1(enc *Encoder, vout []types.TxOutput) {
 		switch v := out.(type) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
-			// Target is a variant (txout_target_v)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			encodeTarget(enc, v.Target)
 		}
 	}
 }
@@ -272,14 +377,15 @@ func decodeOutputsV1(dec *Decoder) []types.TxOutput {
 		if dec.Err() != nil {
 			return vout
 		}
-		switch tag {
-		case types.TargetTypeToKey:
-			dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-			out.Target.MixAttr = dec.ReadUint8()
-		default:
+		target := decodeTarget(dec, tag)
+		if dec.Err() != nil {
+			return vout
+		}
+		if target == nil {
 			dec.err = coreerr.E("decodeOutputsV1", fmt.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
 			return vout
 		}
+		out.Target = target
 		vout = append(vout, out)
 	}
 	return vout
@@ -293,9 +399,7 @@ func encodeOutputsV2(enc *Encoder, vout []types.TxOutput) {
 		switch v := out.(type) {
 		case types.TxOutputBare:
 			enc.WriteVarint(v.Amount)
-			enc.WriteVariantTag(types.TargetTypeToKey)
-			enc.WriteBlob32((*[32]byte)(&v.Target.Key))
-			enc.WriteUint8(v.Target.MixAttr)
+			encodeTarget(enc, v.Target)
 		case types.TxOutputZarcanum:
 			enc.WriteBlob32((*[32]byte)(&v.StealthAddress))
 			enc.WriteBlob32((*[32]byte)(&v.ConcealingPoint))
@@ -323,13 +427,18 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 			var out types.TxOutputBare
 			out.Amount = dec.ReadVarint()
 			targetTag := dec.ReadVariantTag()
-			if targetTag == types.TargetTypeToKey {
-				dec.ReadBlob32((*[32]byte)(&out.Target.Key))
-				out.Target.MixAttr = dec.ReadUint8()
-			} else {
+			if dec.Err() != nil {
+				return vout
+			}
+			target := decodeTarget(dec, targetTag)
+			if dec.Err() != nil {
+				return vout
+			}
+			if target == nil {
 				dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
 				return vout
 			}
+			out.Target = target
 			vout = append(vout, out)
 		case types.OutputTypeZarcanum:
 			var out types.TxOutputZarcanum
@@ -434,6 +543,14 @@ const (
 	tagZCAssetSurjectionProof = 46 // vector<BGE_proof_s>
 	tagZCOutsRangeProof       = 47 // bpp_serialized + aggregation_proof
 	tagZCBalanceProof         = 48 // generic_double_schnorr_sig_s (96 bytes)
+
+	// Asset operation tags (HF5 confidential assets).
+	tagAssetOperationProof            = 49 // asset_operation_proof
+	tagAssetOperationOwnershipProof   = 50 // asset_operation_ownership_proof
+	tagAssetOperationOwnershipProofETH = 51 // asset_operation_ownership_proof_eth
+
+	// Extra variant tags (asset operations).
+	tagAssetDescriptorOperation = 40 // asset_descriptor_operation
 )
 
 // readVariantElementData reads the data portion of a variant element (after the
@@ -509,6 +626,16 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return readZCOutsRangeProof(dec)
 	case tagZCBalanceProof: // generic_double_schnorr_sig_s (3 scalars = 96 bytes)
 		return dec.ReadBytes(96)
+
+	// Asset operation variants (HF5)
+	case tagAssetDescriptorOperation:
+		return readAssetDescriptorOperation(dec)
+	case tagAssetOperationProof:
+		return readAssetOperationProof(dec)
+	case tagAssetOperationOwnershipProof:
+		return readAssetOperationOwnershipProof(dec)
+	case tagAssetOperationOwnershipProofETH:
+		return readAssetOperationOwnershipProofETH(dec)
 
 	default:
 		dec.err = coreerr.E("readVariantElementData", fmt.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
@@ -922,6 +1049,181 @@ func readZCOutsRangeProof(dec *Decoder) []byte {
 	raw = append(raw, v...)
 	// aggregation_proof
 	v = readAggregationProof(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// --- asset operation readers (HF5) ---
+
+// readAssetDescriptorOperation reads asset_descriptor_operation (tag 40).
+// Wire: ver(uint8) + operation_type(uint8) + opt_asset_id(optional 32-byte hash)
+// + opt_descriptor(optional AssetDescriptorBase) + amount_to_emit(uint64 LE)
+// + amount_to_burn(uint64 LE) + etc(vector<uint8>).
+func readAssetDescriptorOperation(dec *Decoder) []byte {
+	var raw []byte
+	// ver: uint8
+	ver := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, ver)
+	// operation_type: uint8
+	opType := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, opType)
+	// opt_asset_id: optional<hash> — uint8 marker, then 32 bytes if present
+	marker := dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, marker)
+	if marker != 0 {
+		b := dec.ReadBytes(32)
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+	}
+	// opt_descriptor: optional<AssetDescriptorBase>
+	marker = dec.ReadUint8()
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, marker)
+	if marker != 0 {
+		// AssetDescriptorBase: ticker(string) + full_name(string)
+		// + total_max_supply(uint64 LE) + current_supply(uint64 LE)
+		// + decimal_point(uint8) + meta_info(string) + owner_key(32)
+		// + etc(vector<uint8>)
+		for range 2 {
+			s := readStringBlob(dec)
+			if dec.err != nil {
+				return nil
+			}
+			raw = append(raw, s...)
+		}
+		b := dec.ReadBytes(8 + 8 + 1) // total_max_supply + current_supply + decimal_point
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+		s := readStringBlob(dec) // meta_info
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, s...)
+		b = dec.ReadBytes(32) // owner_key
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, b...)
+		v := readVariantVectorFixed(dec, 1) // etc
+		if dec.err != nil {
+			return nil
+		}
+		raw = append(raw, v...)
+	}
+	// amount_to_emit: uint64 LE
+	b := dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// amount_to_burn: uint64 LE
+	b = dec.ReadBytes(8)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// readAssetOperationProof reads asset_operation_proof (tag 49).
+// Wire: ver(uint8) + gss(generic_schnorr_sig_s = 64 bytes) + asset_id(32 bytes)
+// + etc(vector<uint8>).
+func readAssetOperationProof(dec *Decoder) []byte {
+	var raw []byte
+	// ver: uint8
+	b := dec.ReadBytes(1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// gss: generic_schnorr_sig_s (s + c = 64 bytes)
+	b = dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// asset_id: 32 bytes
+	b = dec.ReadBytes(32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// readAssetOperationOwnershipProof reads asset_operation_ownership_proof (tag 50).
+// Wire: ver(uint8) + gss(generic_schnorr_sig_s = 64 bytes) + etc(vector<uint8>).
+func readAssetOperationOwnershipProof(dec *Decoder) []byte {
+	var raw []byte
+	// ver: uint8
+	b := dec.ReadBytes(1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// gss: generic_schnorr_sig_s (64 bytes)
+	b = dec.ReadBytes(64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, v...)
+	return raw
+}
+
+// readAssetOperationOwnershipProofETH reads asset_operation_ownership_proof_eth (tag 51).
+// Wire: ver(uint8) + eth_sig(65 bytes: r=32 + s=32 + v=1) + etc(vector<uint8>).
+func readAssetOperationOwnershipProofETH(dec *Decoder) []byte {
+	var raw []byte
+	// ver: uint8
+	b := dec.ReadBytes(1)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// eth_sig: 65 bytes
+	b = dec.ReadBytes(65)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, b...)
+	// etc: vector<uint8>
+	v := readVariantVectorFixed(dec, 1)
 	if dec.err != nil {
 		return nil
 	}

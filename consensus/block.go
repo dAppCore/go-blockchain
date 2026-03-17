@@ -152,8 +152,8 @@ func expectedBlockMajorVersion(forks []config.HardFork, height uint64) uint8 {
 func checkBlockVersion(blk *types.Block, forks []config.HardFork, height uint64) error {
 	expected := expectedBlockMajorVersion(forks, height)
 	if blk.MajorVersion != expected {
-		return fmt.Errorf("%w: got %d, want %d at height %d",
-			ErrBlockMajorVersion, blk.MajorVersion, expected, height)
+		return coreerr.E("checkBlockVersion", fmt.Sprintf("got %d, want %d at height %d",
+			blk.MajorVersion, expected, height), ErrBlockMajorVersion)
 	}
 	return nil
 }
@@ -226,7 +226,7 @@ func IsPreHardforkFreeze(forks []config.HardFork, version uint8, height uint64) 
 func ValidateTransactionInBlock(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
 	// Pre-hardfork freeze: reject non-coinbase transactions in the freeze window.
 	if !isCoinbase(tx) && IsPreHardforkFreeze(forks, config.HF5, height) {
-		return fmt.Errorf("%w: height %d is within HF5 freeze window", ErrPreHardforkFreeze, height)
+		return coreerr.E("ValidateTransactionInBlock", fmt.Sprintf("height %d is within HF5 freeze window", height), ErrPreHardforkFreeze)
 	}
 
 	return ValidateTransaction(tx, txBlob, forks, height)

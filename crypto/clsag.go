@@ -8,8 +8,9 @@ package crypto
 import "C"
 
 import (
-	"errors"
 	"unsafe"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // PointMul8 multiplies a curve point by the cofactor 8.
@@ -20,7 +21,7 @@ func PointMul8(pk [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&result[0])),
 	)
 	if rc != 0 {
-		return result, errors.New("crypto: point_mul8 failed")
+		return result, coreerr.E("PointMul8", "point_mul8 failed", nil)
 	}
 	return result, nil
 }
@@ -34,7 +35,7 @@ func PointDiv8(pk [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&result[0])),
 	)
 	if rc != 0 {
-		return result, errors.New("crypto: point_div8 failed")
+		return result, coreerr.E("PointDiv8", "point_div8 failed", nil)
 	}
 	return result, nil
 }
@@ -48,7 +49,7 @@ func PointSub(a, b [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&result[0])),
 	)
 	if rc != 0 {
-		return result, errors.New("crypto: point_sub failed")
+		return result, coreerr.E("PointSub", "point_sub failed", nil)
 	}
 	return result, nil
 }
@@ -81,7 +82,7 @@ func GenerateCLSAGGG(hash [32]byte, ring []byte, ringSize int,
 		(*C.uint8_t)(unsafe.Pointer(&sig[0])),
 	)
 	if rc != 0 {
-		return nil, errors.New("crypto: generate_CLSAG_GG failed")
+		return nil, coreerr.E("GenerateCLSAGGG", "generate_CLSAG_GG failed", nil)
 	}
 	return sig, nil
 }

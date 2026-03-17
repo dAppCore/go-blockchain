@@ -8,8 +8,9 @@ package crypto
 import "C"
 
 import (
-	"errors"
 	"unsafe"
+
+	coreerr "forge.lthn.ai/core/go-log"
 )
 
 // GenerateKeyImage computes the key image for a public/secret key pair.
@@ -22,7 +23,7 @@ func GenerateKeyImage(pub [32]byte, sec [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&ki[0])),
 	)
 	if rc != 0 {
-		return ki, errors.New("crypto: generate_key_image failed")
+		return ki, coreerr.E("GenerateKeyImage", "generate_key_image failed", nil)
 	}
 	return ki, nil
 }
