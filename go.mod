@@ -3,12 +3,12 @@ module forge.lthn.ai/core/go-blockchain
 go 1.26.0
 
 require (
-	forge.lthn.ai/core/cli v0.3.6
-	forge.lthn.ai/core/go-io v0.1.6
+	forge.lthn.ai/core/cli v0.3.7
+	forge.lthn.ai/core/go-io v0.1.7
 	forge.lthn.ai/core/go-log v0.0.4
-	forge.lthn.ai/core/go-p2p v0.1.6
-	forge.lthn.ai/core/go-process v0.2.8
-	forge.lthn.ai/core/go-store v0.1.9
+	forge.lthn.ai/core/go-p2p v0.1.7
+	forge.lthn.ai/core/go-process v0.2.9
+	forge.lthn.ai/core/go-store v0.1.10
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	forge.lthn.ai/core/go v0.3.2 // indirect
+	forge.lthn.ai/core/go v0.3.3 // indirect
 	forge.lthn.ai/core/go-i18n v0.1.7 // indirect
 	forge.lthn.ai/core/go-inference v0.1.6 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
