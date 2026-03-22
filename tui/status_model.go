@@ -11,7 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	cli "forge.lthn.ai/core/cli/pkg/cli"
+	cli "dappco.re/go/core/cli/pkg/cli"
 )
 
 // Compile-time check: StatusModel implements cli.FrameModel.

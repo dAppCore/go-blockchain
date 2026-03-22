@@ -8,9 +8,9 @@
 package chain
 
 import (
-	"forge.lthn.ai/core/go-blockchain/types"
-	coreerr "forge.lthn.ai/core/go-log"
-	store "forge.lthn.ai/core/go-store"
+	"dappco.re/go/core/blockchain/types"
+	coreerr "dappco.re/go/core/log"
+	store "dappco.re/go/core/store"
 )
 
 // Chain manages blockchain storage and indexing.

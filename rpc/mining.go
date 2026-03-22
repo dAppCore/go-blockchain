@@ -8,7 +8,7 @@ package rpc
 import (
 	"fmt"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // SubmitBlock submits a mined block to the daemon.

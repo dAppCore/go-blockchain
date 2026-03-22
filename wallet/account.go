@@ -17,14 +17,14 @@ import (
 	"encoding/json"
 	"io"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
 	"golang.org/x/crypto/argon2"
 
-	store "forge.lthn.ai/core/go-store"
+	store "dappco.re/go/core/store"
 
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // Store group and key for the encrypted account blob.

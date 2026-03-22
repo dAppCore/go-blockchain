@@ -8,7 +8,7 @@ package rpc
 import (
 	"fmt"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // GetLastBlockHeader returns the header of the most recent block.

@@ -5,7 +5,7 @@
 
 package wire
 
-import "forge.lthn.ai/core/go-blockchain/types"
+import "dappco.re/go/core/blockchain/types"
 
 // EncodeBlockHeader serialises a block header in the consensus wire format.
 //

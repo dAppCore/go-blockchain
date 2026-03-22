@@ -10,7 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
+	"dappco.re/go/core/blockchain/chain"
 )
 
 // Node wraps a [chain.Chain] and provides bubbletea commands for periodic

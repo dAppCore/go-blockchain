@@ -12,11 +12,11 @@ package wallet
 import (
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	store "dappco.re/go/core/store"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 func makeTestBlock(t *testing.T, height uint64, prevHash types.Hash,

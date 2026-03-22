@@ -8,10 +8,10 @@ package consensus
 import (
 	"fmt"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // ValidateTransaction performs semantic validation on a regular (non-coinbase)

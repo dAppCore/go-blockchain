@@ -2,7 +2,7 @@
 
 Pure Go implementation of the Lethean blockchain protocol. Provides chain configuration, core cryptographic data types, CryptoNote wire serialisation, and LWMA difficulty adjustment for the Lethean CryptoNote/Zano-fork chain. Follows ADR-001: protocol logic in Go, cryptographic primitives deferred to a C++ bridge in later phases. Lineage: CryptoNote to IntenseCoin (2017) to Lethean to Zano rebase.
 
-**Module**: `forge.lthn.ai/core/go-blockchain`
+**Module**: `dappco.re/go/core/blockchain`
 **Licence**: EUPL-1.2
 **Language**: Go 1.25
 
@@ -10,10 +10,10 @@ Pure Go implementation of the Lethean blockchain protocol. Provides chain config
 
 ```go
 import (
-    "forge.lthn.ai/core/go-blockchain/config"
-    "forge.lthn.ai/core/go-blockchain/types"
-    "forge.lthn.ai/core/go-blockchain/wire"
-    "forge.lthn.ai/core/go-blockchain/difficulty"
+    "dappco.re/go/core/blockchain/config"
+    "dappco.re/go/core/blockchain/types"
+    "dappco.re/go/core/blockchain/wire"
+    "dappco.re/go/core/blockchain/difficulty"
 )
 
 // Query the active hardfork version at a given block height

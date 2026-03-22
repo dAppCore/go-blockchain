@@ -12,8 +12,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func TestRPCRingSelector(t *testing.T) {

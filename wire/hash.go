@@ -8,7 +8,7 @@ package wire
 import (
 	"bytes"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // BlockHashingBlob builds the blob used to compute a block's hash.

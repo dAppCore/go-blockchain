@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // Decoder reads consensus-critical binary data from an io.Reader.

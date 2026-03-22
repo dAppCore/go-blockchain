@@ -8,9 +8,9 @@ package chain
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
-	store "forge.lthn.ai/core/go-store"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
+	store "dappco.re/go/core/store"
 	"github.com/stretchr/testify/require"
 )
 

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	store "forge.lthn.ai/core/go-store"
+	store "dappco.re/go/core/store"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 // testCoinbaseTx returns a minimal v1 coinbase transaction that round-trips

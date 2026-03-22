@@ -7,7 +7,7 @@ description: Pure Go implementation of the Lethean CryptoNote/Zano-fork blockcha
 
 `go-blockchain` is a Go reimplementation of the Lethean blockchain protocol. It provides pure-Go implementations of chain logic, data structures, consensus rules, wallet operations, and networking, delegating only mathematically complex cryptographic operations (ring signatures, Bulletproofs+, Zarcanum proofs) to a cleaned C++ library via CGo.
 
-**Module path:** `forge.lthn.ai/core/go-blockchain`
+**Module path:** `dappco.re/go/core/blockchain`
 
 **Licence:** [European Union Public Licence (EUPL) version 1.2](https://joinup.ec.europa.eu/software/page/eupl/licence-eupl)
 
@@ -61,9 +61,9 @@ go-blockchain/
 import (
     "fmt"
 
-    "forge.lthn.ai/core/go-blockchain/config"
-    "forge.lthn.ai/core/go-blockchain/rpc"
-    "forge.lthn.ai/core/go-blockchain/types"
+    "dappco.re/go/core/blockchain/config"
+    "dappco.re/go/core/blockchain/rpc"
+    "dappco.re/go/core/blockchain/types"
 )
 
 // Query the daemon
@@ -109,7 +109,7 @@ When CGo is disabled, stub implementations return errors, allowing the rest of t
 
 ## Development Phases
 
-The project follows a 9-phase development plan. See the [wiki Development Phases page](https://forge.lthn.ai/core/go-blockchain/wiki/Development-Phases) for detailed phase descriptions.
+The project follows a 9-phase development plan. See the [wiki Development Phases page](https://dappco.re/go/core/blockchain/wiki/Development-Phases) for detailed phase descriptions.
 
 | Phase | Scope | Status |
 |-------|-------|--------|

@@ -12,10 +12,10 @@ package wallet
 import (
 	"fmt"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // RingMember is a public key and global index used in ring construction.

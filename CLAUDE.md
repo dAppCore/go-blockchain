@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Go implementation of the Lethean blockchain protocol (CryptoNote/Zano-fork) with a CGo crypto bridge.
 
-Module: `forge.lthn.ai/core/go-blockchain`
+Module: `dappco.re/go/core/blockchain`
 Licence: EUPL-1.2 (every source file carries the copyright header)
 
 ## Build
@@ -42,7 +42,7 @@ go test -tags integration ./...                 # integration tests (need C++ te
 - Co-Author trailer: `Co-Authored-By: Charon <charon@lethean.io>`
 - Error strings: `package: description` format (e.g. `types: invalid hex for hash`)
 - Error wrapping: `fmt.Errorf("package: description: %w", err)`
-- Import order: stdlib, then `golang.org/x`, then `forge.lthn.ai`, blank lines between groups
+- Import order: stdlib, then `golang.org/x`, then `dappco.re`, blank lines between groups
 - No emojis in code or comments
 
 ## Test Conventions
@@ -77,9 +77,9 @@ types / config  ←  leaf packages (stdlib only, no internal deps)
 - Block hash includes a varint length prefix: `Keccak256(varint(len) || block_hashing_blob)`.
 - Two P2P varint formats exist: CryptoNote LEB128 (`wire/`) and portable storage 2-bit size mark (`go-p2p/node/levin/`).
 
-**Binary:** `cmd/core-chain/` — cobra CLI via `forge.lthn.ai/core/cli`. Subcommands: `chain sync` (P2P block sync) and `chain explorer` (TUI dashboard).
+**Binary:** `cmd/core-chain/` — cobra CLI via `dappco.re/go/core/cli`. Subcommands: `chain sync` (P2P block sync) and `chain explorer` (TUI dashboard).
 
-**Local replace directives:** `go.mod` uses local `replace` for sibling `forge.lthn.ai/core/*` modules.
+**Local replace directives:** `go.mod` uses `replace` to map `dappco.re/go/core/*` paths to `forge.lthn.ai/core/*` modules during migration.
 
 ## Docs
 

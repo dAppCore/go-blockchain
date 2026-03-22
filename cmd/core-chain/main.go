@@ -6,8 +6,8 @@
 package main
 
 import (
-	cli "forge.lthn.ai/core/cli/pkg/cli"
-	blockchain "forge.lthn.ai/core/go-blockchain"
+	cli "dappco.re/go/core/cli/pkg/cli"
+	blockchain "dappco.re/go/core/blockchain"
 )
 
 func main() {

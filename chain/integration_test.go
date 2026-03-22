@@ -18,12 +18,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/p2p"
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/types"
-	levin "forge.lthn.ai/core/go-p2p/node/levin"
-	store "forge.lthn.ai/core/go-store"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/p2p"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/types"
+	levin "dappco.re/go/core/p2p/node/levin"
+	store "dappco.re/go/core/store"
 )
 
 const testnetRPCAddr = "http://localhost:46941"

@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"math/big"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
 	"golang.org/x/crypto/sha3"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 )
 
 // FlagAuditable marks an address as auditable. When set, the address was

@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // testnetGenesisHeader returns the genesis block header for the Lethean testnet.

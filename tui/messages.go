@@ -8,7 +8,7 @@ package tui
 import (
 	"time"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // NodeStatusMsg carries a periodic status snapshot from the Node goroutine

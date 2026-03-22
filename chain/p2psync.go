@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // P2PConnection abstracts the P2P communication needed for block sync.

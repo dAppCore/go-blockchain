@@ -10,8 +10,8 @@
 package wallet
 
 import (
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // Scanner detects outputs belonging to a wallet within a transaction.

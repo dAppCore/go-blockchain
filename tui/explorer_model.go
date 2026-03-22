@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	cli "forge.lthn.ai/core/cli/pkg/cli"
+	cli "dappco.re/go/core/cli/pkg/cli"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // Compile-time check: ExplorerModel implements cli.FrameModel.

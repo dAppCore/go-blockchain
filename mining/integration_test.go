@@ -12,8 +12,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

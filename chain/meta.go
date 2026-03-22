@@ -5,7 +5,7 @@
 
 package chain
 
-import "forge.lthn.ai/core/go-blockchain/types"
+import "dappco.re/go/core/blockchain/types"
 
 // BlockMeta holds metadata stored alongside each block.
 type BlockMeta struct {

@@ -11,7 +11,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // testnetGenesisRawTx returns the raw wire bytes of the testnet genesis

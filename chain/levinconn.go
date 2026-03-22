@@ -8,10 +8,10 @@ package chain
 import (
 	"log"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/p2p"
-	levinpkg "forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/blockchain/p2p"
+	levinpkg "dappco.re/go/core/p2p/node/levin"
 )
 
 // LevinP2PConn adapts a Levin connection to the P2PConnection interface.

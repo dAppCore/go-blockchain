@@ -6,7 +6,7 @@ import (
 	"hash/crc32"
 	"strings"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 const numWords = 1626

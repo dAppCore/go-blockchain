@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/p2p/node/levin"
 )
 
 func TestEncodeHandshakeRequest_Good_Roundtrip(t *testing.T) {
