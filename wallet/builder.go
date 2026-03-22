@@ -15,12 +15,12 @@ import (
 	"fmt"
 	"slices"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 // Destination is a recipient address and amount.

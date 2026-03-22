@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-16
 **Author:** Charon
-**Package:** `forge.lthn.ai/core/go-blockchain`
+**Package:** `dappco.re/go/core/blockchain`
 **Status:** Approved
 
 ## Context

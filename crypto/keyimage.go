@@ -10,7 +10,7 @@ import "C"
 import (
 	"unsafe"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // GenerateKeyImage computes the key image for a public/secret key pair.

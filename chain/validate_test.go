@@ -8,8 +8,8 @@ package chain
 import (
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
-	"forge.lthn.ai/core/go-blockchain/types"
+	store "dappco.re/go/core/store"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func TestValidateHeader_Good_Genesis(t *testing.T) {

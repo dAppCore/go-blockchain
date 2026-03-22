@@ -8,8 +8,8 @@ package p2p
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/p2p/node/levin"
 )
 
 func TestCoreSyncData_Good_Roundtrip(t *testing.T) {

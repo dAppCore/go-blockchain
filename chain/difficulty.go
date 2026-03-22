@@ -8,8 +8,8 @@ package chain
 import (
 	"math/big"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/difficulty"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/difficulty"
 )
 
 // nextDifficultyWith computes the expected difficulty for the block at the

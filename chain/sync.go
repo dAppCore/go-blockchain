@@ -15,13 +15,13 @@ import (
 	"regexp"
 	"strconv"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/consensus"
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/consensus"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 const syncBatchSize = 10

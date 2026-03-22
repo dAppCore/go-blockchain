@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"math"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // TxFee calculates the transaction fee for pre-HF4 (v0/v1) transactions.

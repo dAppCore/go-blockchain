@@ -8,8 +8,8 @@ package wallet
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 func TestParseTxExtraPublicKey(t *testing.T) {

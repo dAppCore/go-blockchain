@@ -8,7 +8,7 @@ package types
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 )
 
 // makeTestAddress creates an address with deterministic test data.

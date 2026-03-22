@@ -6,7 +6,7 @@
 // Package p2p implements the CryptoNote P2P protocol for the Lethean blockchain.
 package p2p
 
-import "forge.lthn.ai/core/go-p2p/node/levin"
+import "dappco.re/go/core/p2p/node/levin"
 
 // Re-export command IDs from the levin package for convenience.
 const (

@@ -11,10 +11,10 @@ package mining
 import (
 	"encoding/binary"
 
-	"forge.lthn.ai/core/go-blockchain/consensus"
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/consensus"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 // RandomXKey is the cache initialisation key for RandomX hashing.

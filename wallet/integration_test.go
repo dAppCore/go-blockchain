@@ -14,9 +14,9 @@ package wallet
 import (
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/rpc"
+	store "dappco.re/go/core/store"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/rpc"
 )
 
 func TestWalletIntegration(t *testing.T) {

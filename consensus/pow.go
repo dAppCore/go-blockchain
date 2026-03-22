@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // maxTarget is 2^256, used for difficulty comparison.

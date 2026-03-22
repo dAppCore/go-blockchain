@@ -5,7 +5,7 @@
 
 package chain
 
-import "forge.lthn.ai/core/go-blockchain/types"
+import "dappco.re/go/core/blockchain/types"
 
 // SparseChainHistory builds the exponentially-spaced block hash list used by
 // NOTIFY_REQUEST_CHAIN. Matches the C++ get_short_chain_history() algorithm:

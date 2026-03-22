@@ -10,7 +10,7 @@ import "C"
 import (
 	"unsafe"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // PointMul8 multiplies a curve point by the cofactor 8.

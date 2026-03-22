@@ -51,9 +51,9 @@ package chain
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
-	store "forge.lthn.ai/core/go-store"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
+	store "dappco.re/go/core/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -277,8 +277,8 @@ package chain
 import (
 	"math/big"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/difficulty"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/difficulty"
 )
 
 // nextDifficultyWith computes the expected difficulty for the block at the
@@ -365,7 +365,7 @@ cd /home/claude/Code/core/go-blockchain && go test -race -run "TestNext.*Difficu
 **Expected:**
 
 ```
-ok  	forge.lthn.ai/core/go-blockchain/chain	(cached)
+ok  	dappco.re/go/core/blockchain/chain	(cached)
 ```
 
 All 10 tests pass: `TestNextDifficulty_Genesis`, `TestNextDifficulty_FewBlocks`, `TestNextDifficulty_EmptyChain`, `TestNextDifficulty_HF6Boundary_Good`, `TestNextDifficulty_HF6Boundary_Bad`, `TestNextDifficulty_HF6Boundary_Ugly`, `TestNextPoSDifficulty_Good`, `TestNextPoSDifficulty_HF6Boundary_Good`, `TestNextPoSDifficulty_Genesis`.

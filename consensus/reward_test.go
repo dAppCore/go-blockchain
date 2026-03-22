@@ -5,7 +5,7 @@ package consensus
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

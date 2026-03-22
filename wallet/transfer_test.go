@@ -8,9 +8,9 @@ package wallet
 import (
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
+	store "dappco.re/go/core/store"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func newTestStore(t *testing.T) *store.Store {
