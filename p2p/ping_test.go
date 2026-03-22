@@ -8,7 +8,7 @@ package p2p
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/p2p/node/levin"
 )
 
 func TestEncodePingRequest_Good_EmptySection(t *testing.T) {

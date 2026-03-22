@@ -6,8 +6,8 @@
 package p2p
 
 import (
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/p2p/node/levin"
 )
 
 // CoreSyncData is the blockchain state exchanged during handshake and timed sync.

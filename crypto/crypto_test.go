@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/crypto"
+	"dappco.re/go/core/blockchain/crypto"
 )
 
 func TestFastHash_Good_KnownVector(t *testing.T) {

@@ -5,7 +5,7 @@
 
 package p2p
 
-import "forge.lthn.ai/core/go-p2p/node/levin"
+import "dappco.re/go/core/p2p/node/levin"
 
 // NewBlockNotification is NOTIFY_NEW_BLOCK (2001).
 type NewBlockNotification struct {

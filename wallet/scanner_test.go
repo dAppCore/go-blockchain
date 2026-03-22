@@ -8,9 +8,9 @@ package wallet
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 // makeTestTransaction creates a v0 coinbase tx with one output sent to destAddr.

@@ -10,9 +10,9 @@
 package wallet
 
 import (
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
-	coreerr "forge.lthn.ai/core/go-log"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
+	coreerr "dappco.re/go/core/log"
 )
 
 // Signer produces signatures for transaction inputs.

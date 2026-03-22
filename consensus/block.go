@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"slices"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // IsPoS returns true if the block flags indicate a Proof-of-Stake block.

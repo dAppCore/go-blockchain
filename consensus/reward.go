@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"math/bits"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 )
 
 // BaseReward returns the base block reward at the given height.

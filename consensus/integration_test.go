@@ -10,11 +10,11 @@ package consensus
 import (
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
+	store "dappco.re/go/core/store"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/rpc"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/rpc"
 )
 
 func TestConsensusIntegration(t *testing.T) {

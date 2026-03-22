@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // Block 101 coinbase transaction from testnet (post-HF4, version 2).

@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"testing"
 
-	store "forge.lthn.ai/core/go-store"
-	"forge.lthn.ai/core/go-blockchain/config"
+	store "dappco.re/go/core/store"
+	"dappco.re/go/core/blockchain/config"
 	"github.com/stretchr/testify/require"
 )
 

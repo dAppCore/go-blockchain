@@ -16,12 +16,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/rpc"
-	"forge.lthn.ai/core/go-blockchain/types"
-	"forge.lthn.ai/core/go-blockchain/wire"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/rpc"
+	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wire"
 
-	store "forge.lthn.ai/core/go-store"
+	store "dappco.re/go/core/store"
 )
 
 // makeGenesisBlockBlob creates a minimal genesis block and returns its hex blob and hash.

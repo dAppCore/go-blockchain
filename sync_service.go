@@ -14,12 +14,12 @@ import (
 	"net"
 	"time"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/p2p"
-	levin "forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/p2p"
+	levin "dappco.re/go/core/p2p/node/levin"
 )
 
 func syncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, forks []config.HardFork, seed string) {

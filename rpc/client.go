@@ -15,7 +15,7 @@ import (
 	"net/url"
 	"time"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // Client is a Lethean daemon RPC client.

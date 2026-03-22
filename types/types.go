@@ -16,7 +16,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // Hash is a 256-bit (32-byte) hash value, typically produced by Keccak-256.

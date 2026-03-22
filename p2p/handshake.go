@@ -8,7 +8,7 @@ package p2p
 import (
 	"encoding/binary"
 
-	"forge.lthn.ai/core/go-p2p/node/levin"
+	"dappco.re/go/core/p2p/node/levin"
 )
 
 // PeerlistEntrySize is the packed size of a peerlist entry (ip + port + id + last_seen).

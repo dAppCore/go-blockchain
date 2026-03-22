@@ -147,7 +147,7 @@ Do not use American spellings in identifiers, comments, or documentation.
 - Error wrapping uses `fmt.Errorf("types: description: %w", err)`
 - Every source file carries the EUPL-1.2 copyright header
 - No emojis in code or comments
-- Imports are ordered: stdlib, then `golang.org/x`, then `forge.lthn.ai`, each
+- Imports are ordered: stdlib, then `golang.org/x`, then `dappco.re`, each
   separated by a blank line
 
 ### Dependencies

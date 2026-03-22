@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 )
 
 // RandomXHash computes the RandomX PoW hash. The key is the cache

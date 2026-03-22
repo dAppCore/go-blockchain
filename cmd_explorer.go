@@ -12,13 +12,13 @@ import (
 	"path/filepath"
 	"sync"
 
-	coreerr "forge.lthn.ai/core/go-log"
+	coreerr "dappco.re/go/core/log"
 
-	cli "forge.lthn.ai/core/cli/pkg/cli"
-	store "forge.lthn.ai/core/go-store"
+	cli "dappco.re/go/core/cli/pkg/cli"
+	store "dappco.re/go/core/store"
 
-	"forge.lthn.ai/core/go-blockchain/chain"
-	"forge.lthn.ai/core/go-blockchain/tui"
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/tui"
 	"github.com/spf13/cobra"
 )
 

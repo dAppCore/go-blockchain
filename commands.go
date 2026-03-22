@@ -9,10 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	coreio "forge.lthn.ai/core/go-io"
-	coreerr "forge.lthn.ai/core/go-log"
+	coreio "dappco.re/go/core/io"
+	coreerr "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 	"github.com/spf13/cobra"
 )
 

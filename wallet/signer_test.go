@@ -8,8 +8,8 @@ package wallet
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/crypto"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func TestNLSAGSignerRoundTrip(t *testing.T) {

@@ -15,7 +15,7 @@ The Lethean node exposes two RPC interfaces: a **daemon** API for blockchain que
 The `rpc/` package provides a typed Go client:
 
 ```go
-import "forge.lthn.ai/core/go-blockchain/rpc"
+import "dappco.re/go/core/blockchain/rpc"
 
 // Create a client (appends /json_rpc automatically)
 client := rpc.NewClient("http://localhost:36941")

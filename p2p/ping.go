@@ -5,7 +5,7 @@
 
 package p2p
 
-import "forge.lthn.ai/core/go-p2p/node/levin"
+import "dappco.re/go/core/p2p/node/levin"
 
 // EncodePingRequest returns an encoded empty ping request payload.
 func EncodePingRequest() ([]byte, error) {

@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func TestCoinbaseTxEncodeDecode_Good(t *testing.T) {

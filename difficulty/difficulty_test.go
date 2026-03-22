@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
+	"dappco.re/go/core/blockchain/config"
 )
 
 func TestNextDifficulty_Good(t *testing.T) {

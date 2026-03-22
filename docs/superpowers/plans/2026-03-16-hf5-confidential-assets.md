@@ -1085,8 +1085,8 @@ package consensus
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // validV2Tx returns a minimal valid v2 (Zarcanum) transaction for testing.
@@ -1287,8 +1287,8 @@ package consensus
 import (
 	"testing"
 
-	"forge.lthn.ai/core/go-blockchain/config"
-	"forge.lthn.ai/core/go-blockchain/types"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
 )
 
 func TestIsPreHardforkFreeze_Good(t *testing.T) {
