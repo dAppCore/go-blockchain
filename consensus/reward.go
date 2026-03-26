@@ -17,6 +17,7 @@ import (
 // BaseReward returns the base block reward at the given height.
 // Height 0 (genesis) returns the premine amount. All other heights
 // return the fixed block reward (1 LTHN).
+// Usage: consensus.BaseReward(...)
 func BaseReward(height uint64) uint64 {
 	if height == 0 {
 		return config.Premine
@@ -33,6 +34,7 @@ func BaseReward(height uint64) uint64 {
 //	reward = baseReward * (2*median - size) * size / median²
 //
 // Uses math/bits.Mul64 for 128-bit intermediate products to avoid overflow.
+// Usage: consensus.BlockReward(...)
 func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 	effectiveMedian := medianSize
 	if effectiveMedian < config.BlockGrantedFullRewardZone {
@@ -72,6 +74,7 @@ func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 // MinerReward calculates the total miner payout. Pre-HF4, transaction
 // fees are added to the base reward. Post-HF4 (postHF4=true), fees are
 // burned and the miner receives only the base reward.
+// Usage: consensus.MinerReward(...)
 func MinerReward(baseReward, totalFees uint64, postHF4 bool) uint64 {
 	if postHF4 {
 		return baseReward

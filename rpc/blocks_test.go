@@ -6,7 +6,6 @@
 package rpc
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,10 +33,10 @@ func blockHeaderResponse() jsonRPCResponse {
 	}
 }
 
-func TestGetLastBlockHeader_Good(t *testing.T) {
+func TestBlocks_GetLastBlockHeader_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(blockHeaderResponse())
+		writeJSON(t, w, blockHeaderResponse())
 	}))
 	defer srv.Close()
 
@@ -57,10 +56,10 @@ func TestGetLastBlockHeader_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlockHeaderByHeight_Good(t *testing.T) {
+func TestBlocks_GetBlockHeaderByHeight_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(blockHeaderResponse())
+		writeJSON(t, w, blockHeaderResponse())
 	}))
 	defer srv.Close()
 
@@ -74,10 +73,10 @@ func TestGetBlockHeaderByHeight_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlockHeaderByHash_Good(t *testing.T) {
+func TestBlocks_GetBlockHeaderByHash_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(blockHeaderResponse())
+		writeJSON(t, w, blockHeaderResponse())
 	}))
 	defer srv.Close()
 
@@ -91,10 +90,10 @@ func TestGetBlockHeaderByHash_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlocksDetails_Good(t *testing.T) {
+func TestBlocks_GetBlocksDetails_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      rawJSON(`"0"`),
 			Result: rawJSON(`{
@@ -129,10 +128,10 @@ func TestGetBlocksDetails_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlockHeaderByHeight_Bad_TooBig(t *testing.T) {
+func TestBlocks_GetBlockHeaderByHeight_TooBig_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -2, Message: "TOO_BIG_HEIGHT"},

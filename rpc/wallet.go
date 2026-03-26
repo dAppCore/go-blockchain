@@ -12,6 +12,7 @@ import (
 )
 
 // RandomOutputEntry is a decoy output returned by getrandom_outs.
+// Usage: var value rpc.RandomOutputEntry
 type RandomOutputEntry struct {
 	GlobalIndex uint64 `json:"global_index"`
 	PublicKey   string `json:"public_key"`
@@ -19,6 +20,7 @@ type RandomOutputEntry struct {
 
 // GetRandomOutputs fetches random decoy outputs for ring construction.
 // Uses the legacy /getrandom_outs1 endpoint (not available via /json_rpc).
+// Usage: value.GetRandomOutputs(...)
 func (c *Client) GetRandomOutputs(amount uint64, count int) ([]RandomOutputEntry, error) {
 	params := struct {
 		Amount uint64 `json:"amount"`
@@ -41,6 +43,7 @@ func (c *Client) GetRandomOutputs(amount uint64, count int) ([]RandomOutputEntry
 
 // SendRawTransaction submits a serialised transaction for relay.
 // Uses the legacy /sendrawtransaction endpoint (not available via /json_rpc).
+// Usage: value.SendRawTransaction(...)
 func (c *Client) SendRawTransaction(txBlob []byte) error {
 	params := struct {
 		TxAsHex string `json:"tx_as_hex"`

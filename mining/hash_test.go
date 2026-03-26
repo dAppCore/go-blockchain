@@ -46,7 +46,7 @@ func testnetGenesisRawTx() []byte {
 	return buf
 }
 
-func TestHeaderMiningHash_Good(t *testing.T) {
+func TestHash_HeaderMiningHash_Good(t *testing.T) {
 	// Build the genesis block from the known raw coinbase transaction.
 	rawTx := testnetGenesisRawTx()
 	dec := wire.NewDecoder(bytes.NewReader(rawTx))
@@ -74,7 +74,7 @@ func TestHeaderMiningHash_Good(t *testing.T) {
 	}
 }
 
-func TestHeaderMiningHash_Good_NonceIgnored(t *testing.T) {
+func TestHash_HeaderMiningHash_NonceIgnored_Good(t *testing.T) {
 	// HeaderMiningHash must produce the same result regardless of the
 	// block's current nonce value.
 	rawTx := testnetGenesisRawTx()
@@ -100,7 +100,7 @@ func TestHeaderMiningHash_Good_NonceIgnored(t *testing.T) {
 	}
 }
 
-func TestCheckNonce_Good_LowDifficulty(t *testing.T) {
+func TestHash_CheckNonce_LowDifficulty_Good(t *testing.T) {
 	// Build a genesis block and compute its header hash.
 	rawTx := testnetGenesisRawTx()
 	dec := wire.NewDecoder(bytes.NewReader(rawTx))
@@ -125,7 +125,7 @@ func TestCheckNonce_Good_LowDifficulty(t *testing.T) {
 	}
 }
 
-func TestCheckNonce_Good_HighDifficulty(t *testing.T) {
+func TestHash_CheckNonce_HighDifficulty_Good(t *testing.T) {
 	// With extremely high difficulty, nonce=0 should NOT produce a valid solution.
 	rawTx := testnetGenesisRawTx()
 	dec := wire.NewDecoder(bytes.NewReader(rawTx))

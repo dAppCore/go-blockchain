@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/p2p/node/levin"
 )
 
-func TestCoreSyncData_Good_Roundtrip(t *testing.T) {
+func TestSync_CoreSyncData_Roundtrip_Good(t *testing.T) {
 	var topID types.Hash
 	topID[0] = 0xCB
 	topID[31] = 0x63

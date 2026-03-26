@@ -6,14 +6,13 @@
 package rpc
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestClient_Good_JSONRPCCall(t *testing.T) {
+func TestClient_JSONRPCCall_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify request format.
 		if r.Method != http.MethodPost {
@@ -24,7 +23,7 @@ func TestClient_Good_JSONRPCCall(t *testing.T) {
 		}
 		body, _ := io.ReadAll(r.Body)
 		var req jsonRPCRequest
-		json.Unmarshal(body, &req)
+		mustJSONUnmarshal(t, body, &req)
 		if req.JSONRPC != "2.0" {
 			t.Errorf("jsonrpc: got %q, want %q", req.JSONRPC, "2.0")
 		}
@@ -34,7 +33,7 @@ func TestClient_Good_JSONRPCCall(t *testing.T) {
 
 		// Return a valid response.
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      rawJSON(`"0"`),
 			Result:  rawJSON(`{"count":6300,"status":"OK"}`),
@@ -59,7 +58,7 @@ func TestClient_Good_JSONRPCCall(t *testing.T) {
 	}
 }
 
-func TestClient_Good_LegacyCall(t *testing.T) {
+func TestClient_LegacyCall_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/getheight" {
 			t.Errorf("path: got %s, want /getheight", r.URL.Path)
@@ -83,10 +82,10 @@ func TestClient_Good_LegacyCall(t *testing.T) {
 	}
 }
 
-func TestClient_Bad_RPCError(t *testing.T) {
+func TestClient_RPCError_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      rawJSON(`"0"`),
 			Error: &jsonRPCError{
@@ -112,7 +111,7 @@ func TestClient_Bad_RPCError(t *testing.T) {
 	}
 }
 
-func TestClient_Bad_ConnectionRefused(t *testing.T) {
+func TestClient_ConnectionRefused_Bad(t *testing.T) {
 	c := NewClient("http://127.0.0.1:1") // Unlikely to be listening
 	var result struct{}
 	err := c.call("getblockcount", struct{}{}, &result)
@@ -121,7 +120,7 @@ func TestClient_Bad_ConnectionRefused(t *testing.T) {
 	}
 }
 
-func TestClient_Good_URLAppendPath(t *testing.T) {
+func TestClient_URLAppendPath_Good(t *testing.T) {
 	// NewClient should append /json_rpc if path is empty.
 	c := NewClient("http://localhost:46941")
 	if c.url != "http://localhost:46941/json_rpc" {
@@ -135,7 +134,7 @@ func TestClient_Good_URLAppendPath(t *testing.T) {
 	}
 }
 
-func TestClient_Bad_InvalidJSON(t *testing.T) {
+func TestClient_InvalidJSON_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`not json`))
 	}))
@@ -149,7 +148,7 @@ func TestClient_Bad_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestClient_Bad_HTTP500(t *testing.T) {
+func TestClient_HTTP500_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))

@@ -15,6 +15,7 @@ import (
 
 // ValidateTransaction performs semantic validation on a regular (non-coinbase)
 // transaction. Checks are ordered to match the C++ validate_tx_semantic().
+// Usage: consensus.ValidateTransaction(...)
 func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
 	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 

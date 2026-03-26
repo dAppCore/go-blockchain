@@ -17,14 +17,17 @@ import "dappco.re/go/core"
 // MaxVarintLen is the maximum number of bytes a CryptoNote varint can occupy.
 // A uint64 requires at most 10 bytes of 7-bit encoding (64 bits / 7 = ~9.14,
 // so values above 2^63-1 need a 10th byte).
+// Usage: value := wire.MaxVarintLen
 const MaxVarintLen = 10
 
 // ErrVarintOverflow is returned when a varint exceeds the maximum allowed
 // length of 10 bytes.
+// Usage: value := wire.ErrVarintOverflow
 var ErrVarintOverflow = core.E("", "wire: varint overflow (exceeds 10 bytes)", nil)
 
 // ErrVarintEmpty is returned when attempting to decode a varint from an
 // empty byte slice.
+// Usage: value := wire.ErrVarintEmpty
 var ErrVarintEmpty = core.E("", "wire: cannot decode varint from empty data", nil)
 
 // EncodeVarint encodes a uint64 value as a CryptoNote variable-length integer.
@@ -32,6 +35,7 @@ var ErrVarintEmpty = core.E("", "wire: cannot decode varint from empty data", ni
 // The encoding uses 7 bits per byte, with the most significant bit (MSB) set
 // to 1 to indicate that more bytes follow. This is the same scheme as protobuf
 // varints but limited to 9 bytes maximum for uint64 values.
+// Usage: wire.EncodeVarint(...)
 func EncodeVarint(v uint64) []byte {
 	if v == 0 {
 		return []byte{0x00}
@@ -52,6 +56,7 @@ func EncodeVarint(v uint64) []byte {
 // DecodeVarint decodes a CryptoNote variable-length integer from the given
 // byte slice. It returns the decoded value, the number of bytes consumed,
 // and any error encountered.
+// Usage: wire.DecodeVarint(...)
 func DecodeVarint(data []byte) (uint64, int, error) {
 	if len(data) == 0 {
 		return 0, 0, ErrVarintEmpty

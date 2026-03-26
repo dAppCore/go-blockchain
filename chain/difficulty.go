@@ -76,12 +76,14 @@ func (c *Chain) nextDifficultyWith(height uint64, forks []config.HardFork, baseT
 
 // NextDifficulty computes the expected PoW difficulty for the block at the
 // given height. Pre-HF6 the target is 120s; post-HF6 it doubles to 240s.
+// Usage: value.NextDifficulty(...)
 func (c *Chain) NextDifficulty(height uint64, forks []config.HardFork) (uint64, error) {
 	return c.nextDifficultyWith(height, forks, config.DifficultyPowTarget, config.DifficultyPowTargetHF6)
 }
 
 // NextPoSDifficulty computes the expected PoS difficulty for the block at the
 // given height. Pre-HF6 the target is 120s; post-HF6 it doubles to 240s.
+// Usage: value.NextPoSDifficulty(...)
 func (c *Chain) NextPoSDifficulty(height uint64, forks []config.HardFork) (uint64, error) {
 	return c.nextDifficultyWith(height, forks, config.DifficultyPosTarget, config.DifficultyPosTargetHF6)
 }

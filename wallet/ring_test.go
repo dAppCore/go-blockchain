@@ -7,20 +7,20 @@ package wallet
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"dappco.re/go/core"
 	"dappco.re/go/core/blockchain/rpc"
 	"dappco.re/go/core/blockchain/types"
 )
 
-func TestRPCRingSelector(t *testing.T) {
+func TestRing_RPCRingSelector_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type entry struct {
 			GlobalIndex uint64 `json:"global_index"`
-			PublicKey    string `json:"public_key"`
+			PublicKey   string `json:"public_key"`
 		}
 		resp := struct {
 			Outs   []entry `json:"outs"`
@@ -32,10 +32,16 @@ func TestRPCRingSelector(t *testing.T) {
 			key[0] = byte(i + 1)
 			resp.Outs = append(resp.Outs, entry{
 				GlobalIndex: uint64((i + 1) * 100),
-				PublicKey:    hex.EncodeToString(key[:]),
+				PublicKey:   hex.EncodeToString(key[:]),
 			})
 		}
-		json.NewEncoder(w).Encode(resp)
+		raw := core.JSONMarshal(resp)
+		if !raw.OK {
+			t.Fatalf("marshal response: %#v", raw.Value)
+		}
+		if _, err := w.Write(raw.Value.([]byte)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -65,11 +71,11 @@ func TestRPCRingSelector(t *testing.T) {
 	}
 }
 
-func TestRPCRingSelectorExcludesReal(t *testing.T) {
+func TestRing_RPCRingSelectorExcludesReal_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type entry struct {
 			GlobalIndex uint64 `json:"global_index"`
-			PublicKey    string `json:"public_key"`
+			PublicKey   string `json:"public_key"`
 		}
 		resp := struct {
 			Outs   []entry `json:"outs"`
@@ -85,10 +91,16 @@ func TestRPCRingSelectorExcludesReal(t *testing.T) {
 			}
 			resp.Outs = append(resp.Outs, entry{
 				GlobalIndex: gidx,
-				PublicKey:    hex.EncodeToString(key[:]),
+				PublicKey:   hex.EncodeToString(key[:]),
 			})
 		}
-		json.NewEncoder(w).Encode(resp)
+		raw := core.JSONMarshal(resp)
+		if !raw.OK {
+			t.Fatalf("marshal response: %#v", raw.Value)
+		}
+		if _, err := w.Write(raw.Value.([]byte)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -106,13 +118,19 @@ func TestRPCRingSelectorExcludesReal(t *testing.T) {
 	}
 }
 
-func TestRPCRingSelectorInsufficientDecoys(t *testing.T) {
+func TestRing_RPCRingSelectorInsufficientDecoys_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := struct {
 			Outs   []struct{} `json:"outs"`
 			Status string     `json:"status"`
 		}{Status: "OK"}
-		json.NewEncoder(w).Encode(resp)
+		raw := core.JSONMarshal(resp)
+		if !raw.OK {
+			t.Fatalf("marshal response: %#v", raw.Value)
+		}
+		if _, err := w.Write(raw.Value.([]byte)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
 	}))
 	defer srv.Close()
 

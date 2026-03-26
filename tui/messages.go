@@ -13,6 +13,7 @@ import (
 
 // NodeStatusMsg carries a periodic status snapshot from the Node goroutine
 // into the bubbletea update loop.
+// Usage: var value tui.NodeStatusMsg
 type NodeStatusMsg struct {
 	Height     uint64
 	TopHash    types.Hash
@@ -23,6 +24,7 @@ type NodeStatusMsg struct {
 }
 
 // ViewChangedMsg tells the footer to update its key hints.
+// Usage: var value tui.ViewChangedMsg
 type ViewChangedMsg struct {
 	Hints []string
 }

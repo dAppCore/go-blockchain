@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCheckTimestamp_Good(t *testing.T) {
+func TestBlock_CheckTimestamp_Good(t *testing.T) {
 	now := uint64(time.Now().Unix())
 
 	// PoW block within limits.
@@ -28,7 +28,7 @@ func TestCheckTimestamp_Good(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckTimestamp_Bad(t *testing.T) {
+func TestBlock_CheckTimestamp_Bad(t *testing.T) {
 	now := uint64(time.Now().Unix())
 
 	// PoW block too far in future.
@@ -52,7 +52,7 @@ func TestCheckTimestamp_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrTimestampOld)
 }
 
-func TestCheckTimestamp_Ugly(t *testing.T) {
+func TestBlock_CheckTimestamp_Ugly(t *testing.T) {
 	now := uint64(time.Now().Unix())
 
 	// Fewer than 60 timestamps: skip median check.
@@ -74,25 +74,25 @@ func validMinerTx(height uint64) *types.Transaction {
 	}
 }
 
-func TestValidateMinerTx_Good(t *testing.T) {
+func TestBlock_ValidateMinerTx_Good(t *testing.T) {
 	tx := validMinerTx(100)
 	err := ValidateMinerTx(tx, 100, config.MainnetForks)
 	require.NoError(t, err)
 }
 
-func TestValidateMinerTx_Bad_WrongHeight(t *testing.T) {
+func TestBlock_ValidateMinerTx_WrongHeight_Bad(t *testing.T) {
 	tx := validMinerTx(100)
 	err := ValidateMinerTx(tx, 200, config.MainnetForks) // height mismatch
 	assert.ErrorIs(t, err, ErrMinerTxHeight)
 }
 
-func TestValidateMinerTx_Bad_NoInputs(t *testing.T) {
+func TestBlock_ValidateMinerTx_NoInputs_Bad(t *testing.T) {
 	tx := &types.Transaction{Version: types.VersionInitial}
 	err := ValidateMinerTx(tx, 100, config.MainnetForks)
 	assert.ErrorIs(t, err, ErrMinerTxInputs)
 }
 
-func TestValidateMinerTx_Bad_WrongFirstInput(t *testing.T) {
+func TestBlock_ValidateMinerTx_WrongFirstInput_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionInitial,
 		Vin:     []types.TxInput{types.TxInputToKey{Amount: 1}},
@@ -101,7 +101,7 @@ func TestValidateMinerTx_Bad_WrongFirstInput(t *testing.T) {
 	assert.ErrorIs(t, err, ErrMinerTxInputs)
 }
 
-func TestValidateMinerTx_Good_PoS(t *testing.T) {
+func TestBlock_ValidateMinerTx_PoS_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionInitial,
 		Vin: []types.TxInput{
@@ -117,14 +117,14 @@ func TestValidateMinerTx_Good_PoS(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidateBlockReward_Good(t *testing.T) {
+func TestBlock_ValidateBlockReward_Good(t *testing.T) {
 	height := uint64(100)
 	tx := validMinerTx(height)
 	err := ValidateBlockReward(tx, height, 1000, config.BlockGrantedFullRewardZone, 0, config.MainnetForks)
 	require.NoError(t, err)
 }
 
-func TestValidateBlockReward_Bad_TooMuch(t *testing.T) {
+func TestBlock_ValidateBlockReward_TooMuch_Bad(t *testing.T) {
 	height := uint64(100)
 	tx := &types.Transaction{
 		Version: types.VersionInitial,
@@ -137,7 +137,7 @@ func TestValidateBlockReward_Bad_TooMuch(t *testing.T) {
 	assert.ErrorIs(t, err, ErrRewardMismatch)
 }
 
-func TestValidateBlockReward_Good_WithFees(t *testing.T) {
+func TestBlock_ValidateBlockReward_WithFees_Good(t *testing.T) {
 	height := uint64(100)
 	fees := uint64(50_000_000_000)
 	tx := &types.Transaction{
@@ -151,7 +151,7 @@ func TestValidateBlockReward_Good_WithFees(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidateBlock_Good(t *testing.T) {
+func TestBlock_ValidateBlock_Good(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	height := uint64(100)
 	blk := &types.Block{
@@ -167,7 +167,7 @@ func TestValidateBlock_Good(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidateBlock_Bad_Timestamp(t *testing.T) {
+func TestBlock_ValidateBlock_Timestamp_Bad(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	height := uint64(100)
 	blk := &types.Block{
@@ -183,7 +183,7 @@ func TestValidateBlock_Bad_Timestamp(t *testing.T) {
 	assert.ErrorIs(t, err, ErrTimestampFuture)
 }
 
-func TestValidateBlock_Bad_MinerTx(t *testing.T) {
+func TestBlock_ValidateBlock_MinerTx_Bad(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	height := uint64(100)
 	blk := &types.Block{
@@ -201,7 +201,7 @@ func TestValidateBlock_Bad_MinerTx(t *testing.T) {
 
 // --- Block major version tests (Task 10) ---
 
-func TestExpectedBlockMajorVersion_Good(t *testing.T) {
+func TestBlock_ExpectedBlockMajorVersion_Good(t *testing.T) {
 	tests := []struct {
 		name   string
 		forks  []config.HardFork
@@ -271,7 +271,7 @@ func TestExpectedBlockMajorVersion_Good(t *testing.T) {
 	}
 }
 
-func TestCheckBlockVersion_Good(t *testing.T) {
+func TestBlock_CheckBlockVersion_Good(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	// Correct version at each mainnet/testnet era.
 	tests := []struct {
@@ -300,7 +300,7 @@ func TestCheckBlockVersion_Good(t *testing.T) {
 	}
 }
 
-func TestCheckBlockVersion_Bad(t *testing.T) {
+func TestBlock_CheckBlockVersion_Bad(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	tests := []struct {
 		name    string
@@ -329,7 +329,7 @@ func TestCheckBlockVersion_Bad(t *testing.T) {
 	}
 }
 
-func TestCheckBlockVersion_Ugly(t *testing.T) {
+func TestBlock_CheckBlockVersion_Ugly(t *testing.T) {
 	now := uint64(time.Now().Unix())
 
 	// Version 255 should never be valid at any height.
@@ -350,7 +350,7 @@ func TestCheckBlockVersion_Ugly(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidateBlock_MajorVersion_Good(t *testing.T) {
+func TestBlock_ValidateBlock_MajorVersion_Good(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	tests := []struct {
 		name    string
@@ -384,7 +384,7 @@ func TestValidateBlock_MajorVersion_Good(t *testing.T) {
 	}
 }
 
-func TestValidateBlock_MajorVersion_Bad(t *testing.T) {
+func TestBlock_ValidateBlock_MajorVersion_Bad(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	tests := []struct {
 		name    string
@@ -418,7 +418,7 @@ func TestValidateBlock_MajorVersion_Bad(t *testing.T) {
 	}
 }
 
-func TestValidateBlock_MajorVersion_Ugly(t *testing.T) {
+func TestBlock_ValidateBlock_MajorVersion_Ugly(t *testing.T) {
 	now := uint64(time.Now().Unix())
 	// Boundary test: exactly at HF1 activation height (10080) on mainnet.
 	// HF1 activates at heights strictly greater than 10080, so at height

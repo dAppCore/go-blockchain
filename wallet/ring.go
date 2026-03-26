@@ -18,28 +18,33 @@ import (
 )
 
 // RingMember is a public key and global index used in ring construction.
+// Usage: var value wallet.RingMember
 type RingMember struct {
 	PublicKey   types.PublicKey
 	GlobalIndex uint64
 }
 
 // RingSelector picks decoy outputs for ring signatures.
+// Usage: var value wallet.RingSelector
 type RingSelector interface {
 	SelectRing(amount uint64, realGlobalIndex uint64, ringSize int) ([]RingMember, error)
 }
 
 // RPCRingSelector fetches decoys from the daemon via RPC.
+// Usage: var value wallet.RPCRingSelector
 type RPCRingSelector struct {
 	client *rpc.Client
 }
 
 // NewRPCRingSelector returns a RingSelector backed by the given RPC client.
+// Usage: wallet.NewRPCRingSelector(...)
 func NewRPCRingSelector(client *rpc.Client) *RPCRingSelector {
 	return &RPCRingSelector{client: client}
 }
 
 // SelectRing fetches random outputs from the daemon and returns ringSize
 // decoy members, excluding the real output and any duplicates.
+// Usage: value.SelectRing(...)
 func (s *RPCRingSelector) SelectRing(amount uint64, realGlobalIndex uint64, ringSize int) ([]RingMember, error) {
 	outs, err := s.client.GetRandomOutputs(amount, ringSize+5)
 	if err != nil {

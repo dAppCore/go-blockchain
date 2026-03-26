@@ -16,6 +16,7 @@ import (
 // GetRingOutputs fetches the public keys for the given global output indices
 // at the specified amount. This implements the consensus.RingOutputsFn
 // signature for use during signature verification.
+// Usage: value.GetRingOutputs(...)
 func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicKey, error) {
 	pubs := make([]types.PublicKey, len(offsets))
 	for i, gidx := range offsets {
@@ -52,6 +53,7 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 // consensus.ZCRingOutputsFn signature for post-HF4 CLSAG GGX verification.
 //
 // ZC outputs are indexed at amount=0 (confidential amounts).
+// Usage: value.GetZCRingOutputs(...)
 func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, error) {
 	members := make([]consensus.ZCRingMember, len(offsets))
 	for i, gidx := range offsets {

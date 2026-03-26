@@ -1,17 +1,28 @@
 package wallet
 
 import (
-	"strings"
+	"bytes"
 	"testing"
+
+	"dappco.re/go/core"
 )
 
-func TestWordlistLength(t *testing.T) {
+func wordsFromPhrase(phrase string) []string {
+	fields := bytes.Fields([]byte(phrase))
+	words := make([]string, len(fields))
+	for i, field := range fields {
+		words[i] = string(field)
+	}
+	return words
+}
+
+func TestMnemonic_WordlistLength_Good(t *testing.T) {
 	if len(wordlist) != 1626 {
 		t.Fatalf("wordlist length = %d, want 1626", len(wordlist))
 	}
 }
 
-func TestWordlistFirstLast(t *testing.T) {
+func TestMnemonic_WordlistFirstLast_Good(t *testing.T) {
 	if wordlist[0] != "like" {
 		t.Errorf("wordlist[0] = %q, want %q", wordlist[0], "like")
 	}
@@ -20,7 +31,7 @@ func TestWordlistFirstLast(t *testing.T) {
 	}
 }
 
-func TestWordIndexConsistency(t *testing.T) {
+func TestMnemonic_WordIndexConsistency_Good(t *testing.T) {
 	for i, w := range wordlist {
 		idx, ok := wordIndex[w]
 		if !ok {
@@ -32,7 +43,7 @@ func TestWordIndexConsistency(t *testing.T) {
 	}
 }
 
-func TestMnemonicRoundTrip(t *testing.T) {
+func TestMnemonic_MnemonicRoundTrip_Good(t *testing.T) {
 	var key [32]byte
 
 	phrase, err := MnemonicEncode(key[:])
@@ -40,7 +51,7 @@ func TestMnemonicRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	words := strings.Fields(phrase)
+	words := wordsFromPhrase(phrase)
 	if len(words) != 25 {
 		t.Fatalf("got %d words, want 25", len(words))
 	}
@@ -54,7 +65,7 @@ func TestMnemonicRoundTrip(t *testing.T) {
 	}
 }
 
-func TestMnemonicRoundTripNonZero(t *testing.T) {
+func TestMnemonic_MnemonicRoundTripNonZero_Good(t *testing.T) {
 	var key [32]byte
 	for i := range key {
 		key[i] = byte(i * 7)
@@ -74,14 +85,14 @@ func TestMnemonicRoundTripNonZero(t *testing.T) {
 	}
 }
 
-func TestMnemonicInvalidWordCount(t *testing.T) {
+func TestMnemonic_MnemonicInvalidWordCount_Bad(t *testing.T) {
 	_, err := MnemonicDecode("like just love")
 	if err == nil {
 		t.Fatal("expected error for 3 words")
 	}
 }
 
-func TestMnemonicInvalidWord(t *testing.T) {
+func TestMnemonic_MnemonicInvalidWord_Bad(t *testing.T) {
 	phrase := "like just love know never want time out there make look eye down only think call hand high keep last long make new zzzznotaword"
 	_, err := MnemonicDecode(phrase)
 	if err == nil {
@@ -89,23 +100,23 @@ func TestMnemonicInvalidWord(t *testing.T) {
 	}
 }
 
-func TestMnemonicBadChecksum(t *testing.T) {
+func TestMnemonic_MnemonicBadChecksum_Bad(t *testing.T) {
 	var key [32]byte
 
 	phrase, _ := MnemonicEncode(key[:])
-	words := strings.Fields(phrase)
+	words := wordsFromPhrase(phrase)
 	words[24] = "never"
 	if words[24] == words[0] {
 		words[24] = "want"
 	}
 
-	_, err := MnemonicDecode(strings.Join(words, " "))
+	_, err := MnemonicDecode(core.Join(" ", words...))
 	if err == nil {
 		t.Fatal("expected checksum error")
 	}
 }
 
-func TestMnemonicInvalidLength(t *testing.T) {
+func TestMnemonic_MnemonicInvalidLength_Bad(t *testing.T) {
 	_, err := MnemonicEncode([]byte{1, 2, 3})
 	if err == nil {
 		t.Fatal("expected error for non-32-byte input")

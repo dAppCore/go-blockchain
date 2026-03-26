@@ -8,9 +8,9 @@ package chain
 import (
 	"testing"
 
-	store "dappco.re/go/core/store"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wire"
+	store "dappco.re/go/core/store"
 )
 
 func newTestChain(t *testing.T) *Chain {
@@ -38,7 +38,7 @@ func testCoinbaseTx(height uint64) types.Transaction {
 	}
 }
 
-func TestChain_Height_Empty(t *testing.T) {
+func TestChain_Height_Empty_Ugly(t *testing.T) {
 	c := newTestChain(t)
 	h, err := c.Height()
 	if err != nil {
@@ -203,7 +203,7 @@ func TestChain_KeyImage_Good(t *testing.T) {
 	}
 }
 
-func TestChain_TopBlock_Empty(t *testing.T) {
+func TestChain_TopBlock_Empty_Ugly(t *testing.T) {
 	c := newTestChain(t)
 
 	_, _, err := c.TopBlock()
@@ -212,7 +212,7 @@ func TestChain_TopBlock_Empty(t *testing.T) {
 	}
 }
 
-func TestChain_GetBlockByHeight_NotFound(t *testing.T) {
+func TestChain_GetBlockByHeight_NotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	_, _, err := c.GetBlockByHeight(99)
@@ -225,7 +225,7 @@ func TestChain_GetBlockByHeight_NotFound(t *testing.T) {
 	}
 }
 
-func TestChain_GetBlockByHash_NotFound(t *testing.T) {
+func TestChain_GetBlockByHash_NotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	bogus := types.Hash{0xff, 0xfe, 0xfd}
@@ -235,7 +235,7 @@ func TestChain_GetBlockByHash_NotFound(t *testing.T) {
 	}
 }
 
-func TestChain_GetTransaction_NotFound(t *testing.T) {
+func TestChain_GetTransaction_NotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	bogus := types.Hash{0xde, 0xad, 0xbe, 0xef}
@@ -250,7 +250,7 @@ func TestChain_GetTransaction_NotFound(t *testing.T) {
 	}
 }
 
-func TestChain_GetOutput_NotFound(t *testing.T) {
+func TestChain_GetOutput_NotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	_, _, err := c.GetOutput(1000000, 42)
@@ -259,7 +259,7 @@ func TestChain_GetOutput_NotFound(t *testing.T) {
 	}
 }
 
-func TestChain_OutputCount_Empty(t *testing.T) {
+func TestChain_OutputCount_Empty_Ugly(t *testing.T) {
 	c := newTestChain(t)
 
 	count, err := c.OutputCount(999)
@@ -271,7 +271,7 @@ func TestChain_OutputCount_Empty(t *testing.T) {
 	}
 }
 
-func TestChain_IndexOutputs_Zarcanum(t *testing.T) {
+func TestChain_IndexOutputs_Zarcanum_Good(t *testing.T) {
 	c := newTestChain(t)
 
 	// Transaction with a Zarcanum output (hidden amount, indexed at amount 0).

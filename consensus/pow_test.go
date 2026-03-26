@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckDifficulty_Good(t *testing.T) {
+func TestPow_CheckDifficulty_Good(t *testing.T) {
 	// A zero hash meets any difficulty.
 	hash := types.Hash{}
 	assert.True(t, CheckDifficulty(hash, 1))
 }
 
-func TestCheckDifficulty_Bad(t *testing.T) {
+func TestPow_CheckDifficulty_Bad(t *testing.T) {
 	// Max hash (all 0xFF) should fail high difficulty.
 	hash := types.Hash{}
 	for i := range hash {

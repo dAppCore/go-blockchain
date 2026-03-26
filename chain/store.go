@@ -39,6 +39,7 @@ type blockRecord struct {
 }
 
 // PutBlock stores a block and updates the block_index.
+// Usage: value.PutBlock(...)
 func (c *Chain) PutBlock(b *types.Block, meta *BlockMeta) error {
 	var buf bytes.Buffer
 	enc := wire.NewEncoder(&buf)
@@ -67,6 +68,7 @@ func (c *Chain) PutBlock(b *types.Block, meta *BlockMeta) error {
 }
 
 // GetBlockByHeight retrieves a block by its height.
+// Usage: value.GetBlockByHeight(...)
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, *BlockMeta, error) {
 	val, err := c.store.Get(groupBlocks, heightKey(height))
 	if err != nil {
@@ -79,6 +81,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, *BlockMeta, error
 }
 
 // GetBlockByHash retrieves a block by its hash.
+// Usage: value.GetBlockByHash(...)
 func (c *Chain) GetBlockByHash(hash types.Hash) (*types.Block, *BlockMeta, error) {
 	heightStr, err := c.store.Get(groupBlockIndex, hash.String())
 	if err != nil {
@@ -101,6 +104,7 @@ type txRecord struct {
 }
 
 // PutTransaction stores a transaction with metadata.
+// Usage: value.PutTransaction(...)
 func (c *Chain) PutTransaction(hash types.Hash, tx *types.Transaction, meta *TxMeta) error {
 	var buf bytes.Buffer
 	enc := wire.NewEncoder(&buf)
@@ -122,6 +126,7 @@ func (c *Chain) PutTransaction(hash types.Hash, tx *types.Transaction, meta *TxM
 }
 
 // GetTransaction retrieves a transaction by hash.
+// Usage: value.GetTransaction(...)
 func (c *Chain) GetTransaction(hash types.Hash) (*types.Transaction, *TxMeta, error) {
 	val, err := c.store.Get(groupTx, hash.String())
 	if err != nil {
@@ -148,6 +153,7 @@ func (c *Chain) GetTransaction(hash types.Hash) (*types.Transaction, *TxMeta, er
 }
 
 // HasTransaction checks whether a transaction exists in the store.
+// Usage: value.HasTransaction(...)
 func (c *Chain) HasTransaction(hash types.Hash) bool {
 	_, err := c.store.Get(groupTx, hash.String())
 	return err == nil

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyV1Signatures_Good_MockRing(t *testing.T) {
+func TestVerifyCrypto_VerifyV1Signatures_MockRing_Good(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	require.NoError(t, err)
 
@@ -56,7 +56,7 @@ func TestVerifyV1Signatures_Good_MockRing(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifyV1Signatures_Bad_WrongSig(t *testing.T) {
+func TestVerifyCrypto_VerifyV1Signatures_WrongSig_Bad(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	require.NoError(t, err)
 

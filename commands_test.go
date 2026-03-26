@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddChainCommands_Good_RegistersParent(t *testing.T) {
+func TestCommands_AddChainCommands_RegistersParent_Good(t *testing.T) {
 	root := &cobra.Command{Use: "test"}
 	AddChainCommands(root)
 
@@ -22,7 +22,7 @@ func TestAddChainCommands_Good_RegistersParent(t *testing.T) {
 	assert.Equal(t, "chain", chainCmd.Name())
 }
 
-func TestAddChainCommands_Good_HasSubcommands(t *testing.T) {
+func TestCommands_AddChainCommands_HasSubcommands_Good(t *testing.T) {
 	root := &cobra.Command{Use: "test"}
 	AddChainCommands(root)
 
@@ -36,7 +36,7 @@ func TestAddChainCommands_Good_HasSubcommands(t *testing.T) {
 	assert.Contains(t, names, "sync")
 }
 
-func TestAddChainCommands_Good_PersistentFlags(t *testing.T) {
+func TestCommands_AddChainCommands_PersistentFlags_Good(t *testing.T) {
 	root := &cobra.Command{Use: "test"}
 	AddChainCommands(root)
 

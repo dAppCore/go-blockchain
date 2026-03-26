@@ -24,7 +24,7 @@ const testnetP2PAddr = "localhost:46942"
 
 // TestIntegration_Handshake connects to the C++ testnet daemon,
 // performs a full handshake, and verifies the response.
-func TestIntegration_Handshake(t *testing.T) {
+func TestIntegration_Handshake_Good(t *testing.T) {
 	conn, err := net.DialTimeout("tcp", testnetP2PAddr, 10*time.Second)
 	if err != nil {
 		t.Skipf("testnet daemon not reachable at %s: %v", testnetP2PAddr, err)
@@ -117,7 +117,7 @@ func TestIntegration_Handshake(t *testing.T) {
 // TestIntegration_RequestChainAndGetObjects performs a full chain sync
 // sequence: handshake, REQUEST_CHAIN with the genesis hash, then
 // REQUEST_GET_OBJECTS with the first block hash from the chain response.
-func TestIntegration_RequestChainAndGetObjects(t *testing.T) {
+func TestIntegration_RequestChainAndGetObjects_Good(t *testing.T) {
 	conn, err := net.DialTimeout("tcp", testnetP2PAddr, 10*time.Second)
 	if err != nil {
 		t.Skipf("testnet daemon not reachable: %v", err)

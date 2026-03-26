@@ -6,11 +6,11 @@
 package wallet
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 )
 
-func TestAccountGenerate(t *testing.T) {
+func TestAccount_AccountGenerate_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestAccountGenerate(t *testing.T) {
 	}
 }
 
-func TestAccountSeedRoundTrip(t *testing.T) {
+func TestAccount_AccountSeedRoundTrip_Good(t *testing.T) {
 	acc1, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestAccountSeedRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	words := strings.Fields(phrase)
+	words := bytes.Fields([]byte(phrase))
 	if len(words) != 25 {
 		t.Fatalf("seed has %d words, want 25", len(words))
 	}
@@ -64,7 +64,7 @@ func TestAccountSeedRoundTrip(t *testing.T) {
 	}
 }
 
-func TestAccountViewOnly(t *testing.T) {
+func TestAccount_AccountViewOnly_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestAccountViewOnly(t *testing.T) {
 	}
 }
 
-func TestAccountSaveLoad(t *testing.T) {
+func TestAccount_AccountSaveLoad_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	acc1, err := GenerateAccount()
@@ -116,7 +116,7 @@ func TestAccountSaveLoad(t *testing.T) {
 	}
 }
 
-func TestAccountLoadWrongPassword(t *testing.T) {
+func TestAccount_AccountLoadWrongPassword_Bad(t *testing.T) {
 	s := newTestStore(t)
 
 	acc, err := GenerateAccount()
@@ -133,7 +133,7 @@ func TestAccountLoadWrongPassword(t *testing.T) {
 	}
 }
 
-func TestAccountAddress(t *testing.T) {
+func TestAccount_AccountAddress_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)

@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntegration_GetBlockTemplate(t *testing.T) {
+func TestIntegration_GetBlockTemplate_Good(t *testing.T) {
 	client := rpc.NewClient("http://localhost:46941")
 
 	// Get daemon info to check it's running.

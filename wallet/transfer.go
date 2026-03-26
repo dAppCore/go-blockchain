@@ -23,6 +23,7 @@ import (
 const groupTransfers = "transfers"
 
 // KeyPair holds an ephemeral public/secret key pair for an owned output.
+// Usage: var value wallet.KeyPair
 type KeyPair struct {
 	Public types.PublicKey `json:"public"`
 	Secret types.SecretKey `json:"secret"`
@@ -30,6 +31,7 @@ type KeyPair struct {
 
 // Transfer represents an owned transaction output tracked by the wallet.
 // Each transfer is keyed by its unique key image for double-spend detection.
+// Usage: var value wallet.Transfer
 type Transfer struct {
 	TxHash       types.Hash     `json:"tx_hash"`
 	OutputIndex  uint32         `json:"output_index"`
@@ -48,6 +50,7 @@ type Transfer struct {
 // given chain height. A transfer is not spendable if it has already been
 // spent, if it is a coinbase output that has not yet matured, or if its
 // unlock time has not been reached.
+// Usage: value.IsSpendable(...)
 func (t *Transfer) IsSpendable(chainHeight uint64, _ bool) bool {
 	if t.Spent {
 		return false

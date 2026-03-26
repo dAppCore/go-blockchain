@@ -6,13 +6,13 @@
 package rpc
 
 import (
-	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestGetRandomOutputs_Good(t *testing.T) {
+func TestWallet_GetRandomOutputs_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/getrandom_outs1" {
 			t.Errorf("path: got %s, want /getrandom_outs1", r.URL.Path)
@@ -47,10 +47,10 @@ func TestGetRandomOutputs_Good(t *testing.T) {
 	}
 }
 
-func TestGetRandomOutputs_Bad_Status(t *testing.T) {
+func TestWallet_GetRandomOutputs_Status_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(struct{ Status string }{Status: "BUSY"})
+		writeJSON(t, w, struct{ Status string }{Status: "BUSY"})
 	}))
 	defer srv.Close()
 
@@ -61,7 +61,7 @@ func TestGetRandomOutputs_Bad_Status(t *testing.T) {
 	}
 }
 
-func TestSendRawTransaction_Good(t *testing.T) {
+func TestWallet_SendRawTransaction_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/sendrawtransaction" {
 			t.Errorf("path: got %s, want /sendrawtransaction", r.URL.Path)
@@ -70,9 +70,11 @@ func TestSendRawTransaction_Good(t *testing.T) {
 		var req struct {
 			TxAsHex string `json:"tx_as_hex"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
 		}
+		mustJSONUnmarshal(t, body, &req)
 		if req.TxAsHex != "0102" {
 			t.Errorf("tx_as_hex: got %q, want %q", req.TxAsHex, "0102")
 		}
@@ -89,10 +91,10 @@ func TestSendRawTransaction_Good(t *testing.T) {
 	}
 }
 
-func TestSendRawTransaction_Bad_Rejected(t *testing.T) {
+func TestWallet_SendRawTransaction_Rejected_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(struct{ Status string }{Status: "Failed"})
+		writeJSON(t, w, struct{ Status string }{Status: "Failed"})
 	}))
 	defer srv.Close()
 

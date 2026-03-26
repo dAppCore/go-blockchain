@@ -17,6 +17,7 @@ import (
 // RandomXHash computes the RandomX PoW hash. The key is the cache
 // initialisation key (e.g. "LetheanRandomXv1"). Input is typically
 // the block header hash (32 bytes) concatenated with the nonce (8 bytes LE).
+// Usage: crypto.RandomXHash(...)
 func RandomXHash(key, input []byte) ([32]byte, error) {
 	var output [32]byte
 	ret := C.bridge_randomx_hash(

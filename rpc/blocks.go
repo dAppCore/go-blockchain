@@ -11,6 +11,7 @@ import (
 )
 
 // GetLastBlockHeader returns the header of the most recent block.
+// Usage: value.GetLastBlockHeader(...)
 func (c *Client) GetLastBlockHeader() (*BlockHeader, error) {
 	var resp struct {
 		BlockHeader BlockHeader `json:"block_header"`
@@ -26,6 +27,7 @@ func (c *Client) GetLastBlockHeader() (*BlockHeader, error) {
 }
 
 // GetBlockHeaderByHeight returns the block header at the given height.
+// Usage: value.GetBlockHeaderByHeight(...)
 func (c *Client) GetBlockHeaderByHeight(height uint64) (*BlockHeader, error) {
 	params := struct {
 		Height uint64 `json:"height"`
@@ -44,6 +46,7 @@ func (c *Client) GetBlockHeaderByHeight(height uint64) (*BlockHeader, error) {
 }
 
 // GetBlockHeaderByHash returns the block header with the given hash.
+// Usage: value.GetBlockHeaderByHash(...)
 func (c *Client) GetBlockHeaderByHash(hash string) (*BlockHeader, error) {
 	params := struct {
 		Hash string `json:"hash"`
@@ -62,6 +65,7 @@ func (c *Client) GetBlockHeaderByHash(hash string) (*BlockHeader, error) {
 }
 
 // GetBlocksDetails returns full block details starting at the given height.
+// Usage: value.GetBlocksDetails(...)
 func (c *Client) GetBlocksDetails(heightStart, count uint64) ([]BlockDetails, error) {
 	params := struct {
 		HeightStart        uint64 `json:"height_start"`

@@ -8,11 +8,13 @@ package p2p
 import "dappco.re/go/core/p2p/node/levin"
 
 // TimedSyncRequest is a COMMAND_TIMED_SYNC request.
+// Usage: var value p2p.TimedSyncRequest
 type TimedSyncRequest struct {
 	PayloadData CoreSyncData
 }
 
 // Encode serialises the timed sync request.
+// Usage: value.Encode(...)
 func (r *TimedSyncRequest) Encode() ([]byte, error) {
 	s := levin.Section{
 		"payload_data": levin.ObjectVal(r.PayloadData.MarshalSection()),
@@ -21,6 +23,7 @@ func (r *TimedSyncRequest) Encode() ([]byte, error) {
 }
 
 // TimedSyncResponse is a COMMAND_TIMED_SYNC response.
+// Usage: var value p2p.TimedSyncResponse
 type TimedSyncResponse struct {
 	LocalTime    int64
 	PayloadData  CoreSyncData
@@ -28,6 +31,7 @@ type TimedSyncResponse struct {
 }
 
 // Decode parses a timed sync response from a storage blob.
+// Usage: value.Decode(...)
 func (r *TimedSyncResponse) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {

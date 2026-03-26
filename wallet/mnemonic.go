@@ -11,6 +11,7 @@ import (
 const numWords = 1626
 
 // MnemonicEncode converts a 32-byte secret key to a 25-word mnemonic phrase.
+// Usage: wallet.MnemonicEncode(...)
 func MnemonicEncode(key []byte) (string, error) {
 	if len(key) != 32 {
 		return "", coreerr.E("MnemonicEncode", core.Sprintf("wallet: mnemonic encode requires 32 bytes, got %d", len(key)), nil)
@@ -34,6 +35,7 @@ func MnemonicEncode(key []byte) (string, error) {
 }
 
 // MnemonicDecode converts a 25-word mnemonic phrase to a 32-byte secret key.
+// Usage: wallet.MnemonicDecode(...)
 func MnemonicDecode(phrase string) ([32]byte, error) {
 	var key [32]byte
 

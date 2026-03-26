@@ -14,6 +14,7 @@ import (
 )
 
 // P2PConnection abstracts the P2P communication needed for block sync.
+// Usage: var value chain.P2PConnection
 type P2PConnection interface {
 	// PeerHeight returns the peer's advertised chain height.
 	PeerHeight() uint64
@@ -26,6 +27,7 @@ type P2PConnection interface {
 }
 
 // BlockBlobEntry holds raw block and transaction blobs from a peer.
+// Usage: var value chain.BlockBlobEntry
 type BlockBlobEntry struct {
 	Block []byte
 	Txs   [][]byte
@@ -36,6 +38,7 @@ const p2pBatchSize = 200
 // P2PSync synchronises the chain from a P2P peer. It runs the
 // REQUEST_CHAIN / REQUEST_GET_OBJECTS protocol loop until the local
 // chain reaches the peer's height.
+// Usage: value.P2PSync(...)
 func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOptions) error {
 	for {
 		select {

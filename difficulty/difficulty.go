@@ -25,25 +25,31 @@ import (
 // Algorithm constants matching the C++ source.
 const (
 	// Window is the number of blocks in the legacy difficulty window.
+	// Usage: value := difficulty.Window
 	Window uint64 = 720
 
 	// Lag is the additional lookback beyond the window (legacy).
+	// Usage: value := difficulty.Lag
 	Lag uint64 = 15
 
 	// Cut is the number of extreme timestamps trimmed (legacy).
+	// Usage: value := difficulty.Cut
 	Cut uint64 = 60
 
 	// BlocksCount is the total number of blocks considered (Window + Lag).
 	// Used by legacy algorithms; the LWMA uses LWMAWindow instead.
+	// Usage: value := difficulty.BlocksCount
 	BlocksCount uint64 = Window + Lag
 
 	// LWMAWindow is the number of solve-time intervals used by the LWMA
 	// algorithm (N=60). This means we need N+1 = 61 block entries.
+	// Usage: value := difficulty.LWMAWindow
 	LWMAWindow uint64 = 60
 )
 
 // StarterDifficulty is the minimum difficulty returned when there is
 // insufficient data to calculate a proper value.
+// Usage: value := difficulty.StarterDifficulty
 var StarterDifficulty = big.NewInt(1)
 
 // NextDifficulty calculates the next block difficulty using the LWMA algorithm.
@@ -61,6 +67,7 @@ var StarterDifficulty = big.NewInt(1)
 //
 // where each solve-time interval i is weighted by its position (1..n),
 // giving more influence to recent blocks.
+// Usage: difficulty.NextDifficulty(...)
 func NextDifficulty(timestamps []uint64, cumulativeDiffs []*big.Int, target uint64) *big.Int {
 	// Need at least 2 entries to compute one solve-time interval.
 	if len(timestamps) < 2 || len(cumulativeDiffs) < 2 {

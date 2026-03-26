@@ -38,6 +38,7 @@ type blockRow struct {
 
 // ExplorerModel provides block list, block detail, and tx detail views.
 // It implements [cli.FrameModel] for the content region of the TUI dashboard.
+// Usage: var value tui.ExplorerModel
 type ExplorerModel struct {
 	chain  *chain.Chain
 	view   explorerView
@@ -58,6 +59,7 @@ type ExplorerModel struct {
 }
 
 // NewExplorerModel creates an ExplorerModel backed by the given chain.
+// Usage: tui.NewExplorerModel(...)
 func NewExplorerModel(c *chain.Chain) *ExplorerModel {
 	m := &ExplorerModel{chain: c}
 	m.loadBlocks()
@@ -65,12 +67,14 @@ func NewExplorerModel(c *chain.Chain) *ExplorerModel {
 }
 
 // Init returns nil — block list is loaded synchronously in the constructor.
+// Usage: value.Init(...)
 func (m *ExplorerModel) Init() tea.Cmd {
 	return nil
 }
 
 // Update handles incoming messages. KeyMsg drives navigation, NodeStatusMsg
 // triggers a block list refresh, and WindowSizeMsg stores the terminal size.
+// Usage: value.Update(...)
 func (m *ExplorerModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -194,6 +198,7 @@ func (m *ExplorerModel) viewChangedCmd() tea.Cmd {
 }
 
 // View renders the current view, delegating to the appropriate sub-view.
+// Usage: value.View(...)
 func (m *ExplorerModel) View(width, height int) string {
 	m.width = width
 	m.height = height

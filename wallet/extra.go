@@ -27,6 +27,7 @@ const (
 
 // TxExtra holds wallet-critical fields parsed from a transaction's raw extra
 // bytes. The Raw field preserves the original bytes for round-tripping.
+// Usage: var value wallet.TxExtra
 type TxExtra struct {
 	TxPublicKey    types.PublicKey
 	UnlockTime     uint64
@@ -37,6 +38,7 @@ type TxExtra struct {
 // ParseTxExtra decodes a CryptoNote variant vector (raw tx extra bytes) and
 // extracts the wallet-critical fields: tx public key (tag 22), unlock time
 // (tag 14), and derivation hint (tag 11). Unknown tags are skipped.
+// Usage: wallet.ParseTxExtra(...)
 func ParseTxExtra(raw []byte) (*TxExtra, error) {
 	extra := &TxExtra{Raw: make([]byte, len(raw))}
 	copy(extra.Raw, raw)
@@ -97,6 +99,7 @@ func ParseTxExtra(raw []byte) (*TxExtra, error) {
 
 // BuildTxExtra constructs a minimal raw extra containing only the tx public
 // key (tag 22). This is the minimum required for a valid transaction.
+// Usage: wallet.BuildTxExtra(...)
 func BuildTxExtra(txPubKey types.PublicKey) []byte {
 	raw := wire.EncodeVarint(1)
 	raw = append(raw, extraTagPublicKey)

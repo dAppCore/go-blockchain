@@ -11,6 +11,7 @@ import (
 )
 
 // GetTxDetails returns detailed information about a transaction.
+// Usage: value.GetTxDetails(...)
 func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 	params := struct {
 		TxHash string `json:"tx_hash"`
@@ -31,6 +32,7 @@ func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 // GetTransactions fetches transactions by hash.
 // Uses the legacy /gettransactions endpoint (not available via /json_rpc).
 // Returns hex-encoded transaction blobs and any missed (not found) hashes.
+// Usage: value.GetTransactions(...)
 func (c *Client) GetTransactions(hashes []string) (txsHex []string, missed []string, err error) {
 	params := struct {
 		TxsHashes []string `json:"txs_hashes"`

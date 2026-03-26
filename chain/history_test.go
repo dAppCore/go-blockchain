@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSparseChainHistory_Empty(t *testing.T) {
+func TestHistory_SparseChainHistory_Empty_Ugly(t *testing.T) {
 	c := newTestChain(t)
 
 	history, err := c.SparseChainHistory()
@@ -22,7 +22,7 @@ func TestSparseChainHistory_Empty(t *testing.T) {
 	require.Equal(t, expected, history[0])
 }
 
-func TestSparseChainHistory_FewBlocks(t *testing.T) {
+func TestHistory_SparseChainHistory_FewBlocks_Ugly(t *testing.T) {
 	c := newTestChain(t)
 
 	// Store 5 blocks with known hashes.
@@ -56,7 +56,7 @@ func TestSparseChainHistory_FewBlocks(t *testing.T) {
 	require.Len(t, history, 5)
 }
 
-func TestSparseChainHistory_SingleBlock(t *testing.T) {
+func TestHistory_SparseChainHistory_SingleBlock_Ugly(t *testing.T) {
 	c := newTestChain(t)
 
 	blk := &types.Block{
@@ -72,7 +72,7 @@ func TestSparseChainHistory_SingleBlock(t *testing.T) {
 	require.Equal(t, types.Hash{0xaa}, history[0])
 }
 
-func TestSparseChainHistory_ExponentialSpacing(t *testing.T) {
+func TestHistory_SparseChainHistory_ExponentialSpacing_Good(t *testing.T) {
 	c := newTestChain(t)
 
 	// Store 20 blocks (heights 0-19) to exercise exponential stepping.
@@ -112,8 +112,8 @@ func TestSparseChainHistory_ExponentialSpacing(t *testing.T) {
 	// Entry 10: step becomes 2, current = 10 - 2 = 8 -> hash {9}
 	// Entry 11: step becomes 4, current = 8 - 4 = 4  -> hash {5}
 	// Entry 12: step becomes 8, current 4 < 8, jump to 0 -> hash {1} (genesis)
-	require.Equal(t, types.Hash{byte(9)}, history[10])  // height 8
-	require.Equal(t, types.Hash{byte(5)}, history[11])  // height 4
-	require.Equal(t, types.Hash{byte(1)}, history[12])  // height 0 (genesis)
+	require.Equal(t, types.Hash{byte(9)}, history[10]) // height 8
+	require.Equal(t, types.Hash{byte(5)}, history[11]) // height 4
+	require.Equal(t, types.Hash{byte(1)}, history[12]) // height 0 (genesis)
 	require.Len(t, history, 13)
 }

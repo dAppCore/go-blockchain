@@ -16,6 +16,7 @@ import (
 
 // AddChainCommands registers the "chain" command group with explorer
 // and sync subcommands.
+// Usage: blockchain.AddChainCommands(...)
 func AddChainCommands(root *cobra.Command) {
 	var (
 		dataDir string

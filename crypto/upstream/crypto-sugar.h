@@ -15,6 +15,9 @@
 // SPDX‑License‑Identifier: EUPL-1.2
 //
 #pragma once
+#include <iomanip>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "crypto.h"

@@ -20,19 +20,24 @@ package config
 
 // Coin is the number of smallest indivisible units in one LTHN.
 // 1 LTHN = 10^12 atomic units.
+// Usage: value := config.Coin
 const Coin uint64 = 1_000_000_000_000
 
 // DisplayDecimalPoint is the number of decimal places used when displaying
 // amounts in human-readable form.
+// Usage: value := config.DisplayDecimalPoint
 const DisplayDecimalPoint = 12
 
 // BlockReward is the fixed reward per block in atomic units (1.0 LTHN).
+// Usage: value := config.BlockReward
 const BlockReward uint64 = 1_000_000_000_000
 
 // DefaultFee is the standard transaction fee in atomic units (0.01 LTHN).
+// Usage: value := config.DefaultFee
 const DefaultFee uint64 = 10_000_000_000
 
 // MinimumFee is the lowest acceptable transaction fee in atomic units (0.01 LTHN).
+// Usage: value := config.MinimumFee
 const MinimumFee uint64 = 10_000_000_000
 
 // Premine is the total pre-mined supply in atomic units (10,000,000 LTHN).
@@ -40,13 +45,16 @@ const MinimumFee uint64 = 10_000_000_000
 // initial premine (3,690,000 LTHN). The raw value from cmake is
 // 10,000,000,000,000,000,000 but that exceeds uint64 range. The C++ code
 // uses an unsigned literal suffix; we store the value faithfully.
+// Usage: value := config.Premine
 const Premine uint64 = 10_000_000_000_000_000_000
 
 // BaseRewardDustThreshold is the minimum meaningful fraction of a block
 // reward in atomic units.
+// Usage: value := config.BaseRewardDustThreshold
 const BaseRewardDustThreshold uint64 = 1_000_000
 
 // DefaultDustThreshold is the dust threshold for normal transactions.
+// Usage: value := config.DefaultDustThreshold
 const DefaultDustThreshold uint64 = 0
 
 // ---------------------------------------------------------------------------
@@ -58,18 +66,22 @@ const DefaultDustThreshold uint64 = 0
 const (
 	// AddressPrefix is the standard public address prefix.
 	// Produces addresses starting with "iTHN".
+	// Usage: value := config.AddressPrefix
 	AddressPrefix uint64 = 0x1eaf7
 
 	// IntegratedAddressPrefix is the prefix for integrated addresses
 	// (address + embedded payment ID). Produces addresses starting with "iTHn".
+	// Usage: value := config.IntegratedAddressPrefix
 	IntegratedAddressPrefix uint64 = 0xdeaf7
 
 	// AuditableAddressPrefix is the prefix for auditable addresses.
 	// Produces addresses starting with "iThN".
+	// Usage: value := config.AuditableAddressPrefix
 	AuditableAddressPrefix uint64 = 0x3ceff7
 
 	// AuditableIntegratedAddressPrefix is the prefix for auditable
 	// integrated addresses. Produces addresses starting with "iThn".
+	// Usage: value := config.AuditableIntegratedAddressPrefix
 	AuditableIntegratedAddressPrefix uint64 = 0x8b077
 )
 
@@ -78,12 +90,18 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
-	MainnetP2PPort     uint16 = 36942
-	MainnetRPCPort     uint16 = 36941
+	// Usage: value := config.MainnetP2PPort
+	MainnetP2PPort uint16 = 36942
+	// Usage: value := config.MainnetRPCPort
+	MainnetRPCPort uint16 = 36941
+	// Usage: value := config.MainnetStratumPort
 	MainnetStratumPort uint16 = 36940
 
-	TestnetP2PPort     uint16 = 46942
-	TestnetRPCPort     uint16 = 46941
+	// Usage: value := config.TestnetP2PPort
+	TestnetP2PPort uint16 = 46942
+	// Usage: value := config.TestnetRPCPort
+	TestnetRPCPort uint16 = 46941
+	// Usage: value := config.TestnetStratumPort
 	TestnetStratumPort uint16 = 46940
 )
 
@@ -93,45 +111,58 @@ const (
 
 const (
 	// DifficultyPowTarget is the target block interval for PoW blocks in seconds.
+	// Usage: value := config.DifficultyPowTarget
 	DifficultyPowTarget uint64 = 120
 
 	// DifficultyPosTarget is the target block interval for PoS blocks in seconds.
+	// Usage: value := config.DifficultyPosTarget
 	DifficultyPosTarget uint64 = 120
 
 	// DifficultyTotalTarget is the effective combined target:
 	// (PoW + PoS) / 4 = 60 seconds.
+	// Usage: value := config.DifficultyTotalTarget
 	DifficultyTotalTarget uint64 = (DifficultyPowTarget + DifficultyPosTarget) / 4
 
 	// DifficultyWindow is the number of blocks used for difficulty calculation.
+	// Usage: value := config.DifficultyWindow
 	DifficultyWindow uint64 = 720
 
 	// DifficultyLag is the additional lookback beyond the window.
+	// Usage: value := config.DifficultyLag
 	DifficultyLag uint64 = 15
 
 	// DifficultyCut is the number of timestamps cut from each end after sorting.
+	// Usage: value := config.DifficultyCut
 	DifficultyCut uint64 = 60
 
 	// DifficultyBlocksCount is the total number of blocks considered
 	// (Window + Lag).
+	// Usage: value := config.DifficultyBlocksCount
 	DifficultyBlocksCount uint64 = DifficultyWindow + DifficultyLag
 
 	// DifficultyPowStarter is the initial PoW difficulty.
+	// Usage: value := config.DifficultyPowStarter
 	DifficultyPowStarter uint64 = 1
 
 	// DifficultyPosStarter is the initial PoS difficulty.
+	// Usage: value := config.DifficultyPosStarter
 	DifficultyPosStarter uint64 = 1
 
 	// BlockTarget is the desired block interval in seconds.
 	// Both PoW and PoS blocks use the same 120-second target.
+	// Usage: value := config.BlockTarget
 	BlockTarget uint64 = 120
 
 	// DifficultyPowTargetHF6 is the PoW target after hardfork 6 (240s).
+	// Usage: value := config.DifficultyPowTargetHF6
 	DifficultyPowTargetHF6 uint64 = 240
 
 	// DifficultyPosTargetHF6 is the PoS target after hardfork 6 (240s).
+	// Usage: value := config.DifficultyPosTargetHF6
 	DifficultyPosTargetHF6 uint64 = 240
 
 	// DifficultyTotalTargetHF6 is the combined target after HF6.
+	// Usage: value := config.DifficultyTotalTargetHF6
 	DifficultyTotalTargetHF6 uint64 = (DifficultyPowTargetHF6 + DifficultyPosTargetHF6) / 4
 )
 
@@ -141,72 +172,91 @@ const (
 
 const (
 	// MaxBlockNumber is the absolute maximum block height.
+	// Usage: value := config.MaxBlockNumber
 	MaxBlockNumber uint64 = 500_000_000
 
 	// MaxBlockSize is the maximum block header blob size in bytes.
+	// Usage: value := config.MaxBlockSize
 	MaxBlockSize uint64 = 500_000_000
 
 	// TxMaxAllowedInputs is the maximum number of inputs per transaction.
 	// Limited primarily by the asset surjection proof.
+	// Usage: value := config.TxMaxAllowedInputs
 	TxMaxAllowedInputs uint64 = 256
 
 	// TxMaxAllowedOutputs is the maximum number of outputs per transaction.
+	// Usage: value := config.TxMaxAllowedOutputs
 	TxMaxAllowedOutputs uint64 = 2000
 
 	// TxMinAllowedOutputs is the minimum number of outputs (effective from HF4 Zarcanum).
+	// Usage: value := config.TxMinAllowedOutputs
 	TxMinAllowedOutputs uint64 = 2
 
 	// DefaultDecoySetSize is the ring size for pre-HF4 transactions.
+	// Usage: value := config.DefaultDecoySetSize
 	DefaultDecoySetSize uint64 = 10
 
 	// HF4MandatoryDecoySetSize is the ring size required from HF4 onwards.
+	// Usage: value := config.HF4MandatoryDecoySetSize
 	HF4MandatoryDecoySetSize uint64 = 15
 
 	// HF4MandatoryMinCoinage is the minimum coinage in blocks required for HF4.
+	// Usage: value := config.HF4MandatoryMinCoinage
 	HF4MandatoryMinCoinage uint64 = 10
 
 	// MinedMoneyUnlockWindow is the number of blocks before mined coins
 	// can be spent.
+	// Usage: value := config.MinedMoneyUnlockWindow
 	MinedMoneyUnlockWindow uint64 = 10
 
 	// BlockGrantedFullRewardZone is the block size threshold in bytes after
 	// which block reward is calculated using the actual block size.
+	// Usage: value := config.BlockGrantedFullRewardZone
 	BlockGrantedFullRewardZone uint64 = 125_000
 
 	// CoinbaseBlobReservedSize is the reserved space for the coinbase
 	// transaction blob in bytes.
+	// Usage: value := config.CoinbaseBlobReservedSize
 	CoinbaseBlobReservedSize uint64 = 1100
 
 	// MaxTransactionBlobSize is the maximum serialised transaction size in bytes.
 	// Derived from BlockGrantedFullRewardZone - 2*CoinbaseBlobReservedSize
 	// but the canonical C++ value is 374,600.
+	// Usage: value := config.MaxTransactionBlobSize
 	MaxTransactionBlobSize uint64 = 374_600
 
 	// BlockFutureTimeLimit is the maximum acceptable future timestamp for
 	// PoW blocks in seconds (2 hours).
+	// Usage: value := config.BlockFutureTimeLimit
 	BlockFutureTimeLimit uint64 = 60 * 60 * 2
 
 	// PosBlockFutureTimeLimit is the maximum acceptable future timestamp
 	// for PoS blocks in seconds (20 minutes).
+	// Usage: value := config.PosBlockFutureTimeLimit
 	PosBlockFutureTimeLimit uint64 = 60 * 20
 
 	// TimestampCheckWindow is the number of blocks used when checking
 	// whether a block timestamp is valid.
+	// Usage: value := config.TimestampCheckWindow
 	TimestampCheckWindow uint64 = 60
 
 	// PosStartHeight is the block height from which PoS is enabled.
+	// Usage: value := config.PosStartHeight
 	PosStartHeight uint64 = 0
 
 	// RewardBlocksWindow is the number of recent blocks used to calculate
 	// the reward median.
+	// Usage: value := config.RewardBlocksWindow
 	RewardBlocksWindow uint64 = 400
 
 	// FreeTxMaxBlobSize is the soft txpool-based limit for free transactions
 	// in bytes.
+	// Usage: value := config.FreeTxMaxBlobSize
 	FreeTxMaxBlobSize uint64 = 1024
 
 	// PreHardforkTxFreezePeriod is the number of blocks before hardfork
 	// activation when no new transactions are accepted (effective from HF5).
+	// Usage: value := config.PreHardforkTxFreezePeriod
 	PreHardforkTxFreezePeriod uint64 = 60
 )
 
@@ -215,14 +265,22 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
-	BlockMajorVersionGenesis  uint8 = 1
-	BlockMinorVersionGenesis  uint8 = 0
-	BlockMajorVersionInitial  uint8 = 0
-	HF1BlockMajorVersion      uint8 = 1
-	HF3BlockMajorVersion      uint8 = 2
-	HF3BlockMinorVersion      uint8 = 0
-	CurrentBlockMajorVersion  uint8 = 3
-	CurrentBlockMinorVersion  uint8 = 0
+	// Usage: value := config.BlockMajorVersionGenesis
+	BlockMajorVersionGenesis uint8 = 1
+	// Usage: value := config.BlockMinorVersionGenesis
+	BlockMinorVersionGenesis uint8 = 0
+	// Usage: value := config.BlockMajorVersionInitial
+	BlockMajorVersionInitial uint8 = 0
+	// Usage: value := config.HF1BlockMajorVersion
+	HF1BlockMajorVersion uint8 = 1
+	// Usage: value := config.HF3BlockMajorVersion
+	HF3BlockMajorVersion uint8 = 2
+	// Usage: value := config.HF3BlockMinorVersion
+	HF3BlockMinorVersion uint8 = 0
+	// Usage: value := config.CurrentBlockMajorVersion
+	CurrentBlockMajorVersion uint8 = 3
+	// Usage: value := config.CurrentBlockMinorVersion
+	CurrentBlockMinorVersion uint8 = 0
 )
 
 // ---------------------------------------------------------------------------
@@ -230,11 +288,16 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
-	TransactionVersionInitial  uint8 = 0
-	TransactionVersionPreHF4   uint8 = 1
-	TransactionVersionPostHF4  uint8 = 2
-	TransactionVersionPostHF5  uint8 = 3
-	CurrentTransactionVersion  uint8 = 3
+	// Usage: value := config.TransactionVersionInitial
+	TransactionVersionInitial uint8 = 0
+	// Usage: value := config.TransactionVersionPreHF4
+	TransactionVersionPreHF4 uint8 = 1
+	// Usage: value := config.TransactionVersionPostHF4
+	TransactionVersionPostHF4 uint8 = 2
+	// Usage: value := config.TransactionVersionPostHF5
+	TransactionVersionPostHF5 uint8 = 3
+	// Usage: value := config.CurrentTransactionVersion
+	CurrentTransactionVersion uint8 = 3
 )
 
 // ---------------------------------------------------------------------------
@@ -242,12 +305,18 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
-	PosScanWindow                  uint64 = 60 * 10 // 10 minutes in seconds
-	PosScanStep                    uint64 = 15      // seconds
-	PosModifierInterval            uint64 = 10
-	PosMinimumCoinstakeAge         uint64 = 10 // blocks
-	PosStrictSequenceLimit         uint64 = 20
-	PosStarterKernelHash                  = "00000000000000000006382a8d8f94588ce93a1351924f6ccb9e07dd287c6e4b"
+	// Usage: value := config.PosScanWindow
+	PosScanWindow uint64 = 60 * 10 // 10 minutes in seconds
+	// Usage: value := config.PosScanStep
+	PosScanStep uint64 = 15 // seconds
+	// Usage: value := config.PosModifierInterval
+	PosModifierInterval uint64 = 10
+	// Usage: value := config.PosMinimumCoinstakeAge
+	PosMinimumCoinstakeAge uint64 = 10 // blocks
+	// Usage: value := config.PosStrictSequenceLimit
+	PosStrictSequenceLimit uint64 = 20
+	// Usage: value := config.PosStarterKernelHash
+	PosStarterKernelHash = "00000000000000000006382a8d8f94588ce93a1351924f6ccb9e07dd287c6e4b"
 )
 
 // ---------------------------------------------------------------------------
@@ -255,13 +324,20 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
+	// Usage: value := config.P2PLocalWhitePeerlistLimit
 	P2PLocalWhitePeerlistLimit uint64 = 1000
-	P2PLocalGrayPeerlistLimit  uint64 = 5000
+	// Usage: value := config.P2PLocalGrayPeerlistLimit
+	P2PLocalGrayPeerlistLimit uint64 = 5000
+	// Usage: value := config.P2PDefaultConnectionsCount
 	P2PDefaultConnectionsCount uint64 = 8
-	P2PDefaultHandshakeInterval uint64 = 60      // seconds
-	P2PDefaultPacketMaxSize    uint64 = 50_000_000
-	P2PIPBlockTime             uint64 = 60 * 60 * 24 // 24 hours
-	P2PIPFailsBeforeBlock      uint64 = 10
+	// Usage: value := config.P2PDefaultHandshakeInterval
+	P2PDefaultHandshakeInterval uint64 = 60 // seconds
+	// Usage: value := config.P2PDefaultPacketMaxSize
+	P2PDefaultPacketMaxSize uint64 = 50_000_000
+	// Usage: value := config.P2PIPBlockTime
+	P2PIPBlockTime uint64 = 60 * 60 * 24 // 24 hours
+	// Usage: value := config.P2PIPFailsBeforeBlock
+	P2PIPFailsBeforeBlock uint64 = 10
 )
 
 // ---------------------------------------------------------------------------
@@ -270,12 +346,15 @@ const (
 
 const (
 	// CurrencyFormationVersion identifies the mainnet network.
+	// Usage: value := config.CurrencyFormationVersion
 	CurrencyFormationVersion uint64 = 84
 
 	// CurrencyFormationVersionTestnet identifies the testnet network.
+	// Usage: value := config.CurrencyFormationVersionTestnet
 	CurrencyFormationVersionTestnet uint64 = 100
 
 	// P2PNetworkIDVer is derived from CurrencyFormationVersion + 0.
+	// Usage: value := config.P2PNetworkIDVer
 	P2PNetworkIDVer uint64 = CurrencyFormationVersion + 0
 )
 
@@ -285,6 +364,7 @@ const (
 // NOTE: In the C++ source, the #ifndef TESTNET branch (i.e. mainnet) sets
 // P2P_NETWORK_ID_TESTNET_FLAG = 1 and the #else (testnet) sets it to 0.
 // The naming is counter-intuitive but matches the compiled binaries.
+// Usage: value := config.NetworkIDMainnet
 var NetworkIDMainnet = [16]byte{
 	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
 	0x10, 0x11, 0x01, 0x11, 0x01, 0x11, 0x21, 0x54,
@@ -293,6 +373,7 @@ var NetworkIDMainnet = [16]byte{
 // NetworkIDTestnet is the 16-byte network UUID for testnet P2P handshake.
 // Byte 10 = 0x00 (P2P_NETWORK_ID_TESTNET_FLAG in testnet build),
 // byte 15 = formation version (100 = 0x64).
+// Usage: value := config.NetworkIDTestnet
 var NetworkIDTestnet = [16]byte{
 	0x11, 0x10, 0x01, 0x11, 0x01, 0x01, 0x11, 0x01,
 	0x10, 0x11, 0x00, 0x11, 0x01, 0x11, 0x21, 0x64,
@@ -302,17 +383,20 @@ var NetworkIDTestnet = [16]byte{
 // The C++ daemon parses this as "major.minor.revision.build[commit]"
 // and rejects connections where it cannot parse or the build number
 // is below the minimum for the current hard-fork era.
+// Usage: value := config.ClientVersion
 const ClientVersion = "6.0.1.2[go-blockchain]"
-
 
 // ---------------------------------------------------------------------------
 // Currency identity
 // ---------------------------------------------------------------------------
 
 const (
+	// Usage: value := config.CurrencyNameAbbreviation
 	CurrencyNameAbbreviation = "LTHN"
-	CurrencyNameBase         = "Lethean"
-	CurrencyNameShort        = "Lethean"
+	// Usage: value := config.CurrencyNameBase
+	CurrencyNameBase = "Lethean"
+	// Usage: value := config.CurrencyNameShort
+	CurrencyNameShort = "Lethean"
 )
 
 // ---------------------------------------------------------------------------
@@ -320,11 +404,16 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
+	// Usage: value := config.AliasMinimumPublicShortNameAllowed
 	AliasMinimumPublicShortNameAllowed uint64 = 6
-	AliasNameMaxLen                    uint64 = 255
-	AliasValidChars                           = "0123456789abcdefghijklmnopqrstuvwxyz-."
-	AliasCommentMaxSizeBytes           uint64 = 400
-	MaxAliasPerBlock                   uint64 = 1000
+	// Usage: value := config.AliasNameMaxLen
+	AliasNameMaxLen uint64 = 255
+	// Usage: value := config.AliasValidChars
+	AliasValidChars = "0123456789abcdefghijklmnopqrstuvwxyz-."
+	// Usage: value := config.AliasCommentMaxSizeBytes
+	AliasCommentMaxSizeBytes uint64 = 400
+	// Usage: value := config.MaxAliasPerBlock
+	MaxAliasPerBlock uint64 = 1000
 )
 
 // ---------------------------------------------------------------------------
@@ -333,6 +422,7 @@ const (
 
 // ChainConfig holds the complete set of parameters for a particular chain
 // (mainnet or testnet).
+// Usage: var value config.ChainConfig
 type ChainConfig struct {
 	// Name is the human-readable chain name.
 	Name string
@@ -433,6 +523,7 @@ type ChainConfig struct {
 }
 
 // Mainnet holds the chain configuration for the Lethean mainnet.
+// Usage: value := config.Mainnet
 var Mainnet = ChainConfig{
 	Name:                             CurrencyNameBase,
 	Abbreviation:                     CurrencyNameAbbreviation,
@@ -465,10 +556,11 @@ var Mainnet = ChainConfig{
 	HF4MandatoryDecoySetSize:         HF4MandatoryDecoySetSize,
 	MinedMoneyUnlockWindow:           MinedMoneyUnlockWindow,
 	P2PMaintainersPubKey:             "8f138bb73f6d663a3746a542770781a09579a7b84cb4125249e95530824ee607",
-	NetworkID:                       NetworkIDMainnet,
+	NetworkID:                        NetworkIDMainnet,
 }
 
 // Testnet holds the chain configuration for the Lethean testnet.
+// Usage: value := config.Testnet
 var Testnet = ChainConfig{
 	Name:                             CurrencyNameBase + "_testnet",
 	Abbreviation:                     CurrencyNameAbbreviation,
@@ -501,5 +593,5 @@ var Testnet = ChainConfig{
 	HF4MandatoryDecoySetSize:         HF4MandatoryDecoySetSize,
 	MinedMoneyUnlockWindow:           MinedMoneyUnlockWindow,
 	P2PMaintainersPubKey:             "8f138bb73f6d663a3746a542770781a09579a7b84cb4125249e95530824ee607",
-	NetworkID:                       NetworkIDTestnet,
+	NetworkID:                        NetworkIDTestnet,
 }

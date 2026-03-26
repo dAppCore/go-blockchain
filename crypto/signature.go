@@ -14,6 +14,7 @@ import (
 )
 
 // GenerateSignature creates a standard (non-ring) signature.
+// Usage: crypto.GenerateSignature(...)
 func GenerateSignature(hash [32]byte, pub [32]byte, sec [32]byte) ([64]byte, error) {
 	var sig [64]byte
 	rc := C.cn_generate_signature(
@@ -29,6 +30,7 @@ func GenerateSignature(hash [32]byte, pub [32]byte, sec [32]byte) ([64]byte, err
 }
 
 // CheckSignature verifies a standard signature.
+// Usage: crypto.CheckSignature(...)
 func CheckSignature(hash [32]byte, pub [32]byte, sig [64]byte) bool {
 	return C.cn_check_signature(
 		(*C.uint8_t)(unsafe.Pointer(&hash[0])),
@@ -41,6 +43,7 @@ func CheckSignature(hash [32]byte, pub [32]byte, sig [64]byte) bool {
 // pubs contains the public keys of all ring members.
 // sec is the secret key of the actual signer at position secIndex.
 // Returns one signature pair per ring member.
+// Usage: crypto.GenerateRingSignature(...)
 func GenerateRingSignature(hash [32]byte, image [32]byte, pubs [][32]byte,
 	sec [32]byte, secIndex int) ([][64]byte, error) {
 
@@ -72,6 +75,7 @@ func GenerateRingSignature(hash [32]byte, image [32]byte, pubs [][32]byte,
 }
 
 // CheckRingSignature verifies a ring signature.
+// Usage: crypto.CheckRingSignature(...)
 func CheckRingSignature(hash [32]byte, image [32]byte, pubs [][32]byte,
 	sigs [][64]byte) bool {
 

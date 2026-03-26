@@ -15,6 +15,7 @@ import (
 
 // Decoder reads consensus-critical binary data from an io.Reader.
 // It uses the same sticky error pattern as Encoder.
+// Usage: var value wire.Decoder
 type Decoder struct {
 	r   io.Reader
 	err error
@@ -22,14 +23,17 @@ type Decoder struct {
 }
 
 // NewDecoder creates a new Decoder reading from r.
+// Usage: wire.NewDecoder(...)
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r}
 }
 
 // Err returns the first error encountered during decoding.
+// Usage: value.Err(...)
 func (d *Decoder) Err() error { return d.err }
 
 // ReadUint8 reads a single byte.
+// Usage: value.ReadUint8(...)
 func (d *Decoder) ReadUint8() uint8 {
 	if d.err != nil {
 		return 0
@@ -39,6 +43,7 @@ func (d *Decoder) ReadUint8() uint8 {
 }
 
 // ReadUint64LE reads a uint64 in little-endian byte order.
+// Usage: value.ReadUint64LE(...)
 func (d *Decoder) ReadUint64LE() uint64 {
 	if d.err != nil {
 		return 0
@@ -51,6 +56,7 @@ func (d *Decoder) ReadUint64LE() uint64 {
 }
 
 // ReadVarint reads a CryptoNote varint (LEB128).
+// Usage: value.ReadVarint(...)
 func (d *Decoder) ReadVarint() uint64 {
 	if d.err != nil {
 		return 0
@@ -74,6 +80,7 @@ func (d *Decoder) ReadVarint() uint64 {
 }
 
 // ReadBytes reads exactly n bytes as a raw blob.
+// Usage: value.ReadBytes(...)
 func (d *Decoder) ReadBytes(n int) []byte {
 	if d.err != nil {
 		return nil
@@ -94,6 +101,7 @@ func (d *Decoder) ReadBytes(n int) []byte {
 }
 
 // ReadBlob32 reads a 32-byte fixed-size blob into dst.
+// Usage: value.ReadBlob32(...)
 func (d *Decoder) ReadBlob32(dst *[32]byte) {
 	if d.err != nil {
 		return
@@ -102,6 +110,7 @@ func (d *Decoder) ReadBlob32(dst *[32]byte) {
 }
 
 // ReadBlob64 reads a 64-byte fixed-size blob into dst.
+// Usage: value.ReadBlob64(...)
 func (d *Decoder) ReadBlob64(dst *[64]byte) {
 	if d.err != nil {
 		return
@@ -110,9 +119,11 @@ func (d *Decoder) ReadBlob64(dst *[64]byte) {
 }
 
 // ReadVariantTag reads a single-byte variant discriminator.
+// Usage: value.ReadVariantTag(...)
 func (d *Decoder) ReadVariantTag() uint8 {
 	return d.ReadUint8()
 }
 
 // MaxBlobSize is the maximum byte count allowed for a single ReadBytes call.
+// Usage: value := wire.MaxBlobSize
 const MaxBlobSize = 50 * 1024 * 1024 // 50 MiB

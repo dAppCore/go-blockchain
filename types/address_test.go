@@ -22,7 +22,7 @@ func makeTestAddress(flags uint8) *Address {
 	return addr
 }
 
-func TestAddressEncodeDecodeRoundTrip_Good(t *testing.T) {
+func TestAddress_AddressEncodeDecodeRoundTrip_Good(t *testing.T) {
 	tests := []struct {
 		name   string
 		prefix uint64
@@ -69,7 +69,7 @@ func TestAddressEncodeDecodeRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestAddressEncodeDeterministic_Good(t *testing.T) {
+func TestAddress_AddressEncodeDeterministic_Good(t *testing.T) {
 	// Encoding the same address twice must produce the same string.
 	addr := makeTestAddress(0x00)
 	first := addr.Encode(config.AddressPrefix)
@@ -79,7 +79,7 @@ func TestAddressEncodeDeterministic_Good(t *testing.T) {
 	}
 }
 
-func TestAddressIsAuditable_Good(t *testing.T) {
+func TestAddress_AddressIsAuditable_Good(t *testing.T) {
 	addr := makeTestAddress(FlagAuditable)
 	if !addr.IsAuditable() {
 		t.Error("address with FlagAuditable should report IsAuditable() == true")
@@ -91,7 +91,7 @@ func TestAddressIsAuditable_Good(t *testing.T) {
 	}
 }
 
-func TestIsIntegratedPrefix_Good(t *testing.T) {
+func TestAddress_IsIntegratedPrefix_Good(t *testing.T) {
 	if !IsIntegratedPrefix(config.IntegratedAddressPrefix) {
 		t.Error("IntegratedAddressPrefix should be recognised as integrated")
 	}
@@ -103,7 +103,7 @@ func TestIsIntegratedPrefix_Good(t *testing.T) {
 	}
 }
 
-func TestDecodeAddress_Bad(t *testing.T) {
+func TestAddress_DecodeAddress_Bad(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
@@ -123,7 +123,7 @@ func TestDecodeAddress_Bad(t *testing.T) {
 	}
 }
 
-func TestDecodeAddressChecksumCorruption_Bad(t *testing.T) {
+func TestAddress_DecodeAddressChecksumCorruption_Bad(t *testing.T) {
 	addr := makeTestAddress(0x00)
 	encoded := addr.Encode(config.AddressPrefix)
 
@@ -142,7 +142,7 @@ func TestDecodeAddressChecksumCorruption_Bad(t *testing.T) {
 	}
 }
 
-func TestBase58RoundTrip_Good(t *testing.T) {
+func TestAddress_Base58RoundTrip_Good(t *testing.T) {
 	// Test the underlying base58 encode/decode with known data.
 	testData := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}
 	encoded := base58Encode(testData)
@@ -160,7 +160,7 @@ func TestBase58RoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestBase58Empty_Ugly(t *testing.T) {
+func TestAddress_Base58Empty_Ugly(t *testing.T) {
 	// Encoding empty data should produce an empty string.
 	result := base58Encode(nil)
 	if result != "" {

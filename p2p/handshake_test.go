@@ -13,7 +13,7 @@ import (
 	"dappco.re/go/core/p2p/node/levin"
 )
 
-func TestEncodeHandshakeRequest_Good_Roundtrip(t *testing.T) {
+func TestHandshake_EncodeHandshakeRequest_Roundtrip_Good(t *testing.T) {
 	req := HandshakeRequest{
 		NodeData: NodeData{
 			NetworkID: config.NetworkIDTestnet,
@@ -59,7 +59,7 @@ func TestEncodeHandshakeRequest_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestDecodeHandshakeResponse_Good_WithPeerlist(t *testing.T) {
+func TestHandshake_DecodeHandshakeResponse_WithPeerlist_Good(t *testing.T) {
 	// Build a response section manually.
 	nodeData := levin.Section{
 		"network_id": levin.StringVal(config.NetworkIDTestnet[:]),
@@ -127,7 +127,7 @@ func TestDecodeHandshakeResponse_Good_WithPeerlist(t *testing.T) {
 	}
 }
 
-func TestNodeData_Good_NetworkIDBlob(t *testing.T) {
+func TestHandshake_NodeData_NetworkIDBlob_Good(t *testing.T) {
 	nd := NodeData{NetworkID: config.NetworkIDTestnet}
 	s := nd.MarshalSection()
 	blob, err := s["network_id"].AsString()
@@ -148,7 +148,7 @@ func TestNodeData_Good_NetworkIDBlob(t *testing.T) {
 	}
 }
 
-func TestDecodePeerlist_Good_EmptyBlob(t *testing.T) {
+func TestHandshake_DecodePeerlist_EmptyBlob_Good(t *testing.T) {
 	entries := DecodePeerlist(nil)
 	if len(entries) != 0 {
 		t.Errorf("empty peerlist: got %d entries, want 0", len(entries))

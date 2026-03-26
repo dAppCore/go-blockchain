@@ -19,6 +19,8 @@ import (
 //
 //	v0/v1: version, vin, vout, extra
 //	v2+:   version, vin, extra, vout, [hardfork_id]
+//
+// Usage: wire.EncodeTransactionPrefix(...)
 func EncodeTransactionPrefix(enc *Encoder, tx *types.Transaction) {
 	enc.WriteVarint(tx.Version)
 	if tx.Version <= types.VersionPreHF4 {
@@ -29,6 +31,7 @@ func EncodeTransactionPrefix(enc *Encoder, tx *types.Transaction) {
 }
 
 // EncodeTransaction serialises a full transaction including suffix fields.
+// Usage: wire.EncodeTransaction(...)
 func EncodeTransaction(enc *Encoder, tx *types.Transaction) {
 	EncodeTransactionPrefix(enc, tx)
 	if tx.Version <= types.VersionPreHF4 {
@@ -39,6 +42,7 @@ func EncodeTransaction(enc *Encoder, tx *types.Transaction) {
 }
 
 // DecodeTransactionPrefix deserialises a transaction prefix.
+// Usage: wire.DecodeTransactionPrefix(...)
 func DecodeTransactionPrefix(dec *Decoder) types.Transaction {
 	var tx types.Transaction
 	tx.Version = dec.ReadVarint()
@@ -54,6 +58,7 @@ func DecodeTransactionPrefix(dec *Decoder) types.Transaction {
 }
 
 // DecodeTransaction deserialises a full transaction.
+// Usage: wire.DecodeTransaction(...)
 func DecodeTransaction(dec *Decoder) types.Transaction {
 	tx := DecodeTransactionPrefix(dec)
 	if dec.Err() != nil {

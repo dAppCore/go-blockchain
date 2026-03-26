@@ -9,11 +9,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"dappco.re/go/core"
 	"dappco.re/go/core/blockchain/rpc"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wire"
@@ -61,8 +61,8 @@ func minimalBlockBlob(t *testing.T) []byte {
 			Timestamp:    1770897600,
 		},
 		MinerTx: types.Transaction{
-			Version:    1,
-			Vin:        []types.TxInput{types.TxInputGenesis{Height: 100}},
+			Version: 1,
+			Vin:     []types.TxInput{types.TxInputGenesis{Height: 100}},
 			Vout: []types.TxOutput{types.TxOutputBare{
 				Amount: 1000000000000,
 				Target: types.TxOutToKey{},
@@ -80,7 +80,7 @@ func minimalBlockBlob(t *testing.T) []byte {
 	return buf.Bytes()
 }
 
-func TestNewMiner_Good(t *testing.T) {
+func TestMiner_NewMiner_Good(t *testing.T) {
 	cfg := Config{
 		DaemonURL:    "http://localhost:46941",
 		WalletAddr:   "iTHNtestaddr",
@@ -97,7 +97,7 @@ func TestNewMiner_Good(t *testing.T) {
 	assert.Equal(t, time.Duration(0), stats.Uptime)
 }
 
-func TestNewMiner_Good_DefaultPollInterval(t *testing.T) {
+func TestMiner_NewMiner_DefaultPollInterval_Good(t *testing.T) {
 	cfg := Config{
 		DaemonURL:  "http://localhost:46941",
 		WalletAddr: "iTHNtestaddr",
@@ -108,7 +108,7 @@ func TestNewMiner_Good_DefaultPollInterval(t *testing.T) {
 	assert.Equal(t, 3*time.Second, m.cfg.PollInterval)
 }
 
-func TestMiner_Start_Good_ShutdownOnCancel(t *testing.T) {
+func TestMiner_Start_ShutdownOnCancel_Good(t *testing.T) {
 	mock := &mockProvider{
 		templates: []*rpc.BlockTemplateResponse{
 			{
@@ -140,7 +140,7 @@ func TestMiner_Start_Good_ShutdownOnCancel(t *testing.T) {
 	assert.Equal(t, uint64(1), stats.Difficulty)
 }
 
-func TestMiner_Start_Good_TemplateRefresh(t *testing.T) {
+func TestMiner_Start_TemplateRefresh_Good(t *testing.T) {
 	// First call returns height 100, second returns 101 — triggers refresh.
 	mock := &mockProvider{
 		templates: []*rpc.BlockTemplateResponse{
@@ -170,7 +170,7 @@ func TestMiner_Start_Good_TemplateRefresh(t *testing.T) {
 	assert.GreaterOrEqual(t, mock.templateCalls.Load(), int64(2))
 }
 
-func TestMiner_Start_Good_BlockFound(t *testing.T) {
+func TestMiner_Start_BlockFound_Good(t *testing.T) {
 	// With difficulty=1, every hash is valid — should find a block immediately.
 	var foundHeight uint64
 	var foundHash types.Hash
@@ -208,7 +208,7 @@ func TestMiner_Start_Good_BlockFound(t *testing.T) {
 	assert.GreaterOrEqual(t, m.Stats().BlocksFound, uint64(1))
 }
 
-func TestMiner_Start_Good_StatsUpdate(t *testing.T) {
+func TestMiner_Start_StatsUpdate_Good(t *testing.T) {
 	mock := &mockProvider{
 		templates: []*rpc.BlockTemplateResponse{
 			{Difficulty: "1", Height: 200, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
@@ -234,7 +234,7 @@ func TestMiner_Start_Good_StatsUpdate(t *testing.T) {
 	assert.Greater(t, stats.Uptime, time.Duration(0))
 }
 
-func TestMiner_Start_Bad_InvalidDifficulty(t *testing.T) {
+func TestMiner_Start_InvalidDifficulty_Bad(t *testing.T) {
 	mock := &mockProvider{
 		templates: []*rpc.BlockTemplateResponse{
 			{Difficulty: "not_a_number", Height: 100, BlockTemplateBlob: hex.EncodeToString(minimalBlockBlob(t)), Status: "OK"},
@@ -258,7 +258,7 @@ func TestMiner_Start_Bad_InvalidDifficulty(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid difficulty")
 }
 
-func TestMiner_Start_Bad_InvalidBlob(t *testing.T) {
+func TestMiner_Start_InvalidBlob_Bad(t *testing.T) {
 	mock := &mockProvider{
 		templates: []*rpc.BlockTemplateResponse{
 			{Difficulty: "1", Height: 100, BlockTemplateBlob: "not_valid_hex!", Status: "OK"},
@@ -287,10 +287,10 @@ type failingSubmitter struct {
 }
 
 func (f *failingSubmitter) SubmitBlock(hexBlob string) error {
-	return fmt.Errorf("connection refused")
+	return core.E("", "connection refused", nil)
 }
 
-func TestMiner_Start_Good_OnNewTemplate(t *testing.T) {
+func TestMiner_Start_OnNewTemplate_Good(t *testing.T) {
 	var tmplHeight uint64
 	var tmplDiff uint64
 
@@ -322,7 +322,7 @@ func TestMiner_Start_Good_OnNewTemplate(t *testing.T) {
 	assert.Equal(t, uint64(42), tmplDiff)
 }
 
-func TestMiner_Start_Bad_SubmitFails(t *testing.T) {
+func TestMiner_Start_SubmitFails_Bad(t *testing.T) {
 	mock := &failingSubmitter{
 		mockProvider: mockProvider{
 			templates: []*rpc.BlockTemplateResponse{

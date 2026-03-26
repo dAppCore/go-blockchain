@@ -15,6 +15,7 @@ import (
 )
 
 // Scanner detects outputs belonging to a wallet within a transaction.
+// Usage: var value wallet.Scanner
 type Scanner interface {
 	ScanTransaction(tx *types.Transaction, txHash types.Hash,
 		blockHeight uint64, extra *TxExtra) ([]Transfer, error)
@@ -23,11 +24,13 @@ type Scanner interface {
 // V1Scanner implements Scanner for v0/v1 transactions using ECDH derivation.
 // For each output it performs: derivation = viewSecret * txPubKey, then checks
 // whether DerivePublicKey(derivation, i, spendPub) matches the output key.
+// Usage: var value wallet.V1Scanner
 type V1Scanner struct {
 	account *Account
 }
 
 // NewV1Scanner returns a scanner bound to the given account.
+// Usage: wallet.NewV1Scanner(...)
 func NewV1Scanner(acc *Account) *V1Scanner {
 	return &V1Scanner{account: acc}
 }
@@ -35,6 +38,7 @@ func NewV1Scanner(acc *Account) *V1Scanner {
 // ScanTransaction examines every output in tx and returns a Transfer for each
 // output that belongs to the scanner's account. The caller must supply a
 // pre-parsed TxExtra so that the tx public key is available.
+// Usage: value.ScanTransaction(...)
 func (s *V1Scanner) ScanTransaction(tx *types.Transaction, txHash types.Hash,
 	blockHeight uint64, extra *TxExtra) ([]Transfer, error) {
 

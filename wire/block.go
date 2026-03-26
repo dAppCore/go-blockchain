@@ -17,6 +17,8 @@ import "dappco.re/go/core/blockchain/types"
 //	minor_version  varint
 //	timestamp      varint
 //	flags          uint8   (1 byte)
+//
+// Usage: wire.EncodeBlockHeader(...)
 func EncodeBlockHeader(enc *Encoder, h *types.BlockHeader) {
 	enc.WriteUint8(h.MajorVersion)
 	enc.WriteUint64LE(h.Nonce)
@@ -27,6 +29,7 @@ func EncodeBlockHeader(enc *Encoder, h *types.BlockHeader) {
 }
 
 // DecodeBlockHeader deserialises a block header from the consensus wire format.
+// Usage: wire.DecodeBlockHeader(...)
 func DecodeBlockHeader(dec *Decoder) types.BlockHeader {
 	var h types.BlockHeader
 	h.MajorVersion = dec.ReadUint8()
@@ -39,6 +42,7 @@ func DecodeBlockHeader(dec *Decoder) types.BlockHeader {
 }
 
 // EncodeBlock serialises a full block (header + miner tx + tx hashes).
+// Usage: wire.EncodeBlock(...)
 func EncodeBlock(enc *Encoder, b *types.Block) {
 	EncodeBlockHeader(enc, &b.BlockHeader)
 	EncodeTransaction(enc, &b.MinerTx)
@@ -49,6 +53,7 @@ func EncodeBlock(enc *Encoder, b *types.Block) {
 }
 
 // DecodeBlock deserialises a full block.
+// Usage: wire.DecodeBlock(...)
 func DecodeBlock(dec *Decoder) types.Block {
 	var b types.Block
 	b.BlockHeader = DecodeBlockHeader(dec)

@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/blockchain/config"
 )
 
-func TestNextDifficulty_Good(t *testing.T) {
+func TestDifficulty_NextDifficulty_Good(t *testing.T) {
 	// Synthetic test: constant block times at exactly the target interval.
 	// With the LWMA-1 formula, constant D gives next_D = D/n for full window.
 	target := config.BlockTarget
@@ -40,7 +40,7 @@ func TestNextDifficulty_Good(t *testing.T) {
 	}
 }
 
-func TestNextDifficultyEmpty_Good(t *testing.T) {
+func TestDifficulty_NextDifficultyEmpty_Good(t *testing.T) {
 	// Empty input should return starter difficulty.
 	result := NextDifficulty(nil, nil, config.BlockTarget)
 	if result.Cmp(StarterDifficulty) != 0 {
@@ -48,7 +48,7 @@ func TestNextDifficultyEmpty_Good(t *testing.T) {
 	}
 }
 
-func TestNextDifficultySingleEntry_Good(t *testing.T) {
+func TestDifficulty_NextDifficultySingleEntry_Good(t *testing.T) {
 	// A single entry is insufficient for calculation.
 	timestamps := []uint64{1000}
 	diffs := []*big.Int{big.NewInt(100)}
@@ -58,7 +58,7 @@ func TestNextDifficultySingleEntry_Good(t *testing.T) {
 	}
 }
 
-func TestNextDifficultyFastBlocks_Good(t *testing.T) {
+func TestDifficulty_NextDifficultyFastBlocks_Good(t *testing.T) {
 	// When blocks come faster than the target, difficulty should increase
 	// relative to the constant-rate result.
 	target := config.BlockTarget
@@ -89,7 +89,7 @@ func TestNextDifficultyFastBlocks_Good(t *testing.T) {
 	}
 }
 
-func TestNextDifficultySlowBlocks_Good(t *testing.T) {
+func TestDifficulty_NextDifficultySlowBlocks_Good(t *testing.T) {
 	// When blocks come slower than the target, difficulty should decrease
 	// relative to the constant-rate result.
 	target := config.BlockTarget
@@ -120,7 +120,7 @@ func TestNextDifficultySlowBlocks_Good(t *testing.T) {
 	}
 }
 
-func TestNextDifficulty_Ugly(t *testing.T) {
+func TestDifficulty_NextDifficulty_Ugly(t *testing.T) {
 	// Two entries with zero time span — should handle gracefully.
 	timestamps := []uint64{1000, 1000}
 	diffs := []*big.Int{big.NewInt(0), big.NewInt(100)}
@@ -130,7 +130,7 @@ func TestNextDifficulty_Ugly(t *testing.T) {
 	}
 }
 
-func TestConstants_Good(t *testing.T) {
+func TestDifficulty_Constants_Good(t *testing.T) {
 	if Window != 720 {
 		t.Errorf("Window: got %d, want 720", Window)
 	}

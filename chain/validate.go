@@ -17,6 +17,7 @@ import (
 
 // ValidateHeader checks a block header before storage.
 // expectedHeight is the height at which this block would be stored.
+// Usage: value.ValidateHeader(...)
 func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	currentHeight, err := c.Height()
 	if err != nil {

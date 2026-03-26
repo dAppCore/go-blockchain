@@ -17,11 +17,13 @@ import (
 
 // RingOutputsFn fetches the public keys for a ring at the given amount
 // and offsets. Used to decouple consensus/ from chain storage.
+// Usage: var value consensus.RingOutputsFn
 type RingOutputsFn func(amount uint64, offsets []uint64) ([]types.PublicKey, error)
 
 // ZCRingMember holds the three public keys per ring entry needed for
 // CLSAG GGX verification (HF4+). All fields are premultiplied by 1/8
 // as stored on chain.
+// Usage: var value consensus.ZCRingMember
 type ZCRingMember struct {
 	StealthAddress   [32]byte
 	AmountCommitment [32]byte
@@ -30,6 +32,7 @@ type ZCRingMember struct {
 
 // ZCRingOutputsFn fetches ZC ring members for the given global output indices.
 // Used for post-HF4 CLSAG GGX signature verification.
+// Usage: var value consensus.ZCRingOutputsFn
 type ZCRingOutputsFn func(offsets []uint64) ([]ZCRingMember, error)
 
 // VerifyTransactionSignatures verifies all ring signatures in a transaction.
@@ -40,6 +43,7 @@ type ZCRingOutputsFn func(offsets []uint64) ([]ZCRingMember, error)
 // getRingOutputs is used for pre-HF4 (V1) signature verification.
 // getZCRingOutputs is used for post-HF4 (V2) CLSAG GGX verification.
 // Either may be nil for structural-only checks.
+// Usage: consensus.VerifyTransactionSignatures(...)
 func VerifyTransactionSignatures(tx *types.Transaction, forks []config.HardFork,
 	height uint64, getRingOutputs RingOutputsFn, getZCRingOutputs ZCRingOutputsFn) error {
 

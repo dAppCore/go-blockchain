@@ -6,37 +6,37 @@
 package tui
 
 import (
-	"strings"
 	"testing"
 
+	"dappco.re/go/core"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestExplorerModel_View_Good_BlockList(t *testing.T) {
+func TestExplorerModel_View_BlockList_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	m := NewExplorerModel(c)
 
 	out := m.View(80, 20)
 	// Should show block heights.
-	if !strings.Contains(out, "4") {
+	if !core.Contains(out, "4") {
 		t.Errorf("view should contain top block height 4, got:\n%s", out)
 	}
-	if !strings.Contains(out, "0") {
+	if !core.Contains(out, "0") {
 		t.Errorf("view should contain genesis height 0, got:\n%s", out)
 	}
 }
 
-func TestExplorerModel_View_Good_Empty(t *testing.T) {
+func TestExplorerModel_View_Empty_Good(t *testing.T) {
 	c := seedChain(t, 0)
 	m := NewExplorerModel(c)
 
 	out := m.View(80, 20)
-	if !strings.Contains(out, "no blocks") && !strings.Contains(out, "empty") {
+	if !core.Contains(out, "no blocks") && !core.Contains(out, "empty") {
 		t.Errorf("empty chain should show empty message, got:\n%s", out)
 	}
 }
 
-func TestExplorerModel_Update_Good_CursorDown(t *testing.T) {
+func TestExplorerModel_Update_CursorDown_Good(t *testing.T) {
 	c := seedChain(t, 10)
 	m := NewExplorerModel(c)
 
@@ -48,7 +48,7 @@ func TestExplorerModel_Update_Good_CursorDown(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_Update_Good_CursorUp(t *testing.T) {
+func TestExplorerModel_Update_CursorUp_Good(t *testing.T) {
 	c := seedChain(t, 10)
 	m := NewExplorerModel(c)
 
@@ -62,7 +62,7 @@ func TestExplorerModel_Update_Good_CursorUp(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_Update_Good_CursorBoundsTop(t *testing.T) {
+func TestExplorerModel_Update_CursorBoundsTop_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	m := NewExplorerModel(c)
 
@@ -84,7 +84,7 @@ func TestExplorerModel_Init_Good(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_Update_Good_Refresh(t *testing.T) {
+func TestExplorerModel_Update_Refresh_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	m := NewExplorerModel(c)
 
@@ -92,12 +92,12 @@ func TestExplorerModel_Update_Good_Refresh(t *testing.T) {
 	m.Update(NodeStatusMsg{Height: 5})
 
 	out := m.View(80, 20)
-	if !strings.Contains(out, "4") {
+	if !core.Contains(out, "4") {
 		t.Errorf("view should show height 4 after refresh, got:\n%s", out)
 	}
 }
 
-func TestExplorerModel_Update_Good_EnterBlockDetail(t *testing.T) {
+func TestExplorerModel_Update_EnterBlockDetail_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	m := NewExplorerModel(c)
 
@@ -109,12 +109,12 @@ func TestExplorerModel_Update_Good_EnterBlockDetail(t *testing.T) {
 	}
 
 	out := m.View(80, 20)
-	if !strings.Contains(out, "Block 4") {
+	if !core.Contains(out, "Block 4") {
 		t.Errorf("block detail should contain 'Block 4', got:\n%s", out)
 	}
 }
 
-func TestExplorerModel_Update_Good_EscBackToList(t *testing.T) {
+func TestExplorerModel_Update_EscBackToList_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	m := NewExplorerModel(c)
 
@@ -131,7 +131,7 @@ func TestExplorerModel_Update_Good_EscBackToList(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_Update_Good_PgDown(t *testing.T) {
+func TestExplorerModel_Update_PgDown_Good(t *testing.T) {
 	c := seedChain(t, 50)
 	m := NewExplorerModel(c)
 	m.height = 20
@@ -143,7 +143,7 @@ func TestExplorerModel_Update_Good_PgDown(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_Update_Good_Home(t *testing.T) {
+func TestExplorerModel_Update_Home_Good(t *testing.T) {
 	c := seedChain(t, 50)
 	m := NewExplorerModel(c)
 
@@ -162,7 +162,7 @@ func TestExplorerModel_Update_Good_Home(t *testing.T) {
 	}
 }
 
-func TestExplorerModel_ViewBlockDetail_Good_CoinbaseOnly(t *testing.T) {
+func TestExplorerModel_ViewBlockDetail_CoinbaseOnly_Good(t *testing.T) {
 	c := seedChain(t, 3)
 	m := NewExplorerModel(c)
 
@@ -170,7 +170,7 @@ func TestExplorerModel_ViewBlockDetail_Good_CoinbaseOnly(t *testing.T) {
 	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	out := m.View(80, 20)
-	if !strings.Contains(out, "coinbase only") {
+	if !core.Contains(out, "coinbase only") {
 		t.Errorf("block detail should contain 'coinbase only' for blocks with no TxHashes, got:\n%s", out)
 	}
 }

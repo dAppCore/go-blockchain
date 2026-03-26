@@ -21,6 +21,8 @@ package types
 //	minor_version   VARINT   uint64
 //	timestamp       VARINT   uint64
 //	flags           FIXED    uint8   (1 byte)
+//
+// Usage: var value types.BlockHeader
 type BlockHeader struct {
 	// MajorVersion determines which consensus rules apply to this block.
 	MajorVersion uint8
@@ -46,6 +48,7 @@ type BlockHeader struct {
 
 // Block is a complete block including the header, miner (coinbase) transaction,
 // and the hashes of all other transactions included in the block.
+// Usage: var value types.Block
 type Block struct {
 	BlockHeader
 

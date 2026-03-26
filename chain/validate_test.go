@@ -8,11 +8,11 @@ package chain
 import (
 	"testing"
 
-	store "dappco.re/go/core/store"
 	"dappco.re/go/core/blockchain/types"
+	store "dappco.re/go/core/store"
 )
 
-func TestValidateHeader_Good_Genesis(t *testing.T) {
+func TestValidate_ValidateHeader_Genesis_Good(t *testing.T) {
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	c := New(s)
@@ -31,7 +31,7 @@ func TestValidateHeader_Good_Genesis(t *testing.T) {
 	}
 }
 
-func TestValidateHeader_Good_Sequential(t *testing.T) {
+func TestValidate_ValidateHeader_Sequential_Good(t *testing.T) {
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	c := New(s)
@@ -60,7 +60,7 @@ func TestValidateHeader_Good_Sequential(t *testing.T) {
 	}
 }
 
-func TestValidateHeader_Bad_WrongPrevID(t *testing.T) {
+func TestValidate_ValidateHeader_WrongPrevID_Bad(t *testing.T) {
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	c := New(s)
@@ -86,7 +86,7 @@ func TestValidateHeader_Bad_WrongPrevID(t *testing.T) {
 	}
 }
 
-func TestValidateHeader_Bad_WrongHeight(t *testing.T) {
+func TestValidate_ValidateHeader_WrongHeight_Bad(t *testing.T) {
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	c := New(s)
@@ -103,7 +103,7 @@ func TestValidateHeader_Bad_WrongHeight(t *testing.T) {
 	}
 }
 
-func TestValidateHeader_Bad_GenesisNonZeroPrev(t *testing.T) {
+func TestValidate_ValidateHeader_GenesisNonZeroPrev_Bad(t *testing.T) {
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	c := New(s)

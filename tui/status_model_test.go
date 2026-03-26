@@ -6,23 +6,24 @@
 package tui
 
 import (
-	"strings"
 	"testing"
 	"time"
+
+	"dappco.re/go/core"
 )
 
-func TestStatusModel_View_Good_Initial(t *testing.T) {
+func TestStatusModel_View_Initial_Good(t *testing.T) {
 	c := seedChain(t, 0)
 	n := NewNode(c)
 	m := NewStatusModel(n)
 
 	got := m.View(80, 1)
-	if !strings.Contains(got, "syncing") && !strings.Contains(got, "0") {
+	if !core.Contains(got, "syncing") && !core.Contains(got, "0") {
 		t.Errorf("initial View should contain \"syncing\" or \"0\", got %q", got)
 	}
 }
 
-func TestStatusModel_Update_Good_StatusMsg(t *testing.T) {
+func TestStatusModel_Update_StatusMsg_Good(t *testing.T) {
 	c := seedChain(t, 5)
 	n := NewNode(c)
 	n.interval = 10 * time.Millisecond // keep test fast
@@ -50,15 +51,15 @@ func TestStatusModel_Update_Good_StatusMsg(t *testing.T) {
 	}
 
 	got := sm.View(120, 1)
-	if !strings.Contains(got, "100") {
+	if !core.Contains(got, "100") {
 		t.Errorf("View after status update should contain height \"100\", got %q", got)
 	}
-	if !strings.Contains(got, "75.5") {
+	if !core.Contains(got, "75.5") {
 		t.Errorf("View after status update should contain sync pct \"75.5\", got %q", got)
 	}
 }
 
-func TestStatusModel_View_Good_FullSync(t *testing.T) {
+func TestStatusModel_View_FullSync_Good(t *testing.T) {
 	c := seedChain(t, 1)
 	n := NewNode(c)
 	m := NewStatusModel(n)
@@ -70,7 +71,7 @@ func TestStatusModel_View_Good_FullSync(t *testing.T) {
 	m.Update(msg)
 
 	got := m.View(120, 1)
-	if !strings.Contains(got, "6312") {
+	if !core.Contains(got, "6312") {
 		t.Errorf("View should contain height \"6312\", got %q", got)
 	}
 }

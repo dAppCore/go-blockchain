@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyTransactionSignatures_Good_Coinbase(t *testing.T) {
+func TestVerify_VerifyTransactionSignatures_Coinbase_Good(t *testing.T) {
 	// Coinbase transactions have no signatures to verify.
 	tx := validMinerTx(100)
 	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil, nil)
 	require.NoError(t, err)
 }
 
-func TestVerifyTransactionSignatures_Bad_MissingSigs(t *testing.T) {
+func TestVerify_VerifyTransactionSignatures_MissingSigs_Bad(t *testing.T) {
 	tx := validV1Tx()
 	tx.Signatures = nil // no signatures
 	err := VerifyTransactionSignatures(tx, config.MainnetForks, 100, nil, nil)
@@ -27,7 +27,7 @@ func TestVerifyTransactionSignatures_Bad_MissingSigs(t *testing.T) {
 
 // --- HTLC signature verification tests (Task 9) ---
 
-func TestVerifyV1Signatures_MixedHTLC_Good(t *testing.T) {
+func TestVerify_VerifyV1Signatures_MixedHTLC_Good(t *testing.T) {
 	// Structural check only (getRingOutputs = nil).
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -44,7 +44,7 @@ func TestVerifyV1Signatures_MixedHTLC_Good(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifyV1Signatures_MixedHTLC_Bad(t *testing.T) {
+func TestVerify_VerifyV1Signatures_MixedHTLC_Bad(t *testing.T) {
 	// Wrong signature count.
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -61,7 +61,7 @@ func TestVerifyV1Signatures_MixedHTLC_Bad(t *testing.T) {
 	assert.Contains(t, err.Error(), "signature count")
 }
 
-func TestVerifyV1Signatures_HTLCOnly_Good(t *testing.T) {
+func TestVerify_VerifyV1Signatures_HTLCOnly_Good(t *testing.T) {
 	// Transaction with only HTLC inputs.
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -78,7 +78,7 @@ func TestVerifyV1Signatures_HTLCOnly_Good(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifyV1Signatures_MultisigSkipped_Good(t *testing.T) {
+func TestVerify_VerifyV1Signatures_MultisigSkipped_Good(t *testing.T) {
 	// Multisig inputs do not participate in NLSAG signatures.
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,

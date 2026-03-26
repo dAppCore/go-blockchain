@@ -8,6 +8,7 @@ package p2p
 import "dappco.re/go/core/p2p/node/levin"
 
 // NewBlockNotification is NOTIFY_NEW_BLOCK (2001).
+// Usage: var value p2p.NewBlockNotification
 type NewBlockNotification struct {
 	BlockBlob []byte   // Serialised block
 	TxBlobs   [][]byte // Serialised transactions
@@ -15,6 +16,7 @@ type NewBlockNotification struct {
 }
 
 // Encode serialises the notification.
+// Usage: value.Encode(...)
 func (n *NewBlockNotification) Encode() ([]byte, error) {
 	blockEntry := levin.Section{
 		"block": levin.StringVal(n.BlockBlob),
@@ -28,6 +30,7 @@ func (n *NewBlockNotification) Encode() ([]byte, error) {
 }
 
 // Decode parses a new block notification from a storage blob.
+// Usage: value.Decode(...)
 func (n *NewBlockNotification) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
@@ -49,11 +52,13 @@ func (n *NewBlockNotification) Decode(data []byte) error {
 }
 
 // NewTransactionsNotification is NOTIFY_NEW_TRANSACTIONS (2002).
+// Usage: var value p2p.NewTransactionsNotification
 type NewTransactionsNotification struct {
 	TxBlobs [][]byte
 }
 
 // Encode serialises the notification.
+// Usage: value.Encode(...)
 func (n *NewTransactionsNotification) Encode() ([]byte, error) {
 	s := levin.Section{
 		"txs": levin.StringArrayVal(n.TxBlobs),
@@ -62,6 +67,7 @@ func (n *NewTransactionsNotification) Encode() ([]byte, error) {
 }
 
 // Decode parses a new transactions notification.
+// Usage: value.Decode(...)
 func (n *NewTransactionsNotification) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
@@ -74,12 +80,14 @@ func (n *NewTransactionsNotification) Decode(data []byte) error {
 }
 
 // BlockCompleteEntry holds a block blob and its transaction blobs.
+// Usage: var value p2p.BlockCompleteEntry
 type BlockCompleteEntry struct {
 	Block []byte   // Serialised block
 	Txs   [][]byte // Serialised transactions
 }
 
 // RequestGetObjects is NOTIFY_REQUEST_GET_OBJECTS (2003).
+// Usage: var value p2p.RequestGetObjects
 type RequestGetObjects struct {
 	Blocks [][]byte // 32-byte block hashes
 	Txs    [][]byte // 32-byte tx hashes (usually empty for sync)
@@ -88,6 +96,7 @@ type RequestGetObjects struct {
 // Encode serialises the request.
 // The C++ daemon uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB for both blocks
 // and txs, so we pack all hashes into single concatenated blobs.
+// Usage: value.Encode(...)
 func (r *RequestGetObjects) Encode() ([]byte, error) {
 	blocksBlob := make([]byte, 0, len(r.Blocks)*32)
 	for _, id := range r.Blocks {
@@ -107,6 +116,7 @@ func (r *RequestGetObjects) Encode() ([]byte, error) {
 }
 
 // Decode parses a get-objects request from a storage blob.
+// Usage: value.Decode(...)
 func (r *RequestGetObjects) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
@@ -124,6 +134,7 @@ func (r *RequestGetObjects) Decode(data []byte) error {
 }
 
 // ResponseGetObjects is NOTIFY_RESPONSE_GET_OBJECTS (2004).
+// Usage: var value p2p.ResponseGetObjects
 type ResponseGetObjects struct {
 	Blocks        []BlockCompleteEntry
 	MissedIDs     [][]byte
@@ -131,6 +142,7 @@ type ResponseGetObjects struct {
 }
 
 // Encode serialises the response.
+// Usage: value.Encode(...)
 func (r *ResponseGetObjects) Encode() ([]byte, error) {
 	sections := make([]levin.Section, len(r.Blocks))
 	for i, entry := range r.Blocks {
@@ -155,6 +167,7 @@ func (r *ResponseGetObjects) Encode() ([]byte, error) {
 }
 
 // Decode parses a get-objects response from a storage blob.
+// Usage: value.Decode(...)
 func (r *ResponseGetObjects) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {
@@ -184,6 +197,7 @@ func (r *ResponseGetObjects) Decode(data []byte) error {
 }
 
 // RequestChain is NOTIFY_REQUEST_CHAIN (2006).
+// Usage: var value p2p.RequestChain
 type RequestChain struct {
 	BlockIDs [][]byte // Array of 32-byte block hashes
 }
@@ -191,6 +205,7 @@ type RequestChain struct {
 // Encode serialises the request.
 // The C++ daemon uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB for block_ids,
 // so we pack all hashes into a single concatenated blob.
+// Usage: value.Encode(...)
 func (r *RequestChain) Encode() ([]byte, error) {
 	blob := make([]byte, 0, len(r.BlockIDs)*32)
 	for _, id := range r.BlockIDs {
@@ -204,12 +219,14 @@ func (r *RequestChain) Encode() ([]byte, error) {
 
 // BlockContextInfo holds a block hash and cumulative size from a chain
 // entry response. Mirrors the C++ block_context_info struct.
+// Usage: var value p2p.BlockContextInfo
 type BlockContextInfo struct {
 	Hash      []byte // 32-byte block hash (KV_SERIALIZE_VAL_POD_AS_BLOB)
 	CumulSize uint64 // Cumulative block size
 }
 
 // ResponseChainEntry is NOTIFY_RESPONSE_CHAIN_ENTRY (2007).
+// Usage: var value p2p.ResponseChainEntry
 type ResponseChainEntry struct {
 	StartHeight uint64
 	TotalHeight uint64
@@ -220,6 +237,7 @@ type ResponseChainEntry struct {
 // Decode parses a chain entry response.
 // m_block_ids is an object array of block_context_info, each with
 // "h" (hash blob) and "cumul_size" (uint64).
+// Usage: value.Decode(...)
 func (r *ResponseChainEntry) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {

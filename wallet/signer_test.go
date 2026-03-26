@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/blockchain/types"
 )
 
-func TestNLSAGSignerRoundTrip(t *testing.T) {
+func TestSigner_NLSAGSignerRoundTrip_Good(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Fatal(err)
@@ -62,14 +62,14 @@ func TestNLSAGSignerRoundTrip(t *testing.T) {
 	}
 }
 
-func TestNLSAGSignerVersion(t *testing.T) {
+func TestSigner_NLSAGSignerVersion_Good(t *testing.T) {
 	signer := &NLSAGSigner{}
 	if signer.Version() != 1 {
 		t.Fatalf("version = %d, want 1", signer.Version())
 	}
 }
 
-func TestNLSAGSignerLargeRing(t *testing.T) {
+func TestSigner_NLSAGSignerLargeRing_Ugly(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestNLSAGSignerLargeRing(t *testing.T) {
 	}
 }
 
-func TestNLSAGSignerInterface(t *testing.T) {
+func TestSigner_NLSAGSignerInterface_Ugly(t *testing.T) {
 	// Compile-time check that NLSAGSigner satisfies the Signer interface.
 	var _ Signer = (*NLSAGSigner)(nil)
 }

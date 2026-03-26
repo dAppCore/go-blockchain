@@ -26,9 +26,11 @@ import (
 const syncBatchSize = 10
 
 // GenesisHash is the expected genesis block hash.
+// Usage: value := chain.GenesisHash
 var GenesisHash = "cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963"
 
 // SyncOptions controls sync behaviour.
+// Usage: var value chain.SyncOptions
 type SyncOptions struct {
 	// VerifySignatures enables cryptographic signature verification
 	// during sync. Default false for fast sync.
@@ -39,6 +41,7 @@ type SyncOptions struct {
 }
 
 // DefaultSyncOptions returns sync options for fast sync (no signature verification).
+// Usage: chain.DefaultSyncOptions(...)
 func DefaultSyncOptions() SyncOptions {
 	return SyncOptions{
 		VerifySignatures: false,
@@ -48,6 +51,7 @@ func DefaultSyncOptions() SyncOptions {
 
 // Sync fetches blocks from the daemon and stores them locally.
 // It is a blocking function — the caller controls retry and scheduling.
+// Usage: value.Sync(...)
 func (c *Chain) Sync(ctx context.Context, client *rpc.Client, opts SyncOptions) error {
 	localHeight, err := c.Height()
 	if err != nil {

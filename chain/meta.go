@@ -8,6 +8,7 @@ package chain
 import "dappco.re/go/core/blockchain/types"
 
 // BlockMeta holds metadata stored alongside each block.
+// Usage: var value chain.BlockMeta
 type BlockMeta struct {
 	Hash           types.Hash `json:"hash"`
 	Height         uint64     `json:"height"`
@@ -18,6 +19,7 @@ type BlockMeta struct {
 }
 
 // TxMeta holds metadata stored alongside each transaction.
+// Usage: var value chain.TxMeta
 type TxMeta struct {
 	KeeperBlock         uint64   `json:"keeper_block"`
 	GlobalOutputIndexes []uint64 `json:"global_output_indexes"`

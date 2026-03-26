@@ -18,6 +18,7 @@ import (
 )
 
 // RandomXKey is the cache initialisation key for RandomX hashing.
+// Usage: value := mining.RandomXKey
 var RandomXKey = []byte("LetheanRandomXv1")
 
 // HeaderMiningHash computes the header hash used as input to RandomX.
@@ -26,6 +27,7 @@ var RandomXKey = []byte("LetheanRandomXv1")
 //
 // The result is deterministic for a given block template regardless of
 // the block's current nonce value.
+// Usage: mining.HeaderMiningHash(...)
 func HeaderMiningHash(b *types.Block) [32]byte {
 	// Save and zero the nonce.
 	savedNonce := b.Nonce
@@ -38,6 +40,7 @@ func HeaderMiningHash(b *types.Block) [32]byte {
 
 // CheckNonce tests whether a specific nonce produces a valid PoW solution
 // for the given header mining hash and difficulty.
+// Usage: mining.CheckNonce(...)
 func CheckNonce(headerHash [32]byte, nonce, difficulty uint64) (bool, error) {
 	var input [40]byte
 	copy(input[:32], headerHash[:])

@@ -14,7 +14,7 @@ import (
 	"dappco.re/go/core/blockchain/types"
 )
 
-func TestIsPreHardforkFreeze_Good(t *testing.T) {
+func TestFreeze_IsPreHardforkFreeze_Good(t *testing.T) {
 	// Testnet HF5 activates at heights > 200.
 	// Freeze window: heights 141..200 (activation_height - period + 1 .. activation_height).
 	// Note: HF5 activation height is 200, meaning HF5 is active at height > 200 = 201+.
@@ -45,7 +45,7 @@ func TestIsPreHardforkFreeze_Good(t *testing.T) {
 	}
 }
 
-func TestIsPreHardforkFreeze_Bad(t *testing.T) {
+func TestFreeze_IsPreHardforkFreeze_Bad(t *testing.T) {
 	// Mainnet HF5 is at 999999999 — freeze window starts at 999999940.
 	// At typical mainnet heights, no freeze.
 	if IsPreHardforkFreeze(config.MainnetForks, config.HF5, 50000) {
@@ -53,7 +53,7 @@ func TestIsPreHardforkFreeze_Bad(t *testing.T) {
 	}
 }
 
-func TestIsPreHardforkFreeze_Ugly(t *testing.T) {
+func TestFreeze_IsPreHardforkFreeze_Ugly(t *testing.T) {
 	// Unknown fork version — never frozen.
 	if IsPreHardforkFreeze(config.TestnetForks, 99, 150) {
 		t.Error("unknown fork version should never trigger freeze")
@@ -66,7 +66,7 @@ func TestIsPreHardforkFreeze_Ugly(t *testing.T) {
 	}
 }
 
-func TestValidateBlockFreeze_Good(t *testing.T) {
+func TestFreeze_ValidateBlockFreeze_Good(t *testing.T) {
 	// During freeze, coinbase transactions should still be accepted.
 	// This test verifies that ValidateBlock does not reject a block
 	// that only contains its miner transaction during the freeze window.
@@ -82,7 +82,7 @@ func TestValidateBlockFreeze_Good(t *testing.T) {
 	_ = coinbaseTx // structural test — actual block validation needs more fields
 }
 
-func TestValidateTransactionInBlock_Good(t *testing.T) {
+func TestFreeze_ValidateTransactionInBlock_Good(t *testing.T) {
 	// Outside freeze window — regular transaction accepted.
 	tx := validV2Tx()
 	blob := make([]byte, 100)
@@ -92,7 +92,7 @@ func TestValidateTransactionInBlock_Good(t *testing.T) {
 	}
 }
 
-func TestValidateTransactionInBlock_Bad(t *testing.T) {
+func TestFreeze_ValidateTransactionInBlock_Bad(t *testing.T) {
 	// Inside freeze window — regular transaction rejected.
 	tx := validV2Tx()
 	blob := make([]byte, 100)
@@ -102,7 +102,7 @@ func TestValidateTransactionInBlock_Bad(t *testing.T) {
 	}
 }
 
-func TestValidateTransactionInBlock_Ugly(t *testing.T) {
+func TestFreeze_ValidateTransactionInBlock_Ugly(t *testing.T) {
 	// Coinbase transaction during freeze — the freeze check itself should
 	// not reject it (coinbase is exempt). The isCoinbase guard must pass.
 	// Note: ValidateTransaction separately rejects txin_gen in regular txs,

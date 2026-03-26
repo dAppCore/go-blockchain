@@ -50,6 +50,7 @@ const (
 // Account holds the spend and view key pairs for a wallet. The spend secret
 // key is the master key; the view secret key is deterministically derived as
 // Keccak256(spend_secret_key), matching the C++ account_base::generate().
+// Usage: var value wallet.Account
 type Account struct {
 	SpendPublicKey types.PublicKey `json:"spend_public_key"`
 	SpendSecretKey types.SecretKey `json:"spend_secret_key"`
@@ -61,6 +62,7 @@ type Account struct {
 
 // GenerateAccount creates a new account with random spend keys and a
 // deterministically derived view key pair.
+// Usage: wallet.GenerateAccount(...)
 func GenerateAccount() (*Account, error) {
 	spendPub, spendSec, err := crypto.GenerateKeys()
 	if err != nil {
@@ -71,6 +73,7 @@ func GenerateAccount() (*Account, error) {
 
 // RestoreFromSeed reconstructs an account from a 25-word mnemonic phrase.
 // The spend secret is decoded from the phrase; all other keys are derived.
+// Usage: wallet.RestoreFromSeed(...)
 func RestoreFromSeed(phrase string) (*Account, error) {
 	key, err := MnemonicDecode(phrase)
 	if err != nil {
@@ -85,6 +88,7 @@ func RestoreFromSeed(phrase string) (*Account, error) {
 
 // RestoreViewOnly creates a view-only account that can scan incoming
 // transactions but cannot spend. The spend secret key is left zeroed.
+// Usage: wallet.RestoreViewOnly(...)
 func RestoreViewOnly(viewSecret types.SecretKey, spendPublic types.PublicKey) (*Account, error) {
 	viewPub, err := crypto.SecretToPublic([32]byte(viewSecret))
 	if err != nil {
@@ -98,11 +102,13 @@ func RestoreViewOnly(viewSecret types.SecretKey, spendPublic types.PublicKey) (*
 }
 
 // ToSeed encodes the spend secret key as a 25-word mnemonic phrase.
+// Usage: value.ToSeed(...)
 func (a *Account) ToSeed() (string, error) {
 	return MnemonicEncode(a.SpendSecretKey[:])
 }
 
 // Address returns the public address derived from the account's public keys.
+// Usage: value.Address(...)
 func (a *Account) Address() types.Address {
 	return types.Address{
 		SpendPublicKey: a.SpendPublicKey,
@@ -112,6 +118,7 @@ func (a *Account) Address() types.Address {
 
 // Save encrypts the account with Argon2id + AES-256-GCM and persists it to
 // the given store. The stored blob layout is: salt (16) | nonce (12) | ciphertext.
+// Usage: value.Save(...)
 func (a *Account) Save(s *store.Store, password string) error {
 	plaintext := []byte(core.JSONMarshalString(a))
 
@@ -148,6 +155,7 @@ func (a *Account) Save(s *store.Store, password string) error {
 
 // LoadAccount decrypts and returns the account stored in the given store.
 // Returns an error if the password is incorrect or no account exists.
+// Usage: wallet.LoadAccount(...)
 func LoadAccount(s *store.Store, password string) (*Account, error) {
 	encoded, err := s.Get(groupAccount, keyAccount)
 	if err != nil {

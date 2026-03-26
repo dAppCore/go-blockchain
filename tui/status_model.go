@@ -18,23 +18,27 @@ import (
 var _ cli.FrameModel = (*StatusModel)(nil)
 
 // StatusModel displays chain sync status in the header region.
+// Usage: var value tui.StatusModel
 type StatusModel struct {
 	node   *Node
 	status NodeStatusMsg
 }
 
 // NewStatusModel creates a StatusModel backed by the given Node.
+// Usage: tui.NewStatusModel(...)
 func NewStatusModel(n *Node) *StatusModel {
 	return &StatusModel{node: n}
 }
 
 // Init returns a command that reads the current chain status immediately.
+// Usage: value.Init(...)
 func (m *StatusModel) Init() tea.Cmd {
 	return m.node.WaitForStatus()
 }
 
 // Update handles incoming messages. On NodeStatusMsg it stores the snapshot
 // and schedules the next tick; all other messages are ignored.
+// Usage: value.Update(...)
 func (m *StatusModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case NodeStatusMsg:
@@ -47,6 +51,7 @@ func (m *StatusModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 
 // View renders a single-line status bar. When height is zero the model has
 // not yet received a status snapshot, so it shows a placeholder.
+// Usage: value.View(...)
 func (m *StatusModel) View(width, height int) string {
 	var line string
 	if height == 0 {

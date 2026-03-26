@@ -32,21 +32,21 @@ func validV1Tx() *types.Transaction {
 	}
 }
 
-func TestValidateTransaction_Good(t *testing.T) {
+func TestTx_ValidateTransaction_Good(t *testing.T) {
 	tx := validV1Tx()
 	blob := make([]byte, 100) // small blob
 	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
 	require.NoError(t, err)
 }
 
-func TestValidateTransaction_BlobTooLarge(t *testing.T) {
+func TestTx_ValidateTransaction_BlobTooLarge_Bad(t *testing.T) {
 	tx := validV1Tx()
 	blob := make([]byte, config.MaxTransactionBlobSize+1)
 	err := ValidateTransaction(tx, blob, config.MainnetForks, 5000)
 	assert.ErrorIs(t, err, ErrTxTooLarge)
 }
 
-func TestValidateTransaction_NoInputs(t *testing.T) {
+func TestTx_ValidateTransaction_NoInputs_Bad(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vin = nil
 	blob := make([]byte, 100)
@@ -54,7 +54,7 @@ func TestValidateTransaction_NoInputs(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoInputs)
 }
 
-func TestValidateTransaction_TooManyInputs(t *testing.T) {
+func TestTx_ValidateTransaction_TooManyInputs_Good(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vin = make([]types.TxInput, config.TxMaxAllowedInputs+1)
 	for i := range tx.Vin {
@@ -65,7 +65,7 @@ func TestValidateTransaction_TooManyInputs(t *testing.T) {
 	assert.ErrorIs(t, err, ErrTooManyInputs)
 }
 
-func TestValidateTransaction_InvalidInputType(t *testing.T) {
+func TestTx_ValidateTransaction_InvalidInputType_Bad(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vin = []types.TxInput{types.TxInputGenesis{Height: 1}} // genesis not allowed
 	blob := make([]byte, 100)
@@ -73,7 +73,7 @@ func TestValidateTransaction_InvalidInputType(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidInputType)
 }
 
-func TestValidateTransaction_NoOutputs(t *testing.T) {
+func TestTx_ValidateTransaction_NoOutputs_Bad(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vout = nil
 	blob := make([]byte, 100)
@@ -81,7 +81,7 @@ func TestValidateTransaction_NoOutputs(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoOutputs)
 }
 
-func TestValidateTransaction_TooManyOutputs(t *testing.T) {
+func TestTx_ValidateTransaction_TooManyOutputs_Good(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vout = make([]types.TxOutput, config.TxMaxAllowedOutputs+1)
 	for i := range tx.Vout {
@@ -92,7 +92,7 @@ func TestValidateTransaction_TooManyOutputs(t *testing.T) {
 	assert.ErrorIs(t, err, ErrTooManyOutputs)
 }
 
-func TestValidateTransaction_ZeroOutputAmount(t *testing.T) {
+func TestTx_ValidateTransaction_ZeroOutputAmount_Ugly(t *testing.T) {
 	tx := validV1Tx()
 	tx.Vout = []types.TxOutput{
 		types.TxOutputBare{Amount: 0, Target: types.TxOutToKey{Key: types.PublicKey{1}}},
@@ -102,7 +102,7 @@ func TestValidateTransaction_ZeroOutputAmount(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidOutput)
 }
 
-func TestValidateTransaction_DuplicateKeyImage(t *testing.T) {
+func TestTx_ValidateTransaction_DuplicateKeyImage_Bad(t *testing.T) {
 	ki := types.KeyImage{42}
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -119,7 +119,7 @@ func TestValidateTransaction_DuplicateKeyImage(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDuplicateKeyImage)
 }
 
-func TestValidateTransaction_NegativeFee(t *testing.T) {
+func TestTx_ValidateTransaction_NegativeFee_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -136,7 +136,7 @@ func TestValidateTransaction_NegativeFee(t *testing.T) {
 
 // --- HF1 gating tests (Task 7) ---
 
-func TestCheckInputTypes_HTLCPreHF1_Bad(t *testing.T) {
+func TestTx_CheckInputTypes_HTLCPreHF1_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -151,7 +151,7 @@ func TestCheckInputTypes_HTLCPreHF1_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidInputType)
 }
 
-func TestCheckInputTypes_HTLCPostHF1_Good(t *testing.T) {
+func TestTx_CheckInputTypes_HTLCPostHF1_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -169,7 +169,7 @@ func TestCheckInputTypes_HTLCPostHF1_Good(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckInputTypes_MultisigPreHF1_Bad(t *testing.T) {
+func TestTx_CheckInputTypes_MultisigPreHF1_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -184,7 +184,7 @@ func TestCheckInputTypes_MultisigPreHF1_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidInputType)
 }
 
-func TestCheckOutputs_HTLCTargetPreHF1_Bad(t *testing.T) {
+func TestTx_CheckOutputs_HTLCTargetPreHF1_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -202,7 +202,7 @@ func TestCheckOutputs_HTLCTargetPreHF1_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidOutput)
 }
 
-func TestCheckOutputs_MultisigTargetPreHF1_Bad(t *testing.T) {
+func TestTx_CheckOutputs_MultisigTargetPreHF1_Bad(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -220,7 +220,7 @@ func TestCheckOutputs_MultisigTargetPreHF1_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidOutput)
 }
 
-func TestCheckOutputs_MultisigTargetPostHF1_Good(t *testing.T) {
+func TestTx_CheckOutputs_MultisigTargetPostHF1_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -240,7 +240,7 @@ func TestCheckOutputs_MultisigTargetPostHF1_Good(t *testing.T) {
 
 // --- Key image tests for HTLC (Task 8) ---
 
-func TestCheckKeyImages_HTLCDuplicate_Bad(t *testing.T) {
+func TestTx_CheckKeyImages_HTLCDuplicate_Bad(t *testing.T) {
 	ki := types.KeyImage{0x42}
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -257,7 +257,7 @@ func TestCheckKeyImages_HTLCDuplicate_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDuplicateKeyImage)
 }
 
-func TestCheckKeyImages_HTLCAndToKeyDuplicate_Bad(t *testing.T) {
+func TestTx_CheckKeyImages_HTLCAndToKeyDuplicate_Bad(t *testing.T) {
 	ki := types.KeyImage{0x42}
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -274,7 +274,7 @@ func TestCheckKeyImages_HTLCAndToKeyDuplicate_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDuplicateKeyImage)
 }
 
-func TestCheckOutputs_HTLCTargetPostHF1_Good(t *testing.T) {
+func TestTx_CheckOutputs_HTLCTargetPostHF1_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{

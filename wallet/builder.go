@@ -24,12 +24,14 @@ import (
 )
 
 // Destination is a recipient address and amount.
+// Usage: var value wallet.Destination
 type Destination struct {
 	Address types.Address
 	Amount  uint64
 }
 
 // BuildRequest holds the parameters for building a transaction.
+// Usage: var value wallet.BuildRequest
 type BuildRequest struct {
 	Sources       []Transfer
 	Destinations  []Destination
@@ -38,11 +40,13 @@ type BuildRequest struct {
 }
 
 // Builder constructs signed transactions.
+// Usage: var value wallet.Builder
 type Builder interface {
 	Build(req *BuildRequest) (*types.Transaction, error)
 }
 
 // V1Builder constructs v1 transactions with NLSAG ring signatures.
+// Usage: var value wallet.V1Builder
 type V1Builder struct {
 	signer       Signer
 	ringSelector RingSelector
@@ -56,6 +60,7 @@ type inputMeta struct {
 }
 
 // NewV1Builder returns a Builder that produces version 1 transactions.
+// Usage: wallet.NewV1Builder(...)
 func NewV1Builder(signer Signer, ringSelector RingSelector) *V1Builder {
 	return &V1Builder{
 		signer:       signer,
@@ -72,6 +77,8 @@ func NewV1Builder(signer Signer, ringSelector RingSelector) *V1Builder {
 //  4. Build outputs with ECDH-derived one-time keys.
 //  5. Add a change output if there is surplus.
 //  6. Compute the prefix hash and sign each input.
+//
+// Usage: value.Build(...)
 func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	// 1. Validate amounts.
 	var sourceTotal uint64
@@ -219,6 +226,7 @@ func deriveOutput(txSec [32]byte, addr types.Address, index uint64, amount uint6
 }
 
 // SerializeTransaction encodes a transaction into its wire-format bytes.
+// Usage: wallet.SerializeTransaction(...)
 func SerializeTransaction(tx *types.Transaction) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := wire.NewEncoder(&buf)

@@ -14,12 +14,12 @@ package wallet
 import (
 	"testing"
 
-	store "dappco.re/go/core/store"
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/rpc"
+	store "dappco.re/go/core/store"
 )
 
-func TestWalletIntegration(t *testing.T) {
+func TestIntegration_WalletIntegration_Good(t *testing.T) {
 	client := rpc.NewClient("http://localhost:46941")
 
 	s, err := store.New(":memory:")

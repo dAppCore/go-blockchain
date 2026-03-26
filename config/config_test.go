@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestMainnetConstants_Good(t *testing.T) {
+func TestConfig_MainnetConstants_Good(t *testing.T) {
 	// Verify tokenomics match C++ source (default.cmake).
 	if Coin != 1_000_000_000_000 {
 		t.Errorf("Coin: got %d, want 1000000000000", Coin)
@@ -34,7 +34,7 @@ func TestMainnetConstants_Good(t *testing.T) {
 	}
 }
 
-func TestMainnetAddressPrefixes_Good(t *testing.T) {
+func TestConfig_MainnetAddressPrefixes_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		got  uint64
@@ -52,7 +52,7 @@ func TestMainnetAddressPrefixes_Good(t *testing.T) {
 	}
 }
 
-func TestMainnetPorts_Good(t *testing.T) {
+func TestConfig_MainnetPorts_Good(t *testing.T) {
 	if Mainnet.P2PPort != 36942 {
 		t.Errorf("Mainnet P2P port: got %d, want 36942", Mainnet.P2PPort)
 	}
@@ -64,7 +64,7 @@ func TestMainnetPorts_Good(t *testing.T) {
 	}
 }
 
-func TestTestnetPortDifferences_Good(t *testing.T) {
+func TestConfig_TestnetPortDifferences_Good(t *testing.T) {
 	if Testnet.P2PPort != 46942 {
 		t.Errorf("Testnet P2P port: got %d, want 46942", Testnet.P2PPort)
 	}
@@ -79,7 +79,7 @@ func TestTestnetPortDifferences_Good(t *testing.T) {
 	}
 }
 
-func TestDifficultyConstants_Good(t *testing.T) {
+func TestConfig_DifficultyConstants_Good(t *testing.T) {
 	if DifficultyPowTarget != 120 {
 		t.Errorf("DifficultyPowTarget: got %d, want 120", DifficultyPowTarget)
 	}
@@ -103,7 +103,7 @@ func TestDifficultyConstants_Good(t *testing.T) {
 	}
 }
 
-func TestNetworkIdentity_Good(t *testing.T) {
+func TestConfig_NetworkIdentity_Good(t *testing.T) {
 	if CurrencyFormationVersion != 84 {
 		t.Errorf("CurrencyFormationVersion: got %d, want 84", CurrencyFormationVersion)
 	}
@@ -115,7 +115,7 @@ func TestNetworkIdentity_Good(t *testing.T) {
 	}
 }
 
-func TestChainConfigStruct_Good(t *testing.T) {
+func TestConfig_ChainConfigStruct_Good(t *testing.T) {
 	// Verify Mainnet struct fields are populated correctly.
 	if Mainnet.Name != "Lethean" {
 		t.Errorf("Mainnet.Name: got %q, want %q", Mainnet.Name, "Lethean")
@@ -134,7 +134,7 @@ func TestChainConfigStruct_Good(t *testing.T) {
 	}
 }
 
-func TestTransactionLimits_Good(t *testing.T) {
+func TestConfig_TransactionLimits_Good(t *testing.T) {
 	if TxMaxAllowedInputs != 256 {
 		t.Errorf("TxMaxAllowedInputs: got %d, want 256", TxMaxAllowedInputs)
 	}
@@ -149,7 +149,7 @@ func TestTransactionLimits_Good(t *testing.T) {
 	}
 }
 
-func TestTransactionVersionConstants_Good(t *testing.T) {
+func TestConfig_TransactionVersionConstants_Good(t *testing.T) {
 	if TransactionVersionInitial != 0 {
 		t.Errorf("TransactionVersionInitial: got %d, want 0", TransactionVersionInitial)
 	}
@@ -167,7 +167,7 @@ func TestTransactionVersionConstants_Good(t *testing.T) {
 	}
 }
 
-func TestNetworkID_Good(t *testing.T) {
+func TestConfig_NetworkID_Good(t *testing.T) {
 	// In the C++ source, #ifndef TESTNET (mainnet) sets
 	// P2P_NETWORK_ID_TESTNET_FLAG=1 and #else (testnet) sets it to 0.
 	// The naming is counter-intuitive but matches the compiled binaries.

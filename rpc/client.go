@@ -18,6 +18,7 @@ import (
 )
 
 // Client is a Lethean daemon RPC client.
+// Usage: var value rpc.Client
 type Client struct {
 	url        string // Base URL with /json_rpc path for JSON-RPC calls.
 	baseURL    string // Base URL without path for legacy calls.
@@ -26,11 +27,13 @@ type Client struct {
 
 // NewClient creates a client for the daemon at the given URL.
 // If the URL has no path, "/json_rpc" is appended automatically.
+// Usage: rpc.NewClient(...)
 func NewClient(daemonURL string) *Client {
 	return NewClientWithHTTP(daemonURL, &http.Client{Timeout: 30 * time.Second})
 }
 
 // NewClientWithHTTP creates a client with a custom http.Client.
+// Usage: rpc.NewClientWithHTTP(...)
 func NewClientWithHTTP(daemonURL string, httpClient *http.Client) *Client {
 	u, err := url.Parse(daemonURL)
 	if err != nil {
@@ -49,11 +52,13 @@ func NewClientWithHTTP(daemonURL string, httpClient *http.Client) *Client {
 }
 
 // RPCError represents a JSON-RPC error returned by the daemon.
+// Usage: var value rpc.RPCError
 type RPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// Usage: value.Error(...)
 func (e *RPCError) Error() string {
 	return core.Sprintf("rpc error %d: %s", e.Code, e.Message)
 }
@@ -80,11 +85,13 @@ type jsonRPCError struct {
 
 type rawJSON []byte
 
+// Usage: value.UnmarshalJSON(...)
 func (r *rawJSON) UnmarshalJSON(data []byte) error {
 	*r = append((*r)[:0], data...)
 	return nil
 }
 
+// Usage: value.MarshalJSON(...)
 func (r rawJSON) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return []byte("null"), nil

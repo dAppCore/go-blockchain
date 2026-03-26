@@ -13,6 +13,7 @@ import (
 // SubmitBlock submits a mined block to the daemon.
 // The hexBlob is the hex-encoded serialised block.
 // Note: submitblock takes a JSON array as params, not an object.
+// Usage: value.SubmitBlock(...)
 func (c *Client) SubmitBlock(hexBlob string) error {
 	// submitblock expects params as an array: ["hexblob"]
 	params := []string{hexBlob}
@@ -29,6 +30,7 @@ func (c *Client) SubmitBlock(hexBlob string) error {
 }
 
 // BlockTemplateResponse is the daemon's response to getblocktemplate.
+// Usage: var value rpc.BlockTemplateResponse
 type BlockTemplateResponse struct {
 	Difficulty            string `json:"difficulty"`
 	Height                uint64 `json:"height"`
@@ -41,6 +43,7 @@ type BlockTemplateResponse struct {
 }
 
 // GetBlockTemplate requests a block template from the daemon for mining.
+// Usage: value.GetBlockTemplate(...)
 func (c *Client) GetBlockTemplate(walletAddr string) (*BlockTemplateResponse, error) {
 	params := struct {
 		WalletAddress string `json:"wallet_address"`

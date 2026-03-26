@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTxFee_Good(t *testing.T) {
+func TestFee_TxFee_Good(t *testing.T) {
 	// Coinbase tx: fee is 0.
 	coinbase := &types.Transaction{
 		Version: types.VersionInitial,
@@ -41,7 +41,7 @@ func TestTxFee_Good(t *testing.T) {
 	assert.Equal(t, uint64(30), fee)
 }
 
-func TestTxFee_Bad(t *testing.T) {
+func TestFee_TxFee_Bad(t *testing.T) {
 	// Outputs exceed inputs.
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -56,7 +56,7 @@ func TestTxFee_Bad(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNegativeFee)
 }
 
-func TestTxFee_Ugly(t *testing.T) {
+func TestFee_TxFee_Ugly(t *testing.T) {
 	// Input amounts that would overflow uint64.
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
@@ -74,7 +74,7 @@ func TestTxFee_Ugly(t *testing.T) {
 
 // --- HTLC and multisig fee tests (Task 8) ---
 
-func TestTxFee_HTLCInput_Good(t *testing.T) {
+func TestFee_TxFee_HTLCInput_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -89,7 +89,7 @@ func TestTxFee_HTLCInput_Good(t *testing.T) {
 	assert.Equal(t, uint64(10), fee)
 }
 
-func TestTxFee_MultisigInput_Good(t *testing.T) {
+func TestFee_TxFee_MultisigInput_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -104,7 +104,7 @@ func TestTxFee_MultisigInput_Good(t *testing.T) {
 	assert.Equal(t, uint64(50), fee)
 }
 
-func TestTxFee_MixedInputs_Good(t *testing.T) {
+func TestFee_TxFee_MixedInputs_Good(t *testing.T) {
 	tx := &types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{

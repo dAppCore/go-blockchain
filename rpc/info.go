@@ -12,6 +12,7 @@ import (
 
 // GetInfo returns the daemon status.
 // Uses flags=0 for the cheapest query (no expensive calculations).
+// Usage: value.GetInfo(...)
 func (c *Client) GetInfo() (*DaemonInfo, error) {
 	params := struct {
 		Flags uint64 `json:"flags"`
@@ -31,6 +32,7 @@ func (c *Client) GetInfo() (*DaemonInfo, error) {
 
 // GetHeight returns the current blockchain height.
 // Uses the legacy /getheight endpoint (not available via /json_rpc).
+// Usage: value.GetHeight(...)
 func (c *Client) GetHeight() (uint64, error) {
 	var resp struct {
 		Height uint64 `json:"height"`
@@ -46,6 +48,7 @@ func (c *Client) GetHeight() (uint64, error) {
 }
 
 // GetBlockCount returns the total number of blocks (height of top block + 1).
+// Usage: value.GetBlockCount(...)
 func (c *Client) GetBlockCount() (uint64, error) {
 	var resp struct {
 		Count  uint64 `json:"count"`

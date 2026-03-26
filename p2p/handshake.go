@@ -12,9 +12,11 @@ import (
 )
 
 // PeerlistEntrySize is the packed size of a peerlist entry (ip + port + id + last_seen).
+// Usage: value := p2p.PeerlistEntrySize
 const PeerlistEntrySize = 24
 
 // NodeData contains the node identity exchanged during handshake.
+// Usage: var value p2p.NodeData
 type NodeData struct {
 	NetworkID [16]byte
 	PeerID    uint64
@@ -23,6 +25,7 @@ type NodeData struct {
 }
 
 // MarshalSection encodes NodeData into a portable storage Section.
+// Usage: value.MarshalSection(...)
 func (n *NodeData) MarshalSection() levin.Section {
 	return levin.Section{
 		"network_id": levin.StringVal(n.NetworkID[:]),
@@ -33,6 +36,7 @@ func (n *NodeData) MarshalSection() levin.Section {
 }
 
 // UnmarshalSection decodes NodeData from a portable storage Section.
+// Usage: value.UnmarshalSection(...)
 func (n *NodeData) UnmarshalSection(s levin.Section) error {
 	if v, ok := s["network_id"]; ok {
 		blob, err := v.AsString()
@@ -68,6 +72,7 @@ func (n *NodeData) UnmarshalSection(s levin.Section) error {
 }
 
 // PeerlistEntry is a decoded peerlist entry from a handshake response.
+// Usage: var value p2p.PeerlistEntry
 type PeerlistEntry struct {
 	IP       uint32
 	Port     uint32
@@ -76,6 +81,7 @@ type PeerlistEntry struct {
 }
 
 // DecodePeerlist splits a packed peerlist blob into entries.
+// Usage: p2p.DecodePeerlist(...)
 func DecodePeerlist(blob []byte) []PeerlistEntry {
 	n := len(blob) / PeerlistEntrySize
 	entries := make([]PeerlistEntry, n)
@@ -92,12 +98,14 @@ func DecodePeerlist(blob []byte) []PeerlistEntry {
 }
 
 // HandshakeRequest is a COMMAND_HANDSHAKE request.
+// Usage: var value p2p.HandshakeRequest
 type HandshakeRequest struct {
 	NodeData    NodeData
 	PayloadData CoreSyncData
 }
 
 // MarshalSection encodes the request.
+// Usage: value.MarshalSection(...)
 func (r *HandshakeRequest) MarshalSection() levin.Section {
 	return levin.Section{
 		"node_data":    levin.ObjectVal(r.NodeData.MarshalSection()),
@@ -106,6 +114,7 @@ func (r *HandshakeRequest) MarshalSection() levin.Section {
 }
 
 // UnmarshalSection decodes the request.
+// Usage: value.UnmarshalSection(...)
 func (r *HandshakeRequest) UnmarshalSection(s levin.Section) error {
 	if v, ok := s["node_data"]; ok {
 		obj, err := v.AsSection()
@@ -129,11 +138,13 @@ func (r *HandshakeRequest) UnmarshalSection(s levin.Section) error {
 }
 
 // EncodeHandshakeRequest serialises a handshake request into a storage blob.
+// Usage: p2p.EncodeHandshakeRequest(...)
 func EncodeHandshakeRequest(req *HandshakeRequest) ([]byte, error) {
 	return levin.EncodeStorage(req.MarshalSection())
 }
 
 // HandshakeResponse is a COMMAND_HANDSHAKE response.
+// Usage: var value p2p.HandshakeResponse
 type HandshakeResponse struct {
 	NodeData     NodeData
 	PayloadData  CoreSyncData
@@ -141,6 +152,7 @@ type HandshakeResponse struct {
 }
 
 // Decode parses a handshake response from a storage blob.
+// Usage: value.Decode(...)
 func (r *HandshakeResponse) Decode(data []byte) error {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {

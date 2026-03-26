@@ -45,7 +45,7 @@ func testnetGenesisRawTx() []byte {
 // If this test passes, the block header serialisation, transaction prefix
 // serialisation, tree hash, and Keccak-256 implementation are all
 // bit-identical to the C++ reference.
-func TestGenesisBlockHash_Good(t *testing.T) {
+func TestHash_GenesisBlockHash_Good(t *testing.T) {
 	wantHash := "cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963"
 
 	// Parse the raw genesis coinbase transaction.
@@ -106,7 +106,7 @@ func TestGenesisBlockHash_Good(t *testing.T) {
 	}
 }
 
-func TestTransactionPrefixHashRoundTrip_Good(t *testing.T) {
+func TestHash_TransactionPrefixHashRoundTrip_Good(t *testing.T) {
 	rawTx := testnetGenesisRawTx()
 
 	// Decode.

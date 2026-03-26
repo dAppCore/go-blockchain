@@ -7,6 +7,7 @@ package rpc
 
 // BlockHeader is a block header as returned by daemon RPC.
 // Returned by getlastblockheader, getblockheaderbyheight, getblockheaderbyhash.
+// Usage: var value rpc.BlockHeader
 type BlockHeader struct {
 	MajorVersion uint8  `json:"major_version"`
 	MinorVersion uint8  `json:"minor_version"`
@@ -22,6 +23,7 @@ type BlockHeader struct {
 }
 
 // DaemonInfo is the daemon status as returned by getinfo.
+// Usage: var value rpc.DaemonInfo
 type DaemonInfo struct {
 	Height                       uint64 `json:"height"`
 	TxCount                      uint64 `json:"tx_count"`
@@ -47,6 +49,7 @@ type DaemonInfo struct {
 }
 
 // BlockDetails is a full block with metadata as returned by get_blocks_details.
+// Usage: var value rpc.BlockDetails
 type BlockDetails struct {
 	Height                uint64   `json:"height"`
 	Timestamp             uint64   `json:"timestamp"`
@@ -67,6 +70,7 @@ type BlockDetails struct {
 }
 
 // TxInfo is transaction metadata as returned by get_tx_details.
+// Usage: var value rpc.TxInfo
 type TxInfo struct {
 	ID           string `json:"id"`
 	BlobSize     uint64 `json:"blob_size"`

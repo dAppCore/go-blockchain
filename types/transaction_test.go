@@ -7,21 +7,21 @@ package types
 
 import "testing"
 
-func TestTxOutToKey_TargetType_Good(t *testing.T) {
+func TestTransaction_TxOutToKey_TargetType_Good(t *testing.T) {
 	var target TxOutTarget = TxOutToKey{Key: PublicKey{1}, MixAttr: 0}
 	if target.TargetType() != TargetTypeToKey {
 		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeToKey)
 	}
 }
 
-func TestTxOutMultisig_TargetType_Good(t *testing.T) {
+func TestTransaction_TxOutMultisig_TargetType_Good(t *testing.T) {
 	var target TxOutTarget = TxOutMultisig{MinimumSigs: 2, Keys: []PublicKey{{1}, {2}}}
 	if target.TargetType() != TargetTypeMultisig {
 		t.Errorf("TargetType: got %d, want %d", target.TargetType(), TargetTypeMultisig)
 	}
 }
 
-func TestTxOutHTLC_TargetType_Good(t *testing.T) {
+func TestTransaction_TxOutHTLC_TargetType_Good(t *testing.T) {
 	var target TxOutTarget = TxOutHTLC{
 		Flags:      0,
 		Expiration: 10080,
@@ -31,7 +31,7 @@ func TestTxOutHTLC_TargetType_Good(t *testing.T) {
 	}
 }
 
-func TestTxInputHTLC_InputType_Good(t *testing.T) {
+func TestTransaction_TxInputHTLC_InputType_Good(t *testing.T) {
 	var input TxInput = TxInputHTLC{
 		HTLCOrigin: "test",
 		Amount:     1000,
@@ -42,7 +42,7 @@ func TestTxInputHTLC_InputType_Good(t *testing.T) {
 	}
 }
 
-func TestTxInputMultisig_InputType_Good(t *testing.T) {
+func TestTransaction_TxInputMultisig_InputType_Good(t *testing.T) {
 	var input TxInput = TxInputMultisig{
 		Amount:    500,
 		SigsCount: 2,

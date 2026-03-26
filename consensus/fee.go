@@ -17,6 +17,7 @@ import (
 // TxFee calculates the transaction fee for pre-HF4 (v0/v1) transactions.
 // Coinbase transactions return 0. For standard transactions, fee equals
 // the difference between total input amounts and total output amounts.
+// Usage: consensus.TxFee(...)
 func TxFee(tx *types.Transaction) (uint64, error) {
 	if isCoinbase(tx) {
 		return 0, nil

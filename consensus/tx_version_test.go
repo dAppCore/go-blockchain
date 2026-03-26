@@ -47,7 +47,7 @@ func validV3Tx() *types.Transaction {
 	}
 }
 
-func TestCheckTxVersion_Good(t *testing.T) {
+func TestTxVersion_CheckTxVersion_Good(t *testing.T) {
 	tests := []struct {
 		name   string
 		tx     *types.Transaction
@@ -72,7 +72,7 @@ func TestCheckTxVersion_Good(t *testing.T) {
 	}
 }
 
-func TestCheckTxVersion_Bad(t *testing.T) {
+func TestTxVersion_CheckTxVersion_Bad(t *testing.T) {
 	tests := []struct {
 		name   string
 		tx     *types.Transaction
@@ -95,7 +95,7 @@ func TestCheckTxVersion_Bad(t *testing.T) {
 	}
 }
 
-func TestCheckTxVersion_Ugly(t *testing.T) {
+func TestTxVersion_CheckTxVersion_Ugly(t *testing.T) {
 	// v3 at exact HF5 activation boundary (height 201 on testnet, HF5.Height=200).
 	tx := validV3Tx()
 	err := checkTxVersion(tx, config.TestnetForks, 201)

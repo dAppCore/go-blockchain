@@ -12,11 +12,11 @@ package wallet
 import (
 	"testing"
 
-	store "dappco.re/go/core/store"
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/crypto"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wire"
+	store "dappco.re/go/core/store"
 )
 
 func makeTestBlock(t *testing.T, height uint64, prevHash types.Hash,
@@ -56,7 +56,7 @@ func makeTestBlock(t *testing.T, height uint64, prevHash types.Hash,
 	return blk, hash
 }
 
-func TestWalletSyncAndBalance(t *testing.T) {
+func TestWallet_WalletSyncAndBalance_Good(t *testing.T) {
 	s, err := store.New(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestWalletSyncAndBalance(t *testing.T) {
 	}
 }
 
-func TestWalletTransfers(t *testing.T) {
+func TestWallet_WalletTransfers_Good(t *testing.T) {
 	s, err := store.New(":memory:")
 	if err != nil {
 		t.Fatal(err)

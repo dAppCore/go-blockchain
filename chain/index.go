@@ -16,6 +16,7 @@ import (
 )
 
 // MarkSpent records a key image as spent at the given block height.
+// Usage: value.MarkSpent(...)
 func (c *Chain) MarkSpent(ki types.KeyImage, height uint64) error {
 	if err := c.store.Set(groupSpentKeys, ki.String(), strconv.FormatUint(height, 10)); err != nil {
 		return coreerr.E("Chain.MarkSpent", core.Sprintf("chain: mark spent %s", ki), err)
@@ -24,6 +25,7 @@ func (c *Chain) MarkSpent(ki types.KeyImage, height uint64) error {
 }
 
 // IsSpent checks whether a key image has been spent.
+// Usage: value.IsSpent(...)
 func (c *Chain) IsSpent(ki types.KeyImage) (bool, error) {
 	_, err := c.store.Get(groupSpentKeys, ki.String())
 	if core.Is(err, store.ErrNotFound) {
@@ -42,6 +44,7 @@ func outputGroup(amount uint64) string {
 
 // PutOutput appends an output to the global index for the given amount.
 // Returns the assigned global index.
+// Usage: value.PutOutput(...)
 func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64, error) {
 	grp := outputGroup(amount)
 	count, err := c.store.Count(grp)
@@ -64,6 +67,7 @@ func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64,
 }
 
 // GetOutput retrieves an output by amount and global index.
+// Usage: value.GetOutput(...)
 func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, error) {
 	grp := outputGroup(amount)
 	key := strconv.FormatUint(gindex, 10)
@@ -87,6 +91,7 @@ func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, err
 }
 
 // OutputCount returns the number of outputs indexed for the given amount.
+// Usage: value.OutputCount(...)
 func (c *Chain) OutputCount(amount uint64) (uint64, error) {
 	n, err := c.store.Count(outputGroup(amount))
 	if err != nil {
