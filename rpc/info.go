@@ -6,8 +6,7 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -25,7 +24,7 @@ func (c *Client) GetInfo() (*DaemonInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetInfo", fmt.Sprintf("getinfo: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetInfo", core.Sprintf("getinfo: status %q", resp.Status), nil)
 	}
 	return &resp.DaemonInfo, nil
 }
@@ -41,7 +40,7 @@ func (c *Client) GetHeight() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, coreerr.E("Client.GetHeight", fmt.Sprintf("getheight: status %q", resp.Status), nil)
+		return 0, coreerr.E("Client.GetHeight", core.Sprintf("getheight: status %q", resp.Status), nil)
 	}
 	return resp.Height, nil
 }
@@ -56,7 +55,7 @@ func (c *Client) GetBlockCount() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, coreerr.E("Client.GetBlockCount", fmt.Sprintf("getblockcount: status %q", resp.Status), nil)
+		return 0, coreerr.E("Client.GetBlockCount", core.Sprintf("getblockcount: status %q", resp.Status), nil)
 	}
 	return resp.Count, nil
 }

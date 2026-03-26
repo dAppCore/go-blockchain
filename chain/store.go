@@ -8,11 +8,9 @@ package chain
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"strconv"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -31,7 +29,7 @@ const (
 
 // heightKey returns a zero-padded 10-digit decimal key for the given height.
 func heightKey(h uint64) string {
-	return fmt.Sprintf("%010d", h)
+	return core.Sprintf("%010d", h)
 }
 
 // blockRecord is the JSON value stored in the blocks group.
@@ -46,26 +44,23 @@ func (c *Chain) PutBlock(b *types.Block, meta *BlockMeta) error {
 	enc := wire.NewEncoder(&buf)
 	wire.EncodeBlock(enc, b)
 	if err := enc.Err(); err != nil {
-		return coreerr.E("Chain.PutBlock", fmt.Sprintf("chain: encode block %d", meta.Height), err)
+		return coreerr.E("Chain.PutBlock", core.Sprintf("chain: encode block %d", meta.Height), err)
 	}
 
 	rec := blockRecord{
 		Meta: *meta,
 		Blob: hex.EncodeToString(buf.Bytes()),
 	}
-	val, err := json.Marshal(rec)
-	if err != nil {
-		return coreerr.E("Chain.PutBlock", fmt.Sprintf("chain: marshal block %d", meta.Height), err)
-	}
+	val := core.JSONMarshalString(rec)
 
-	if err := c.store.Set(groupBlocks, heightKey(meta.Height), string(val)); err != nil {
-		return coreerr.E("Chain.PutBlock", fmt.Sprintf("chain: store block %d", meta.Height), err)
+	if err := c.store.Set(groupBlocks, heightKey(meta.Height), val); err != nil {
+		return coreerr.E("Chain.PutBlock", core.Sprintf("chain: store block %d", meta.Height), err)
 	}
 
 	// Update hash -> height index.
 	hashHex := meta.Hash.String()
 	if err := c.store.Set(groupBlockIndex, hashHex, strconv.FormatUint(meta.Height, 10)); err != nil {
-		return coreerr.E("Chain.PutBlock", fmt.Sprintf("chain: index block %d", meta.Height), err)
+		return coreerr.E("Chain.PutBlock", core.Sprintf("chain: index block %d", meta.Height), err)
 	}
 
 	return nil
@@ -75,10 +70,10 @@ func (c *Chain) PutBlock(b *types.Block, meta *BlockMeta) error {
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, *BlockMeta, error) {
 	val, err := c.store.Get(groupBlocks, heightKey(height))
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return nil, nil, coreerr.E("Chain.GetBlockByHeight", fmt.Sprintf("chain: block %d not found", height), nil)
+		if core.Is(err, store.ErrNotFound) {
+			return nil, nil, coreerr.E("Chain.GetBlockByHeight", core.Sprintf("chain: block %d not found", height), nil)
 		}
-		return nil, nil, coreerr.E("Chain.GetBlockByHeight", fmt.Sprintf("chain: get block %d", height), err)
+		return nil, nil, coreerr.E("Chain.GetBlockByHeight", core.Sprintf("chain: get block %d", height), err)
 	}
 	return decodeBlockRecord(val)
 }
@@ -87,14 +82,14 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, *BlockMeta, error
 func (c *Chain) GetBlockByHash(hash types.Hash) (*types.Block, *BlockMeta, error) {
 	heightStr, err := c.store.Get(groupBlockIndex, hash.String())
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return nil, nil, coreerr.E("Chain.GetBlockByHash", fmt.Sprintf("chain: block %s not found", hash), nil)
+		if core.Is(err, store.ErrNotFound) {
+			return nil, nil, coreerr.E("Chain.GetBlockByHash", core.Sprintf("chain: block %s not found", hash), nil)
 		}
-		return nil, nil, coreerr.E("Chain.GetBlockByHash", fmt.Sprintf("chain: get block index %s", hash), err)
+		return nil, nil, coreerr.E("Chain.GetBlockByHash", core.Sprintf("chain: get block index %s", hash), err)
 	}
 	height, err := strconv.ParseUint(heightStr, 10, 64)
 	if err != nil {
-		return nil, nil, coreerr.E("Chain.GetBlockByHash", fmt.Sprintf("chain: parse height %q", heightStr), err)
+		return nil, nil, coreerr.E("Chain.GetBlockByHash", core.Sprintf("chain: parse height %q", heightStr), err)
 	}
 	return c.GetBlockByHeight(height)
 }
@@ -111,20 +106,17 @@ func (c *Chain) PutTransaction(hash types.Hash, tx *types.Transaction, meta *TxM
 	enc := wire.NewEncoder(&buf)
 	wire.EncodeTransaction(enc, tx)
 	if err := enc.Err(); err != nil {
-		return coreerr.E("Chain.PutTransaction", fmt.Sprintf("chain: encode tx %s", hash), err)
+		return coreerr.E("Chain.PutTransaction", core.Sprintf("chain: encode tx %s", hash), err)
 	}
 
 	rec := txRecord{
 		Meta: *meta,
 		Blob: hex.EncodeToString(buf.Bytes()),
 	}
-	val, err := json.Marshal(rec)
-	if err != nil {
-		return coreerr.E("Chain.PutTransaction", fmt.Sprintf("chain: marshal tx %s", hash), err)
-	}
+	val := core.JSONMarshalString(rec)
 
-	if err := c.store.Set(groupTx, hash.String(), string(val)); err != nil {
-		return coreerr.E("Chain.PutTransaction", fmt.Sprintf("chain: store tx %s", hash), err)
+	if err := c.store.Set(groupTx, hash.String(), val); err != nil {
+		return coreerr.E("Chain.PutTransaction", core.Sprintf("chain: store tx %s", hash), err)
 	}
 	return nil
 }
@@ -133,15 +125,15 @@ func (c *Chain) PutTransaction(hash types.Hash, tx *types.Transaction, meta *TxM
 func (c *Chain) GetTransaction(hash types.Hash) (*types.Transaction, *TxMeta, error) {
 	val, err := c.store.Get(groupTx, hash.String())
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return nil, nil, coreerr.E("Chain.GetTransaction", fmt.Sprintf("chain: tx %s not found", hash), nil)
+		if core.Is(err, store.ErrNotFound) {
+			return nil, nil, coreerr.E("Chain.GetTransaction", core.Sprintf("chain: tx %s not found", hash), nil)
 		}
-		return nil, nil, coreerr.E("Chain.GetTransaction", fmt.Sprintf("chain: get tx %s", hash), err)
+		return nil, nil, coreerr.E("Chain.GetTransaction", core.Sprintf("chain: get tx %s", hash), err)
 	}
 
 	var rec txRecord
-	if err := json.Unmarshal([]byte(val), &rec); err != nil {
-		return nil, nil, coreerr.E("Chain.GetTransaction", "chain: unmarshal tx", err)
+	if r := core.JSONUnmarshalString(val, &rec); !r.OK {
+		return nil, nil, coreerr.E("Chain.GetTransaction", "chain: unmarshal tx", r.Value.(error))
 	}
 	blob, err := hex.DecodeString(rec.Blob)
 	if err != nil {
@@ -166,19 +158,19 @@ func (c *Chain) HasTransaction(hash types.Hash) bool {
 func (c *Chain) getBlockMeta(height uint64) (*BlockMeta, error) {
 	val, err := c.store.Get(groupBlocks, heightKey(height))
 	if err != nil {
-		return nil, coreerr.E("Chain.getBlockMeta", fmt.Sprintf("chain: block meta %d", height), err)
+		return nil, coreerr.E("Chain.getBlockMeta", core.Sprintf("chain: block meta %d", height), err)
 	}
 	var rec blockRecord
-	if err := json.Unmarshal([]byte(val), &rec); err != nil {
-		return nil, coreerr.E("Chain.getBlockMeta", fmt.Sprintf("chain: unmarshal block meta %d", height), err)
+	if r := core.JSONUnmarshalString(val, &rec); !r.OK {
+		return nil, coreerr.E("Chain.getBlockMeta", core.Sprintf("chain: unmarshal block meta %d", height), r.Value.(error))
 	}
 	return &rec.Meta, nil
 }
 
 func decodeBlockRecord(val string) (*types.Block, *BlockMeta, error) {
 	var rec blockRecord
-	if err := json.Unmarshal([]byte(val), &rec); err != nil {
-		return nil, nil, coreerr.E("decodeBlockRecord", "chain: unmarshal block", err)
+	if r := core.JSONUnmarshalString(val, &rec); !r.OK {
+		return nil, nil, coreerr.E("decodeBlockRecord", "chain: unmarshal block", r.Value.(error))
 	}
 	blob, err := hex.DecodeString(rec.Blob)
 	if err != nil {

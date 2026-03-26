@@ -31,8 +31,8 @@ func TestSubmitBlock_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"status":"OK"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"status":"OK"}`),
 		})
 	}))
 	defer srv.Close()
@@ -49,7 +49,7 @@ func TestSubmitBlock_Bad_Rejected(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -7, Message: "BLOCK_NOT_ACCEPTED"},
 		})
 	}))
@@ -86,8 +86,8 @@ func TestGetBlockTemplate_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"difficulty": "42",
 				"height": 100,
 				"blocktemplate_blob": "0100000000000000000000000000",
@@ -122,8 +122,8 @@ func TestGetBlockTemplate_Bad_Status(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"status":"BUSY"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"status":"BUSY"}`),
 		})
 	}))
 	defer srv.Close()

@@ -17,8 +17,8 @@ func TestGetInfo_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"height": 6300,
 				"tx_count": 12345,
 				"tx_pool_size": 3,
@@ -83,8 +83,8 @@ func TestGetBlockCount_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"count":6301,"status":"OK"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"count":6301,"status":"OK"}`),
 		})
 	}))
 	defer srv.Close()

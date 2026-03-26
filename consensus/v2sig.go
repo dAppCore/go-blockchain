@@ -7,8 +7,7 @@ package consensus
 
 import (
 	"bytes"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -47,7 +46,7 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 	for i := uint64(0); i < count; i++ {
 		tag := dec.ReadUint8()
 		if dec.Err() != nil {
-			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("read sig tag %d", i), dec.Err())
+			return nil, coreerr.E("parseV2Signatures", core.Sprintf("read sig tag %d", i), dec.Err())
 		}
 
 		entry := v2SigEntry{tag: tag}
@@ -56,7 +55,7 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 		case types.SigTypeZC:
 			zc, err := parseZCSig(dec)
 			if err != nil {
-				return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("parse ZC_sig %d", i), err)
+				return nil, coreerr.E("parseV2Signatures", core.Sprintf("parse ZC_sig %d", i), err)
 			}
 			entry.zcSig = zc
 
@@ -76,11 +75,11 @@ func parseV2Signatures(raw []byte) ([]v2SigEntry, error) {
 			skipZarcanumSig(dec)
 
 		default:
-			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("unsupported sig tag 0x%02x", tag), nil)
+			return nil, coreerr.E("parseV2Signatures", core.Sprintf("unsupported sig tag 0x%02x", tag), nil)
 		}
 
 		if dec.Err() != nil {
-			return nil, coreerr.E("parseV2Signatures", fmt.Sprintf("parse sig %d (tag 0x%02x)", i, tag), dec.Err())
+			return nil, coreerr.E("parseV2Signatures", core.Sprintf("parse sig %d (tag 0x%02x)", i, tag), dec.Err())
 		}
 		entries = append(entries, entry)
 	}
@@ -119,7 +118,7 @@ func parseZCSig(dec *wire.Decoder) (*zcSigData, error) {
 	}
 
 	if rgCount != rxCount {
-		return nil, coreerr.E("parseZCSig", fmt.Sprintf("CLSAG r_g count %d != r_x count %d", rgCount, rxCount), nil)
+		return nil, coreerr.E("parseZCSig", core.Sprintf("CLSAG r_g count %d != r_x count %d", rgCount, rxCount), nil)
 	}
 	zc.ringSize = int(rgCount)
 
@@ -205,7 +204,7 @@ func parseV2Proofs(raw []byte) (*v2ProofData, error) {
 	for i := uint64(0); i < count; i++ {
 		tag := dec.ReadUint8()
 		if dec.Err() != nil {
-			return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("read proof tag %d", i), dec.Err())
+			return nil, coreerr.E("parseV2Proofs", core.Sprintf("read proof tag %d", i), dec.Err())
 		}
 
 		switch tag {
@@ -218,7 +217,7 @@ func parseV2Proofs(raw []byte) (*v2ProofData, error) {
 			for j := uint64(0); j < nBGE; j++ {
 				data.bgeProofs[j] = readBGEProofBytes(dec)
 				if dec.Err() != nil {
-					return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("parse BGE proof %d", j), dec.Err())
+					return nil, coreerr.E("parseV2Proofs", core.Sprintf("parse BGE proof %d", j), dec.Err())
 				}
 			}
 
@@ -239,7 +238,7 @@ func parseV2Proofs(raw []byte) (*v2ProofData, error) {
 			}
 
 		default:
-			return nil, coreerr.E("parseV2Proofs", fmt.Sprintf("unsupported proof tag 0x%02x", tag), nil)
+			return nil, coreerr.E("parseV2Proofs", core.Sprintf("unsupported proof tag 0x%02x", tag), nil)
 		}
 	}
 

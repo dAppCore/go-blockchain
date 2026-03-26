@@ -36,8 +36,8 @@ func TestClient_Good_JSONRPCCall(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"count":6300,"status":"OK"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"count":6300,"status":"OK"}`),
 		})
 	}))
 	defer srv.Close()
@@ -88,7 +88,7 @@ func TestClient_Bad_RPCError(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error: &jsonRPCError{
 				Code:    -2,
 				Message: "TOO_BIG_HEIGHT",

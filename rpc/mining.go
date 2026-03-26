@@ -6,8 +6,7 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -24,7 +23,7 @@ func (c *Client) SubmitBlock(hexBlob string) error {
 		return err
 	}
 	if resp.Status != "OK" {
-		return coreerr.E("Client.SubmitBlock", fmt.Sprintf("submitblock: status %q", resp.Status), nil)
+		return coreerr.E("Client.SubmitBlock", core.Sprintf("submitblock: status %q", resp.Status), nil)
 	}
 	return nil
 }
@@ -51,7 +50,7 @@ func (c *Client) GetBlockTemplate(walletAddr string) (*BlockTemplateResponse, er
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetBlockTemplate", fmt.Sprintf("getblocktemplate: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetBlockTemplate", core.Sprintf("getblocktemplate: status %q", resp.Status), nil)
 	}
 	return &resp, nil
 }

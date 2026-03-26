@@ -8,9 +8,9 @@ package crypto
 import "C"
 
 import (
-	"fmt"
 	"unsafe"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -21,7 +21,7 @@ func GenerateKeys() (pub [32]byte, sec [32]byte, err error) {
 		(*C.uint8_t)(unsafe.Pointer(&sec[0])),
 	)
 	if rc != 0 {
-		err = coreerr.E("GenerateKeys", fmt.Sprintf("generate_keys failed (rc=%d)", rc), nil)
+		err = coreerr.E("GenerateKeys", core.Sprintf("generate_keys failed (rc=%d)", rc), nil)
 	}
 	return
 }
@@ -34,7 +34,7 @@ func SecretToPublic(sec [32]byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&pub[0])),
 	)
 	if rc != 0 {
-		return pub, coreerr.E("SecretToPublic", fmt.Sprintf("secret_to_public failed (rc=%d)", rc), nil)
+		return pub, coreerr.E("SecretToPublic", core.Sprintf("secret_to_public failed (rc=%d)", rc), nil)
 	}
 	return pub, nil
 }

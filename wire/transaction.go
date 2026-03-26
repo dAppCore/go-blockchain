@@ -6,8 +6,7 @@
 package wire
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -223,7 +222,7 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 			in.EtcDetails = decodeRawVariantVector(dec)
 			vin = append(vin, in)
 		default:
-			dec.err = coreerr.E("decodeInputs", fmt.Sprintf("wire: unsupported input tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeInputs", core.Sprintf("wire: unsupported input tag 0x%02x", tag), nil)
 			return vin
 		}
 	}
@@ -261,7 +260,7 @@ func decodeKeyOffsets(dec *Decoder) []types.TxOutRef {
 			dec.ReadBlob32((*[32]byte)(&refs[i].TxID))
 			refs[i].N = dec.ReadVarint()
 		default:
-			dec.err = coreerr.E("decodeKeyOffsets", fmt.Sprintf("wire: unsupported ref tag 0x%02x", refs[i].Tag), nil)
+			dec.err = coreerr.E("decodeKeyOffsets", core.Sprintf("wire: unsupported ref tag 0x%02x", refs[i].Tag), nil)
 			return refs
 		}
 	}
@@ -340,7 +339,7 @@ func decodeOutputsV1(dec *Decoder) []types.TxOutput {
 			dec.ReadBlob32((*[32]byte)(&t.PKRefund))
 			out.Target = t
 		default:
-			dec.err = coreerr.E("decodeOutputsV1", fmt.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeOutputsV1", core.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
 			return vout
 		}
 		vout = append(vout, out)
@@ -427,7 +426,7 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 				dec.ReadBlob32((*[32]byte)(&t.PKRefund))
 				out.Target = t
 			default:
-				dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
+				dec.err = coreerr.E("decodeOutputsV2", core.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
 				return vout
 			}
 			vout = append(vout, out)
@@ -441,7 +440,7 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 			out.MixAttr = dec.ReadUint8()
 			vout = append(vout, out)
 		default:
-			dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported output tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeOutputsV2", core.Sprintf("wire: unsupported output tag 0x%02x", tag), nil)
 			return vout
 		}
 	}
@@ -627,7 +626,7 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return dec.ReadBytes(96)
 
 	default:
-		dec.err = coreerr.E("readVariantElementData", fmt.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
+		dec.err = coreerr.E("readVariantElementData", core.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
 		return nil
 	}
 }

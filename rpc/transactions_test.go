@@ -17,8 +17,8 @@ func TestGetTxDetails_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"status": "OK",
 				"tx_info": {
 					"id": "a6e8da986858e6825fce7a192097e6afae4e889cabe853a9c29b964985b23da8",
@@ -55,7 +55,7 @@ func TestGetTxDetails_Bad_NotFound(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -14, Message: "NOT_FOUND"},
 		})
 	}))

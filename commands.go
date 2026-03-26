@@ -6,9 +6,7 @@
 package blockchain
 
 import (
-	"os"
-	"path/filepath"
-
+	"dappco.re/go/core"
 	coreio "dappco.re/go/core/io"
 	coreerr "dappco.re/go/core/log"
 
@@ -54,11 +52,11 @@ func resolveConfig(testnet bool, seed *string) (config.ChainConfig, []config.Har
 }
 
 func defaultDataDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	home := core.Env("DIR_HOME")
+	if home == "" {
 		return ".lethean"
 	}
-	return filepath.Join(home, ".lethean", "chain")
+	return core.JoinPath(home, ".lethean", "chain")
 }
 
 func ensureDataDir(dataDir string) error {

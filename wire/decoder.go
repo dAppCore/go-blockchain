@@ -7,9 +7,9 @@ package wire
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -82,7 +82,7 @@ func (d *Decoder) ReadBytes(n int) []byte {
 		return nil
 	}
 	if n < 0 || n > MaxBlobSize {
-		d.err = coreerr.E("Decoder.ReadBytes", fmt.Sprintf("wire: blob size %d exceeds maximum %d", n, MaxBlobSize), nil)
+		d.err = coreerr.E("Decoder.ReadBytes", core.Sprintf("wire: blob size %d exceeds maximum %d", n, MaxBlobSize), nil)
 		return nil
 	}
 	buf := make([]byte, n)

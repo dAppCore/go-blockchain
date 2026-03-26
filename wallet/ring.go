@@ -10,8 +10,7 @@
 package wallet
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/rpc"
@@ -70,7 +69,7 @@ func (s *RPCRingSelector) SelectRing(amount uint64, realGlobalIndex uint64, ring
 	}
 
 	if len(members) < ringSize {
-		return nil, coreerr.E("RPCRingSelector.SelectRing", fmt.Sprintf("wallet: insufficient decoys: got %d, need %d", len(members), ringSize), nil)
+		return nil, coreerr.E("RPCRingSelector.SelectRing", core.Sprintf("wallet: insufficient decoys: got %d, need %d", len(members), ringSize), nil)
 	}
 	return members, nil
 }

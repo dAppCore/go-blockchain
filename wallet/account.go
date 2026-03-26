@@ -14,9 +14,9 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"io"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"golang.org/x/crypto/argon2"
@@ -113,10 +113,7 @@ func (a *Account) Address() types.Address {
 // Save encrypts the account with Argon2id + AES-256-GCM and persists it to
 // the given store. The stored blob layout is: salt (16) | nonce (12) | ciphertext.
 func (a *Account) Save(s *store.Store, password string) error {
-	plaintext, err := json.Marshal(a)
-	if err != nil {
-		return coreerr.E("Account.Save", "wallet: marshal account", err)
-	}
+	plaintext := []byte(core.JSONMarshalString(a))
 
 	salt := make([]byte, saltLen)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
@@ -187,8 +184,8 @@ func LoadAccount(s *store.Store, password string) (*Account, error) {
 	}
 
 	var acc Account
-	if err := json.Unmarshal(plaintext, &acc); err != nil {
-		return nil, coreerr.E("LoadAccount", "wallet: unmarshal account", err)
+	if r := core.JSONUnmarshalString(string(plaintext), &acc); !r.OK {
+		return nil, coreerr.E("LoadAccount", "wallet: unmarshal account", r.Value.(error))
 	}
 	return &acc, nil
 }

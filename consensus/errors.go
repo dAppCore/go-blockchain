@@ -5,39 +5,39 @@
 
 package consensus
 
-import "errors"
+import "dappco.re/go/core"
 
 // Sentinel errors for consensus validation failures.
 var (
 	// Transaction structural errors.
-	ErrTxTooLarge        = errors.New("consensus: transaction too large")
-	ErrNoInputs          = errors.New("consensus: transaction has no inputs")
-	ErrTooManyInputs     = errors.New("consensus: transaction exceeds max inputs")
-	ErrInvalidInputType  = errors.New("consensus: unsupported input type")
-	ErrNoOutputs         = errors.New("consensus: transaction has no outputs")
-	ErrTooFewOutputs     = errors.New("consensus: transaction below min outputs")
-	ErrTooManyOutputs    = errors.New("consensus: transaction exceeds max outputs")
-	ErrInvalidOutput     = errors.New("consensus: invalid output")
-	ErrDuplicateKeyImage = errors.New("consensus: duplicate key image in transaction")
-	ErrInvalidExtra      = errors.New("consensus: invalid extra field")
-	ErrTxVersionInvalid  = errors.New("consensus: invalid transaction version for current hardfork")
-	ErrPreHardforkFreeze = errors.New("consensus: non-coinbase transaction rejected during pre-hardfork freeze")
+	ErrTxTooLarge        = core.E("", "consensus: transaction too large", nil)
+	ErrNoInputs          = core.E("", "consensus: transaction has no inputs", nil)
+	ErrTooManyInputs     = core.E("", "consensus: transaction exceeds max inputs", nil)
+	ErrInvalidInputType  = core.E("", "consensus: unsupported input type", nil)
+	ErrNoOutputs         = core.E("", "consensus: transaction has no outputs", nil)
+	ErrTooFewOutputs     = core.E("", "consensus: transaction below min outputs", nil)
+	ErrTooManyOutputs    = core.E("", "consensus: transaction exceeds max outputs", nil)
+	ErrInvalidOutput     = core.E("", "consensus: invalid output", nil)
+	ErrDuplicateKeyImage = core.E("", "consensus: duplicate key image in transaction", nil)
+	ErrInvalidExtra      = core.E("", "consensus: invalid extra field", nil)
+	ErrTxVersionInvalid  = core.E("", "consensus: invalid transaction version for current hardfork", nil)
+	ErrPreHardforkFreeze = core.E("", "consensus: non-coinbase transaction rejected during pre-hardfork freeze", nil)
 
 	// Transaction economic errors.
-	ErrInputOverflow  = errors.New("consensus: input amount overflow")
-	ErrOutputOverflow = errors.New("consensus: output amount overflow")
-	ErrNegativeFee    = errors.New("consensus: outputs exceed inputs")
+	ErrInputOverflow  = core.E("", "consensus: input amount overflow", nil)
+	ErrOutputOverflow = core.E("", "consensus: output amount overflow", nil)
+	ErrNegativeFee    = core.E("", "consensus: outputs exceed inputs", nil)
 
 	// Block errors.
-	ErrBlockTooLarge      = errors.New("consensus: block exceeds max size")
-	ErrBlockMajorVersion  = errors.New("consensus: invalid block major version for height")
-	ErrTimestampFuture    = errors.New("consensus: block timestamp too far in future")
-	ErrTimestampOld       = errors.New("consensus: block timestamp below median")
-	ErrMinerTxInputs      = errors.New("consensus: invalid miner transaction inputs")
-	ErrMinerTxHeight      = errors.New("consensus: miner transaction height mismatch")
-	ErrMinerTxUnlock      = errors.New("consensus: miner transaction unlock time invalid")
-	ErrRewardMismatch     = errors.New("consensus: block reward mismatch")
-	ErrMinerTxProofs      = errors.New("consensus: miner transaction proof count invalid")
+	ErrBlockTooLarge     = core.E("", "consensus: block exceeds max size", nil)
+	ErrBlockMajorVersion = core.E("", "consensus: invalid block major version for height", nil)
+	ErrTimestampFuture   = core.E("", "consensus: block timestamp too far in future", nil)
+	ErrTimestampOld      = core.E("", "consensus: block timestamp below median", nil)
+	ErrMinerTxInputs     = core.E("", "consensus: invalid miner transaction inputs", nil)
+	ErrMinerTxHeight     = core.E("", "consensus: miner transaction height mismatch", nil)
+	ErrMinerTxUnlock     = core.E("", "consensus: miner transaction unlock time invalid", nil)
+	ErrRewardMismatch    = core.E("", "consensus: block reward mismatch", nil)
+	ErrMinerTxProofs     = core.E("", "consensus: miner transaction proof count invalid", nil)
 
 	// ErrBlockVersion is an alias for ErrBlockMajorVersion, used by
 	// checkBlockVersion when the block major version does not match

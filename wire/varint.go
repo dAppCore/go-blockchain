@@ -12,9 +12,7 @@
 // to the C++ reference implementation.
 package wire
 
-import (
-	"errors"
-)
+import "dappco.re/go/core"
 
 // MaxVarintLen is the maximum number of bytes a CryptoNote varint can occupy.
 // A uint64 requires at most 10 bytes of 7-bit encoding (64 bits / 7 = ~9.14,
@@ -23,11 +21,11 @@ const MaxVarintLen = 10
 
 // ErrVarintOverflow is returned when a varint exceeds the maximum allowed
 // length of 10 bytes.
-var ErrVarintOverflow = errors.New("wire: varint overflow (exceeds 10 bytes)")
+var ErrVarintOverflow = core.E("", "wire: varint overflow (exceeds 10 bytes)", nil)
 
 // ErrVarintEmpty is returned when attempting to decode a varint from an
 // empty byte slice.
-var ErrVarintEmpty = errors.New("wire: cannot decode varint from empty data")
+var ErrVarintEmpty = core.E("", "wire: cannot decode varint from empty data", nil)
 
 // EncodeVarint encodes a uint64 value as a CryptoNote variable-length integer.
 //

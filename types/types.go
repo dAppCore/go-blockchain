@@ -13,10 +13,9 @@
 package types
 
 import (
-	"encoding/hex"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
+	"encoding/hex"
 )
 
 // Hash is a 256-bit (32-byte) hash value, typically produced by Keccak-256.
@@ -45,7 +44,7 @@ func HashFromHex(s string) (Hash, error) {
 		return h, coreerr.E("HashFromHex", "types: invalid hex for hash", err)
 	}
 	if len(b) != 32 {
-		return h, coreerr.E("HashFromHex", fmt.Sprintf("types: hash hex must be 64 characters, got %d", len(s)), nil)
+		return h, coreerr.E("HashFromHex", core.Sprintf("types: hash hex must be 64 characters, got %d", len(s)), nil)
 	}
 	copy(h[:], b)
 	return h, nil
@@ -70,7 +69,7 @@ func PublicKeyFromHex(s string) (PublicKey, error) {
 		return pk, coreerr.E("PublicKeyFromHex", "types: invalid hex for public key", err)
 	}
 	if len(b) != 32 {
-		return pk, coreerr.E("PublicKeyFromHex", fmt.Sprintf("types: public key hex must be 64 characters, got %d", len(s)), nil)
+		return pk, coreerr.E("PublicKeyFromHex", core.Sprintf("types: public key hex must be 64 characters, got %d", len(s)), nil)
 	}
 	copy(pk[:], b)
 	return pk, nil

@@ -29,8 +29,8 @@ var testBlockHeaderJSON = `{
 func blockHeaderResponse() jsonRPCResponse {
 	return jsonRPCResponse{
 		JSONRPC: "2.0",
-		ID:      json.RawMessage(`"0"`),
-		Result:  json.RawMessage(`{"block_header":` + testBlockHeaderJSON + `,"status":"OK"}`),
+		ID:      rawJSON(`"0"`),
+		Result:  rawJSON(`{"block_header":` + testBlockHeaderJSON + `,"status":"OK"}`),
 	}
 }
 
@@ -96,8 +96,8 @@ func TestGetBlocksDetails_Good(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"blocks": [{
 					"height": 0,
 					"timestamp": 1770897600,
@@ -134,7 +134,7 @@ func TestGetBlockHeaderByHeight_Bad_TooBig(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -2, Message: "TOO_BIG_HEIGHT"},
 		})
 	}))

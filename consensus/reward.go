@@ -6,9 +6,9 @@
 package consensus
 
 import (
-	"fmt"
 	"math/bits"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -44,7 +44,7 @@ func BlockReward(baseReward, blockSize, medianSize uint64) (uint64, error) {
 	}
 
 	if blockSize > 2*effectiveMedian {
-		return 0, coreerr.E("BlockReward", fmt.Sprintf("consensus: block size %d too large for median %d", blockSize, effectiveMedian), nil)
+		return 0, coreerr.E("BlockReward", core.Sprintf("consensus: block size %d too large for median %d", blockSize, effectiveMedian), nil)
 	}
 
 	// penalty = baseReward * (2*median - size) * size / median²

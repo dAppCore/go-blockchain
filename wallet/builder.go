@@ -12,9 +12,9 @@ package wallet
 import (
 	"bytes"
 	"cmp"
-	"fmt"
 	"slices"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -83,7 +83,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 		destTotal += dst.Amount
 	}
 	if sourceTotal < destTotal+req.Fee {
-		return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: insufficient funds: have %d, need %d", sourceTotal, destTotal+req.Fee), nil)
+		return nil, coreerr.E("V1Builder.Build", core.Sprintf("wallet: insufficient funds: have %d, need %d", sourceTotal, destTotal+req.Fee), nil)
 	}
 	change := sourceTotal - destTotal - req.Fee
 
@@ -101,7 +101,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for i, src := range req.Sources {
 		input, meta, buildErr := b.buildInput(&src)
 		if buildErr != nil {
-			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: input %d", i), buildErr)
+			return nil, coreerr.E("V1Builder.Build", core.Sprintf("wallet: input %d", i), buildErr)
 		}
 		tx.Vin = append(tx.Vin, input)
 		metas[i] = meta
@@ -112,7 +112,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for _, dst := range req.Destinations {
 		out, outErr := deriveOutput(txSec, dst.Address, outputIdx, dst.Amount)
 		if outErr != nil {
-			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: output %d", outputIdx), outErr)
+			return nil, coreerr.E("V1Builder.Build", core.Sprintf("wallet: output %d", outputIdx), outErr)
 		}
 		tx.Vout = append(tx.Vout, out)
 		outputIdx++
@@ -136,7 +136,7 @@ func (b *V1Builder) Build(req *BuildRequest) (*types.Transaction, error) {
 	for i, meta := range metas {
 		sigs, signErr := b.signer.SignInput(prefixHash, meta.ephemeral, meta.ring, meta.realIndex)
 		if signErr != nil {
-			return nil, coreerr.E("V1Builder.Build", fmt.Sprintf("wallet: sign input %d", i), signErr)
+			return nil, coreerr.E("V1Builder.Build", core.Sprintf("wallet: sign input %d", i), signErr)
 		}
 		tx.Signatures = append(tx.Signatures, sigs)
 	}

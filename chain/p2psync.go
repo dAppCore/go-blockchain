@@ -7,9 +7,9 @@ package chain
 
 import (
 	"context"
-	"fmt"
 	"log"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -120,12 +120,12 @@ func (c *Chain) P2PSync(ctx context.Context, conn P2PConnection, opts SyncOption
 
 				blockDiff, err := c.NextDifficulty(blockHeight, opts.Forks)
 				if err != nil {
-					return coreerr.E("Chain.P2PSync", fmt.Sprintf("p2p sync: compute difficulty for block %d", blockHeight), err)
+					return coreerr.E("Chain.P2PSync", core.Sprintf("p2p sync: compute difficulty for block %d", blockHeight), err)
 				}
 
 				if err := c.processBlockBlobs(entry.Block, entry.Txs,
 					blockHeight, blockDiff, opts); err != nil {
-					return coreerr.E("Chain.P2PSync", fmt.Sprintf("p2p sync: process block %d", blockHeight), err)
+					return coreerr.E("Chain.P2PSync", core.Sprintf("p2p sync: process block %d", blockHeight), err)
 				}
 			}
 		}

@@ -7,11 +7,11 @@ package blockchain
 
 import (
 	"context"
-	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
+	"syscall"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	cli "dappco.re/go/core/cli/pkg/cli"
@@ -38,7 +38,7 @@ func runExplorer(dataDir, seed string, testnet bool) error {
 		return err
 	}
 
-	dbPath := filepath.Join(dataDir, "chain.db")
+	dbPath := core.JoinPath(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
 		return coreerr.E("runExplorer", "open store", err)
@@ -48,7 +48,7 @@ func runExplorer(dataDir, seed string, testnet bool) error {
 	c := chain.New(s)
 	cfg, forks := resolveConfig(testnet, &seed)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT)
 	defer cancel()
 
 	var wg sync.WaitGroup

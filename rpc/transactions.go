@@ -6,8 +6,7 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -24,7 +23,7 @@ func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetTxDetails", fmt.Sprintf("get_tx_details: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetTxDetails", core.Sprintf("get_tx_details: status %q", resp.Status), nil)
 	}
 	return &resp.TxInfo, nil
 }
@@ -45,7 +44,7 @@ func (c *Client) GetTransactions(hashes []string) (txsHex []string, missed []str
 		return nil, nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, nil, coreerr.E("Client.GetTransactions", fmt.Sprintf("gettransactions: status %q", resp.Status), nil)
+		return nil, nil, coreerr.E("Client.GetTransactions", core.Sprintf("gettransactions: status %q", resp.Status), nil)
 	}
 	return resp.TxsAsHex, resp.MissedTx, nil
 }

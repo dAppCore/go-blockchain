@@ -10,9 +10,7 @@
 package wallet
 
 import (
-	"encoding/json"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	store "dappco.re/go/core/store"
@@ -66,22 +64,18 @@ func (t *Transfer) IsSpendable(chainHeight uint64, _ bool) bool {
 // putTransfer serialises a transfer as JSON and stores it in the given store,
 // keyed by the transfer's key image hex string.
 func putTransfer(s *store.Store, tr *Transfer) error {
-	val, err := json.Marshal(tr)
-	if err != nil {
-		return coreerr.E("putTransfer", "wallet: marshal transfer", err)
-	}
-	return s.Set(groupTransfers, tr.KeyImage.String(), string(val))
+	return s.Set(groupTransfers, tr.KeyImage.String(), core.JSONMarshalString(tr))
 }
 
 // getTransfer retrieves and deserialises a transfer by its key image.
 func getTransfer(s *store.Store, ki types.KeyImage) (*Transfer, error) {
 	val, err := s.Get(groupTransfers, ki.String())
 	if err != nil {
-		return nil, coreerr.E("getTransfer", fmt.Sprintf("wallet: get transfer %s", ki), err)
+		return nil, coreerr.E("getTransfer", core.Sprintf("wallet: get transfer %s", ki), err)
 	}
 	var tr Transfer
-	if err := json.Unmarshal([]byte(val), &tr); err != nil {
-		return nil, coreerr.E("getTransfer", "wallet: unmarshal transfer", err)
+	if r := core.JSONUnmarshalString(val, &tr); !r.OK {
+		return nil, coreerr.E("getTransfer", "wallet: unmarshal transfer", r.Value.(error))
 	}
 	return &tr, nil
 }
@@ -107,7 +101,7 @@ func listTransfers(s *store.Store) ([]Transfer, error) {
 	transfers := make([]Transfer, 0, len(pairs))
 	for _, val := range pairs {
 		var tr Transfer
-		if err := json.Unmarshal([]byte(val), &tr); err != nil {
+		if r := core.JSONUnmarshalString(val, &tr); !r.OK {
 			continue
 		}
 		transfers = append(transfers, tr)

@@ -6,9 +6,9 @@
 package consensus
 
 import (
-	"fmt"
 	"math"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -33,7 +33,7 @@ func TxFee(tx *types.Transaction) (uint64, error) {
 	}
 
 	if outputSum > inputSum {
-		return 0, coreerr.E("TxFee", fmt.Sprintf("inputs=%d, outputs=%d", inputSum, outputSum), ErrNegativeFee)
+		return 0, coreerr.E("TxFee", core.Sprintf("inputs=%d, outputs=%d", inputSum, outputSum), ErrNegativeFee)
 	}
 
 	return inputSum - outputSum, nil

@@ -10,11 +10,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/consensus"
@@ -141,7 +141,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		// Parse difficulty.
 		diff, err := strconv.ParseUint(tmpl.Difficulty, 10, 64)
 		if err != nil {
-			return coreerr.E("Miner.Start", fmt.Sprintf("mining: invalid difficulty %q", tmpl.Difficulty), err)
+			return coreerr.E("Miner.Start", core.Sprintf("mining: invalid difficulty %q", tmpl.Difficulty), err)
 		}
 
 		// Decode the block template blob.

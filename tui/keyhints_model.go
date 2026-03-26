@@ -6,8 +6,7 @@
 package tui
 
 import (
-	"strings"
-
+	"dappco.re/go/core"
 	tea "github.com/charmbracelet/bubbletea"
 
 	cli "dappco.re/go/core/cli/pkg/cli"
@@ -44,7 +43,7 @@ func (m *KeyHintsModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 // View renders a single-line hint bar separated by vertical bars.
 // The output is truncated to width if it would overflow.
 func (m *KeyHintsModel) View(width, height int) string {
-	line := " " + strings.Join(m.hints, "  \u2502  ")
+	line := " " + core.Join("  \u2502  ", m.hints...)
 	if len(line) > width && width > 0 {
 		line = line[:width]
 	}

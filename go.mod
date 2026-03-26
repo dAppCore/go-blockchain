@@ -3,6 +3,7 @@ module dappco.re/go/core/blockchain
 go 1.26.0
 
 require (
+	dappco.re/go/core v0.8.0-alpha.1
 	dappco.re/go/core/cli v0.3.1
 	dappco.re/go/core/io v0.2.0
 	dappco.re/go/core/log v0.1.0
@@ -63,7 +64,7 @@ require (
 )
 
 replace (
-	dappco.re/go/core => forge.lthn.ai/core/go v0.5.0
+	dappco.re/go/core => forge.lthn.ai/core/go v0.8.0-alpha.1
 	dappco.re/go/core/cli => forge.lthn.ai/core/cli v0.3.1
 	dappco.re/go/core/crypt => forge.lthn.ai/core/go-crypt v0.1.7
 	dappco.re/go/core/i18n => forge.lthn.ai/core/go-i18n v0.1.4

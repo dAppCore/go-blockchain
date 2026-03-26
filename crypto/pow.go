@@ -8,9 +8,9 @@ package crypto
 // #include "bridge.h"
 import "C"
 import (
-	"fmt"
 	"unsafe"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -25,7 +25,7 @@ func RandomXHash(key, input []byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&output[0])),
 	)
 	if ret != 0 {
-		return output, coreerr.E("RandomXHash", fmt.Sprintf("RandomX hash failed with code %d", ret), nil)
+		return output, coreerr.E("RandomXHash", core.Sprintf("RandomX hash failed with code %d", ret), nil)
 	}
 	return output, nil
 }

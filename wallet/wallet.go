@@ -11,10 +11,10 @@ package wallet
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 	"strconv"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/chain"
@@ -77,7 +77,7 @@ func (w *Wallet) Sync() error {
 	for h := lastScanned; h < chainHeight; h++ {
 		blk, _, err := w.chain.GetBlockByHeight(h)
 		if err != nil {
-			return coreerr.E("Wallet.Sync", fmt.Sprintf("wallet: get block %d", h), err)
+			return coreerr.E("Wallet.Sync", core.Sprintf("wallet: get block %d", h), err)
 		}
 
 		// Scan miner tx.
@@ -209,7 +209,7 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 		}
 	}
 	if selectedSum < needed {
-		return nil, coreerr.E("Wallet.Send", fmt.Sprintf("wallet: insufficient balance: have %d, need %d", selectedSum, needed), nil)
+		return nil, coreerr.E("Wallet.Send", core.Sprintf("wallet: insufficient balance: have %d, need %d", selectedSum, needed), nil)
 	}
 
 	req := &BuildRequest{

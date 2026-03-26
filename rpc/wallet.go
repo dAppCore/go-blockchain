@@ -6,10 +6,9 @@
 package rpc
 
 import (
-	"encoding/hex"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
+	"encoding/hex"
 )
 
 // RandomOutputEntry is a decoy output returned by getrandom_outs.
@@ -35,7 +34,7 @@ func (c *Client) GetRandomOutputs(amount uint64, count int) ([]RandomOutputEntry
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetRandomOutputs", fmt.Sprintf("getrandom_outs: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetRandomOutputs", core.Sprintf("getrandom_outs: status %q", resp.Status), nil)
 	}
 	return resp.Outs, nil
 }
@@ -55,7 +54,7 @@ func (c *Client) SendRawTransaction(txBlob []byte) error {
 		return err
 	}
 	if resp.Status != "OK" {
-		return coreerr.E("Client.SendRawTransaction", fmt.Sprintf("sendrawtransaction: status %q", resp.Status), nil)
+		return coreerr.E("Client.SendRawTransaction", core.Sprintf("sendrawtransaction: status %q", resp.Status), nil)
 	}
 	return nil
 }

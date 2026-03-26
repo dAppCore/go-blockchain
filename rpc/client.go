@@ -8,13 +8,12 @@ package rpc
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
@@ -38,7 +37,7 @@ func NewClientWithHTTP(daemonURL string, httpClient *http.Client) *Client {
 		// Fall through with raw URL.
 		return &Client{url: daemonURL + "/json_rpc", baseURL: daemonURL, httpClient: httpClient}
 	}
-	baseURL := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+	baseURL := core.Sprintf("%s://%s", u.Scheme, u.Host)
 	if u.Path == "" || u.Path == "/" {
 		u.Path = "/json_rpc"
 	}
@@ -56,7 +55,7 @@ type RPCError struct {
 }
 
 func (e *RPCError) Error() string {
-	return fmt.Sprintf("rpc error %d: %s", e.Code, e.Message)
+	return core.Sprintf("rpc error %d: %s", e.Code, e.Message)
 }
 
 // JSON-RPC 2.0 envelope types.
@@ -68,10 +67,10 @@ type jsonRPCRequest struct {
 }
 
 type jsonRPCResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"`
-	Result  json.RawMessage `json:"result"`
-	Error   *jsonRPCError   `json:"error,omitempty"`
+	JSONRPC string        `json:"jsonrpc"`
+	ID      rawJSON       `json:"id"`
+	Result  rawJSON       `json:"result"`
+	Error   *jsonRPCError `json:"error,omitempty"`
 }
 
 type jsonRPCError struct {
@@ -79,26 +78,37 @@ type jsonRPCError struct {
 	Message string `json:"message"`
 }
 
+type rawJSON []byte
+
+func (r *rawJSON) UnmarshalJSON(data []byte) error {
+	*r = append((*r)[:0], data...)
+	return nil
+}
+
+func (r rawJSON) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return []byte("null"), nil
+	}
+	return []byte(r), nil
+}
+
 // call makes a JSON-RPC 2.0 call to /json_rpc.
 func (c *Client) call(method string, params any, result any) error {
-	reqBody, err := json.Marshal(jsonRPCRequest{
+	reqBody := core.JSONMarshalString(jsonRPCRequest{
 		JSONRPC: "2.0",
 		ID:      "0",
 		Method:  method,
 		Params:  params,
 	})
-	if err != nil {
-		return coreerr.E("Client.call", "marshal request", err)
-	}
 
-	resp, err := c.httpClient.Post(c.url, "application/json", bytes.NewReader(reqBody))
+	resp, err := c.httpClient.Post(c.url, "application/json", bytes.NewReader([]byte(reqBody)))
 	if err != nil {
-		return coreerr.E("Client.call", fmt.Sprintf("post %s", method), err)
+		return coreerr.E("Client.call", core.Sprintf("post %s", method), err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return coreerr.E("Client.call", fmt.Sprintf("http %d from %s", resp.StatusCode, method), nil)
+		return coreerr.E("Client.call", core.Sprintf("http %d from %s", resp.StatusCode, method), nil)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -107,8 +117,8 @@ func (c *Client) call(method string, params any, result any) error {
 	}
 
 	var rpcResp jsonRPCResponse
-	if err := json.Unmarshal(body, &rpcResp); err != nil {
-		return coreerr.E("Client.call", "unmarshal response", err)
+	if r := core.JSONUnmarshalString(string(body), &rpcResp); !r.OK {
+		return coreerr.E("Client.call", "unmarshal response", r.Value.(error))
 	}
 
 	if rpcResp.Error != nil {
@@ -116,8 +126,8 @@ func (c *Client) call(method string, params any, result any) error {
 	}
 
 	if result != nil && len(rpcResp.Result) > 0 {
-		if err := json.Unmarshal(rpcResp.Result, result); err != nil {
-			return coreerr.E("Client.call", "unmarshal result", err)
+		if r := core.JSONUnmarshalString(string(rpcResp.Result), result); !r.OK {
+			return coreerr.E("Client.call", "unmarshal result", r.Value.(error))
 		}
 	}
 	return nil
@@ -125,20 +135,17 @@ func (c *Client) call(method string, params any, result any) error {
 
 // legacyCall makes a plain JSON POST to a legacy URI path (e.g. /getheight).
 func (c *Client) legacyCall(path string, params any, result any) error {
-	reqBody, err := json.Marshal(params)
-	if err != nil {
-		return coreerr.E("Client.legacyCall", "marshal request", err)
-	}
+	reqBody := core.JSONMarshalString(params)
 
 	url := c.baseURL + path
-	resp, err := c.httpClient.Post(url, "application/json", bytes.NewReader(reqBody))
+	resp, err := c.httpClient.Post(url, "application/json", bytes.NewReader([]byte(reqBody)))
 	if err != nil {
-		return coreerr.E("Client.legacyCall", fmt.Sprintf("post %s", path), err)
+		return coreerr.E("Client.legacyCall", core.Sprintf("post %s", path), err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return coreerr.E("Client.legacyCall", fmt.Sprintf("http %d from %s", resp.StatusCode, path), nil)
+		return coreerr.E("Client.legacyCall", core.Sprintf("http %d from %s", resp.StatusCode, path), nil)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -147,8 +154,8 @@ func (c *Client) legacyCall(path string, params any, result any) error {
 	}
 
 	if result != nil {
-		if err := json.Unmarshal(body, result); err != nil {
-			return coreerr.E("Client.legacyCall", "unmarshal response", err)
+		if r := core.JSONUnmarshalString(string(body), result); !r.OK {
+			return coreerr.E("Client.legacyCall", "unmarshal response", r.Value.(error))
 		}
 	}
 	return nil

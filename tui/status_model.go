@@ -6,9 +6,9 @@
 package tui
 
 import (
-	"fmt"
 	"time"
 
+	"dappco.re/go/core"
 	tea "github.com/charmbracelet/bubbletea"
 
 	cli "dappco.re/go/core/cli/pkg/cli"
@@ -53,7 +53,7 @@ func (m *StatusModel) View(width, height int) string {
 		line = " height 0 | syncing..."
 	} else {
 		s := m.status
-		line = fmt.Sprintf(" height %d | sync %.1f%% | diff %s | %d peers | tip %s",
+		line = core.Sprintf(" height %d | sync %.1f%% | diff %s | %d peers | tip %s",
 			s.Height, s.SyncPct, formatDifficulty(s.Difficulty), s.PeerCount, formatAge(s.TipTime))
 	}
 	if len(line) > width && width > 0 {
@@ -70,13 +70,13 @@ func formatAge(t time.Time) string {
 	d := time.Since(t)
 	switch {
 	case d < time.Minute:
-		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+		return core.Sprintf("%ds ago", int(d.Seconds()))
 	case d < time.Hour:
-		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+		return core.Sprintf("%dm ago", int(d.Minutes()))
 	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh ago", int(d.Hours()))
+		return core.Sprintf("%dh ago", int(d.Hours()))
 	default:
-		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+		return core.Sprintf("%dd ago", int(d.Hours()/24))
 	}
 }
 
@@ -84,12 +84,12 @@ func formatAge(t time.Time) string {
 func formatDifficulty(d uint64) string {
 	switch {
 	case d >= 1_000_000_000:
-		return fmt.Sprintf("%.1fG", float64(d)/1_000_000_000)
+		return core.Sprintf("%.1fG", float64(d)/1_000_000_000)
 	case d >= 1_000_000:
-		return fmt.Sprintf("%.1fM", float64(d)/1_000_000)
+		return core.Sprintf("%.1fM", float64(d)/1_000_000)
 	case d >= 1_000:
-		return fmt.Sprintf("%.1fK", float64(d)/1_000)
+		return core.Sprintf("%.1fK", float64(d)/1_000)
 	default:
-		return fmt.Sprintf("%d", d)
+		return core.Sprintf("%d", d)
 	}
 }
