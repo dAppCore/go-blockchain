@@ -15,5 +15,6 @@ func main() {
 	cli.Main(
 		cli.WithCommands("chain", blockchain.AddChainCommands),
 		cli.WithCommands("wallet", blockchain.AddWalletCommands),
+		cli.WithCommands("asset", blockchain.AddAssetCommands),
 	)
 }

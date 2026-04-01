@@ -92,6 +92,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetAliasDetails(w, req)
 	case "getblockcount":
 		s.rpcGetBlockCount(w, req)
+	case "get_asset_info":
+		s.rpcGetAssetInfo(w, req)
 	default:
 		writeError(w, req.ID, -32601, core.Sprintf("method %s not found", req.Method))
 	}
@@ -272,4 +274,33 @@ func (s *Server) rpcGetBlockCount(w http.ResponseWriter, req jsonRPCRequest) {
 		"count":  height,
 		"status": "OK",
 	})
+}
+
+func (s *Server) rpcGetAssetInfo(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		AssetID string `json:"asset_id"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// For the native LTHN asset, return hardcoded descriptor
+	if params.AssetID == "LTHN" || params.AssetID == "d6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a" {
+		writeResult(w, req.ID, map[string]interface{}{
+			"asset_descriptor": map[string]interface{}{
+				"ticker":           "LTHN",
+				"full_name":        "Lethean",
+				"total_max_supply": 0,
+				"current_supply":   0,
+				"decimal_point":    12,
+				"hidden_supply":    false,
+			},
+			"asset_id": "d6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a",
+			"status":   "OK",
+		})
+		return
+	}
+
+	// For other assets, return not found (until asset index is built)
+	writeError(w, req.ID, -1, core.Sprintf("asset %s not found", params.AssetID))
 }
