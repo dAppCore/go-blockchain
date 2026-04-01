@@ -90,6 +90,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetAllAliasDetails(w, req)
 	case "get_alias_details":
 		s.rpcGetAliasDetails(w, req)
+	case "getblockcount":
+		s.rpcGetBlockCount(w, req)
 	default:
 		writeError(w, req.ID, -32601, core.Sprintf("method %s not found", req.Method))
 	}
@@ -260,6 +262,14 @@ func (s *Server) rpcGetAliasCount(w http.ResponseWriter, req jsonRPCRequest) {
 	aliases := s.chain.GetAllAliases()
 	writeResult(w, req.ID, map[string]interface{}{
 		"count":  len(aliases),
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetBlockCount(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	writeResult(w, req.ID, map[string]interface{}{
+		"count":  height,
 		"status": "OK",
 	})
 }
