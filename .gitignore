@@ -3,3 +3,4 @@ crypto/build/
 .vscode/
 *.log
 .core/
+core-chain
