@@ -210,6 +210,11 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 		return coreerr.E("Chain.processBlockBlobs", "store miner tx", err)
 	}
 
+	// Extract alias registrations from miner tx extra.
+	if alias := ExtractAliasFromExtra(blk.MinerTx.Extra); alias != nil {
+		c.PutAlias(*alias)
+	}
+
 	// Process regular transactions from txBlobs.
 	for i, txBlobData := range txBlobs {
 		txDec := wire.NewDecoder(bytes.NewReader(txBlobData))
@@ -223,6 +228,11 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 		// Validate transaction semantics.
 		if err := consensus.ValidateTransaction(&tx, txBlobData, opts.Forks, height); err != nil {
 			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("validate tx %s", txHash), err)
+		}
+
+		// Extract alias registrations from regular tx extra.
+		if alias := ExtractAliasFromExtra(tx.Extra); alias != nil {
+			c.PutAlias(*alias)
 		}
 
 		// Optionally verify signatures using the chain's output index.

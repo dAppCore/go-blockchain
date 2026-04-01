@@ -597,6 +597,10 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return readUnlockTime2(dec)
 	case tagTxServiceAttachment:
 		return readTxServiceAttachment(dec)
+	case tagExtraAliasEntry:
+		return readExtraAliasEntry(dec)
+	case tagExtraAliasEntryOld:
+		return readExtraAliasEntryOld(dec)
 
 	// Zarcanum extra variant
 	case tagZarcanumTxDataV1: // fee — FIELD(fee) → serialize_int → 8-byte LE
@@ -795,6 +799,93 @@ func readTxServiceAttachment(dec *Decoder) []byte {
 		return nil
 	}
 	raw = append(raw, b)
+	return raw
+}
+
+// readAccountPublicAddress reads account_public_address (65 bytes):
+// spend_public_key (32) + view_public_key (32) + flags (1).
+func readAccountPublicAddress(dec *Decoder) []byte {
+	return dec.ReadBytes(65) // 32 + 32 + 1
+}
+
+// readAccountPublicAddressOld reads account_public_address_old (64 bytes):
+// spend_public_key (32) + view_public_key (32), no flags.
+func readAccountPublicAddressOld(dec *Decoder) []byte {
+	return dec.ReadBytes(64)
+}
+
+// readExtraAliasEntry reads extra_alias_entry (tag 33).
+// Structure: m_alias (string) + m_address (65 bytes) + m_text_comment (string)
+// + m_view_key (vector<secret_key>) + m_sign (vector<signature>).
+func readExtraAliasEntry(dec *Decoder) []byte {
+	var raw []byte
+	// m_alias — string
+	alias := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, alias...)
+	// m_address — account_public_address (65 bytes)
+	addr := readAccountPublicAddress(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, addr...)
+	// m_text_comment — string
+	comment := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, comment...)
+	// m_view_key — vector<secret_key> (varint count + 32 bytes each)
+	vk := readVariantVectorFixed(dec, 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, vk...)
+	// m_sign — vector<signature> (varint count + 64 bytes each)
+	sig := readVariantVectorFixed(dec, 64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, sig...)
+	return raw
+}
+
+// readExtraAliasEntryOld reads extra_alias_entry_old (tag 20).
+// Same as extra_alias_entry but uses old address format (64 bytes, no flags).
+func readExtraAliasEntryOld(dec *Decoder) []byte {
+	var raw []byte
+	// m_alias — string
+	alias := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, alias...)
+	// m_address — account_public_address_old (64 bytes)
+	addr := readAccountPublicAddressOld(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, addr...)
+	// m_text_comment — string
+	comment := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, comment...)
+	// m_view_key — vector<secret_key>
+	vk := readVariantVectorFixed(dec, 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, vk...)
+	// m_sign — vector<signature>
+	sig := readVariantVectorFixed(dec, 64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, sig...)
 	return raw
 }
 
