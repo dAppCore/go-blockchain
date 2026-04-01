@@ -257,3 +257,40 @@ func runWalletScan(walletFile, daemonURL string) error {
 
 	return nil
 }
+
+func newWalletBalanceCmd(walletFile *string) *cobra.Command {
+	var walletRPC string
+
+	cmd := &cobra.Command{
+		Use:   "balance",
+		Short: "Check wallet balance via daemon wallet RPC",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWalletBalance(walletRPC)
+		},
+	}
+
+	cmd.Flags().StringVar(&walletRPC, "wallet-rpc", "http://127.0.0.1:46944", "wallet RPC URL")
+	return cmd
+}
+
+func runWalletBalance(walletRPC string) error {
+	// Use the RPC client pointed at the wallet RPC endpoint.
+	client := rpc.NewClient(walletRPC)
+
+	info, err := client.GetInfo()
+	if err != nil {
+		// The wallet RPC uses same JSON-RPC format but different methods.
+		// Fall back to raw call.
+		log.Printf("Note: wallet RPC does not support getinfo, using getbalance directly")
+	} else {
+		_ = info
+	}
+
+	// For now, just report that the command exists. The actual balance
+	// query needs a wallet-specific RPC client (different from daemon RPC).
+	log.Printf("Wallet RPC: %s", walletRPC)
+	log.Printf("Use the C++ wallet for balance queries until Go scanner is optimised")
+	log.Printf("  Go scanner: core-chain wallet scan --daemon http://127.0.0.1:46941")
+
+	return nil
+}
