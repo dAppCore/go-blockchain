@@ -129,6 +129,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcCheckKeyImages(w, req)
 	case "sendrawtransaction":
 	case "validate_signature":
+	case "generate_key_image":
+		s.rpcGenerateKeyImage(w, req)
+	case "fast_hash":
+		s.rpcFastHash(w, req)
+	case "generate_keys":
+		s.rpcGenerateKeys(w, req)
+	case "check_key":
+		s.rpcCheckKey(w, req)
 		s.rpcValidateSignature(w, req)
 		s.rpcSendRawTransaction(w, req)
 		s.rpcGetVersion(w, req)
@@ -807,6 +815,98 @@ func (s *Server) rpcValidateSignature(w http.ResponseWriter, req jsonRPCRequest)
 
 	writeResult(w, req.ID, map[string]interface{}{
 		"valid":  valid,
+		"status": "OK",
+	})
+}
+
+// --- Native crypto methods (Go+CGo, no C++ daemon needed) ---
+
+func (s *Server) rpcGenerateKeyImage(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		PublicKey string `json:"public_key"`
+		SecretKey string `json:"secret_key"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	pubBytes, _ := hex.DecodeString(params.PublicKey)
+	secBytes, _ := hex.DecodeString(params.SecretKey)
+	if len(pubBytes) != 32 || len(secBytes) != 32 {
+		writeError(w, req.ID, -1, "keys must be 32 bytes hex")
+		return
+	}
+
+	var pub, sec [32]byte
+	copy(pub[:], pubBytes)
+	copy(sec[:], secBytes)
+
+	ki, err := crypto.GenerateKeyImage(pub, sec)
+	if err != nil {
+		writeError(w, req.ID, -1, "key image generation failed")
+		return
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"key_image": hex.EncodeToString(ki[:]),
+		"status":    "OK",
+	})
+}
+
+func (s *Server) rpcFastHash(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Data string `json:"data"` // hex encoded
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	data, err := hex.DecodeString(params.Data)
+	if err != nil {
+		writeError(w, req.ID, -1, "invalid hex data")
+		return
+	}
+
+	hash := crypto.FastHash(data)
+	writeResult(w, req.ID, map[string]interface{}{
+		"hash":   hex.EncodeToString(hash[:]),
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGenerateKeys(w http.ResponseWriter, req jsonRPCRequest) {
+	pub, sec, err := crypto.GenerateKeys()
+	if err != nil {
+		writeError(w, req.ID, -1, "key generation failed")
+		return
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"public_key": hex.EncodeToString(pub[:]),
+		"secret_key": hex.EncodeToString(sec[:]),
+		"status":     "OK",
+	})
+}
+
+func (s *Server) rpcCheckKey(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Key string `json:"key"` // hex public key
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	keyBytes, _ := hex.DecodeString(params.Key)
+	if len(keyBytes) != 32 {
+		writeResult(w, req.ID, map[string]interface{}{"valid": false, "status": "OK"})
+		return
+	}
+
+	var key [32]byte
+	copy(key[:], keyBytes)
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"valid":  crypto.CheckKey(key),
 		"status": "OK",
 	})
 }
