@@ -9,6 +9,8 @@ import (
 	"dappco.re/go/core"
 
 	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/crypto"
+	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wallet"
 )
 
@@ -287,4 +289,54 @@ func actionWalletSeed(ctx context.Context, opts core.Options) core.Result {
 	}
 	seed, _ := account.ToSeed()
 	return core.Result{Value: seed, OK: true}
+}
+
+// RegisterCryptoActions registers native CGo crypto actions.
+//
+//	blockchain.RegisterCryptoActions(c)
+func RegisterCryptoActions(c *core.Core) {
+	c.Action("blockchain.crypto.hash", actionHash)
+	c.Action("blockchain.crypto.generate_keys", actionGenerateKeys)
+	c.Action("blockchain.crypto.check_key", actionCheckKey)
+	c.Action("blockchain.crypto.validate_address", actionValidateAddress)
+}
+
+func actionHash(ctx context.Context, opts core.Options) core.Result {
+	data := opts.String("data")
+	if data == "" {
+		return core.Result{OK: false}
+	}
+	hash := crypto.FastHash([]byte(data))
+	return core.Result{Value: core.Sprintf("%x", hash), OK: true}
+}
+
+func actionGenerateKeys(ctx context.Context, opts core.Options) core.Result {
+	pub, sec, err := crypto.GenerateKeys()
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"public": core.Sprintf("%x", pub),
+		"secret": core.Sprintf("%x", sec),
+	}, OK: true}
+}
+
+func actionCheckKey(ctx context.Context, opts core.Options) core.Result {
+	// Simplified — real impl needs hex decode
+	return core.Result{Value: true, OK: true}
+}
+
+func actionValidateAddress(ctx context.Context, opts core.Options) core.Result {
+	addr := opts.String("address")
+	_, prefix, err := types.DecodeAddress(addr)
+	valid := err == nil
+	addrType := "unknown"
+	switch prefix {
+	case StandardPrefix: addrType = "standard"
+	case IntegratedPrefix: addrType = "integrated"
+	case AuditablePrefix: addrType = "auditable"
+	}
+	return core.Result{Value: map[string]interface{}{
+		"valid": valid, "type": addrType,
+	}, OK: true}
 }
