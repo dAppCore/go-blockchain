@@ -629,7 +629,7 @@ func makeEstBlockTime(ch *chain.Chain) core.ActionHandler {
 			return core.Result{Value: uint64(120), OK: true}
 		}
 		genesis, _, _ := ch.GetBlockByHeight(0)
-		_, top := ch.Snapshot()
+		_, _, top := ch.Snapshot()
 		if genesis == nil || top == nil || top.Height == 0 {
 			return core.Result{Value: uint64(120), OK: true}
 		}
