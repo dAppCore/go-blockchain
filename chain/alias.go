@@ -43,7 +43,7 @@ func (c *Chain) GetAlias(name string) (*Alias, error) {
 		return nil, coreerr.E("Chain.GetAlias", core.Sprintf("alias %s not found", name), err)
 	}
 
-	parts := strings.SplitN(data, "|", 2)
+	parts := core.SplitN(data, "|", 2)
 	alias := &Alias{Name: name}
 	if len(parts) >= 1 {
 		alias.Address = parts[0]
@@ -64,7 +64,7 @@ func (c *Chain) GetAllAliases() []Alias {
 		return aliases
 	}
 	for name, value := range all {
-		parts := strings.SplitN(value, "|", 2)
+		parts := core.SplitN(value, "|", 2)
 		a := Alias{Name: name}
 		if len(parts) >= 1 {
 			a.Address = parts[0]
