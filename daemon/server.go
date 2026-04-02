@@ -34,6 +34,8 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s := &Server{chain: c, config: cfg, mux: http.NewServeMux()}
 	s.mux.HandleFunc("/json_rpc", s.handleJSONRPC)
 	s.mux.HandleFunc("/getheight", s.handleGetHeight)
+	s.mux.HandleFunc("/start_mining", s.handleStartMining)
+	s.mux.HandleFunc("/stop_mining", s.handleStopMining)
 	return s
 }
 
@@ -331,5 +333,23 @@ func (s *Server) rpcGetAliasByAddress(w http.ResponseWriter, req jsonRPCRequest)
 	writeResult(w, req.ID, map[string]interface{}{
 		"alias_info_list": matches,
 		"status":          "OK",
+	})
+}
+
+// Legacy HTTP endpoints (non-JSON-RPC, used by mining scripts and monitoring)
+
+func (s *Server) handleStartMining(w http.ResponseWriter, r *http.Request) {
+	// The Go daemon doesn't mine — forward to C++ daemon or return info
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "NOT MINING",
+		"note":   "Go daemon is read-only. Use C++ daemon for mining.",
+	})
+}
+
+func (s *Server) handleStopMining(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "OK",
 	})
 }
