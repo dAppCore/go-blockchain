@@ -7,7 +7,6 @@ package blockchain
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os/signal"
 	"sync"
@@ -80,7 +79,7 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort string) error
 	// Start JSON-RPC server.
 	srv := daemon.NewServer(c, &cfg)
 	addr := rpcBind + ":" + rpcPort
-	log.Printf("Go daemon RPC on %s (syncing from %s)", addr, seed)
+	core.Print(nil, "Go daemon RPC on %s (syncing from %s)", addr, seed)
 
 	httpSrv := &http.Server{Addr: addr, Handler: srv}
 	go func() {
@@ -126,7 +125,7 @@ func rpcSyncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, f
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("rpc sync: %v (retrying in 10s)", err)
+			core.Print(nil, "rpc sync: %v (retrying in 10s)", err)
 		}
 
 		select {

@@ -6,7 +6,6 @@
 package blockchain
 
 import (
-	"log"
 
 	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
@@ -71,21 +70,21 @@ func runDeployITNS(walletRPC string) error {
 		MetaInfo:     core.Concat(`{"network":"lethean","type":"trust","purpose":"sidechain gateway trust token"}`),
 	}
 
-	log.Println("Deploying ITNS (IntenseCoin) confidential asset...")
-	log.Printf("  Ticker:     %s", desc.Ticker)
-	log.Printf("  Name:       %s", desc.FullName)
-	log.Printf("  Max supply: %d (1B ITNS)", desc.TotalMax)
-	log.Printf("  Decimals:   %d", desc.DecimalPoint)
+	core.Print(nil, "Deploying ITNS (IntenseCoin) confidential asset...")
+	core.Print(nil, "  Ticker:     %s", desc.Ticker)
+	core.Print(nil, "  Name:       %s", desc.FullName)
+	core.Print(nil, "  Max supply: %d (1B ITNS)", desc.TotalMax)
+	core.Print(nil, "  Decimals:   %d", desc.DecimalPoint)
 
 	resp, err := client.DeployAsset(desc)
 	if err != nil {
 		return coreerr.E("runDeployITNS", "deploy failed", err)
 	}
 
-	log.Println("")
-	log.Println("ITNS DEPLOYED!")
-	log.Printf("  Asset ID: %s", resp.AssetID)
-	log.Printf("  TX Hash:  %s", resp.TxID)
+	core.Print(nil, "")
+	core.Print(nil, "ITNS DEPLOYED!")
+	core.Print(nil, "  Asset ID: %s", resp.AssetID)
+	core.Print(nil, "  TX Hash:  %s", resp.TxID)
 
 	return nil
 }
@@ -98,11 +97,11 @@ func runAssetInfo(walletRPC, assetID string) error {
 		return coreerr.E("runAssetInfo", core.Sprintf("asset %s", assetID), err)
 	}
 
-	log.Printf("Asset: %s (%s)", info.Ticker, info.FullName)
-	log.Printf("  Max supply:     %d", info.TotalMax)
-	log.Printf("  Current supply: %d", info.CurrentSup)
-	log.Printf("  Decimals:       %d", info.DecimalPoint)
-	log.Printf("  Hidden supply:  %v", info.HiddenSupply)
+	core.Print(nil, "Asset: %s (%s)", info.Ticker, info.FullName)
+	core.Print(nil, "  Max supply:     %d", info.TotalMax)
+	core.Print(nil, "  Current supply: %d", info.CurrentSup)
+	core.Print(nil, "  Decimals:       %d", info.DecimalPoint)
+	core.Print(nil, "  Hidden supply:  %v", info.HiddenSupply)
 
 	return nil
 }

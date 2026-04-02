@@ -8,7 +8,6 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
-	"log"
 
 	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
@@ -104,10 +103,10 @@ func runWalletCreate(walletFile string) error {
 	addrStr := addr.Encode(0x1eaf7) // iTHN standard prefix
 	seed, _ := account.ToSeed()
 
-	log.Println("Wallet created!")
-	log.Printf("  Address: %s", addrStr)
-	log.Printf("  Seed:    %s", seed)
-	log.Printf("  File:    %s", walletFile)
+	core.Print(nil, "Wallet created!")
+	core.Print(nil, "  Address: %s", addrStr)
+	core.Print(nil, "  Seed:    %s", seed)
+	core.Print(nil, "  File:    %s", walletFile)
 
 	return nil
 }
@@ -129,7 +128,7 @@ func runWalletAddress(walletFile string) error {
 	}
 
 	addr := account.Address()
-	log.Printf("%s", addr.Encode(0x1eaf7))
+	core.Print(nil, "%s", addr.Encode(0x1eaf7))
 	return nil
 }
 
@@ -154,7 +153,7 @@ func runWalletSeed(walletFile string) error {
 		return coreerr.E("runWalletSeed", "export seed", err)
 	}
 
-	log.Printf("%s", seed)
+	core.Print(nil, "%s", seed)
 	return nil
 }
 
@@ -190,7 +189,7 @@ func runWalletScan(walletFile, daemonURL string) error {
 	}
 
 	addr := account.Address()
-	log.Printf("Scanning for: %s", addr.Encode(0x1eaf7))
+	core.Print(nil, "Scanning for: %s", addr.Encode(0x1eaf7))
 
 	scanner := wallet.NewV1Scanner(account)
 	client := rpc.NewClient(daemonURL)
@@ -240,20 +239,20 @@ func runWalletScan(walletFile, daemonURL string) error {
 				for _, t := range transfers {
 					totalBalance += t.Amount
 					outputCount++
-					log.Printf("  Found output: %d.%012d LTHN at height %d",
+					core.Print(nil, "  Found output: %d.%012d LTHN at height %d",
 						t.Amount/1000000000000, t.Amount%1000000000000, h)
 				}
 			}
 		}
 
 		if h > 0 && h%1000 == 0 {
-			log.Printf("  Scanned %d/%d blocks... (%d outputs, %d.%012d LTHN)",
+			core.Print(nil, "  Scanned %d/%d blocks... (%d outputs, %d.%012d LTHN)",
 				h, remoteHeight, outputCount,
 				totalBalance/1000000000000, totalBalance%1000000000000)
 		}
 	}
 
-	log.Printf("Balance: %d.%012d LTHN (%d outputs)",
+	core.Print(nil, "Balance: %d.%012d LTHN (%d outputs)",
 		totalBalance/1000000000000, totalBalance%1000000000000, outputCount)
 
 	return nil
@@ -282,16 +281,16 @@ func runWalletBalance(walletRPC string) error {
 	if err != nil {
 		// The wallet RPC uses same JSON-RPC format but different methods.
 		// Fall back to raw call.
-		log.Printf("Note: wallet RPC does not support getinfo, using getbalance directly")
+		core.Print(nil, "Note: wallet RPC does not support getinfo, using getbalance directly")
 	} else {
 		_ = info
 	}
 
 	// For now, just report that the command exists. The actual balance
 	// query needs a wallet-specific RPC client (different from daemon RPC).
-	log.Printf("Wallet RPC: %s", walletRPC)
-	log.Printf("Use the C++ wallet for balance queries until Go scanner is optimised")
-	log.Printf("  Go scanner: core-chain wallet scan --daemon http://127.0.0.1:46941")
+	core.Print(nil, "Wallet RPC: %s", walletRPC)
+	core.Print(nil, "Use the C++ wallet for balance queries until Go scanner is optimised")
+	core.Print(nil, "  Go scanner: core-chain wallet scan --daemon http://127.0.0.1:46941")
 
 	return nil
 }
@@ -331,9 +330,9 @@ func runWalletRestore(walletFile, seed string) error {
 	}
 
 	addr := account.Address()
-	log.Println("Wallet restored!")
-	log.Printf("  Address: %s", addr.Encode(0x1eaf7))
-	log.Printf("  File:    %s", walletFile)
+	core.Print(nil, "Wallet restored!")
+	core.Print(nil, "  Address: %s", addr.Encode(0x1eaf7))
+	core.Print(nil, "  File:    %s", walletFile)
 
 	return nil
 }

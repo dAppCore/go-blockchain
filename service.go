@@ -7,7 +7,6 @@ package blockchain
 
 import (
 	"context"
-	"log"
 	"time"
 	"net/http"
 
@@ -98,7 +97,7 @@ func (s *BlockchainService) start() core.Result {
 				if ctx.Err() != nil {
 					return
 				}
-				log.Printf("blockchain sync: %v", err)
+				core.Print(nil, "blockchain sync: %v", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -112,11 +111,11 @@ func (s *BlockchainService) start() core.Result {
 	s.daemon = daemon.NewServer(s.chain, &cfg)
 	addr := s.opts.RPCBind + ":" + s.opts.RPCPort
 	go func() {
-		log.Printf("blockchain RPC on %s", addr)
+		core.Print(nil, "blockchain RPC on %s", addr)
 		http.ListenAndServe(addr, s.daemon)
 	}()
 
-	log.Printf("blockchain service started (testnet=%v, seed=%s)", s.opts.Testnet, s.opts.Seed)
+	core.Print(nil, "blockchain service started (testnet=%v, seed=%s)", s.opts.Testnet, s.opts.Seed)
 	return core.Result{OK: true}
 }
 
@@ -127,7 +126,7 @@ func (s *BlockchainService) stop() core.Result {
 	if s.store != nil {
 		s.store.Close()
 	}
-	log.Printf("blockchain service stopped")
+	core.Print(nil, "blockchain service stopped")
 	return core.Result{OK: true}
 }
 

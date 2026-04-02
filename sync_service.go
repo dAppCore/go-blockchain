@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"log"
 	"net"
 	"time"
 
@@ -36,7 +35,7 @@ func syncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, fork
 		}
 
 		if err := syncOnce(ctx, c, cfg, opts, seed); err != nil {
-			log.Printf("sync: %v (retrying in 10s)", err)
+			core.Print(nil, "sync: %v (retrying in 10s)", err)
 			select {
 			case <-ctx.Done():
 				return

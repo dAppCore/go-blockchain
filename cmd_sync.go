@@ -7,7 +7,6 @@ package blockchain
 
 import (
 	"context"
-	"log"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -66,9 +65,9 @@ func runSyncForeground(dataDir, seed string, testnet bool) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	log.Println("Starting headless P2P sync...")
+	core.Print(nil, "Starting headless P2P sync...")
 	syncLoop(ctx, c, &cfg, forks, seed)
-	log.Println("Sync stopped.")
+	core.Print(nil, "Sync stopped.")
 	return nil
 }
 
@@ -107,7 +106,7 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 	defer cancel()
 
 	d.SetReady(true)
-	log.Println("Sync daemon started.")
+	core.Print(nil, "Sync daemon started.")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -132,6 +131,6 @@ func stopSyncDaemon(dataDir string) error {
 		return coreerr.E("stopSyncDaemon", core.Sprintf("signal process %d", pid), err)
 	}
 
-	log.Printf("Sent SIGTERM to sync daemon (PID %d)", pid)
+	core.Print(nil, "Sent SIGTERM to sync daemon (PID %d)", pid)
 	return nil
 }
