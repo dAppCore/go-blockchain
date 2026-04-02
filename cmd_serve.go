@@ -86,7 +86,13 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC st
 	addr := rpcBind + ":" + rpcPort
 	core.Print(nil, "Go daemon RPC on %s (syncing from %s)", addr, seed)
 
-	httpSrv := &http.Server{Addr: addr, Handler: srv}
+	httpSrv := &http.Server{
+		Addr:         addr,
+		Handler:      srv,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 120 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 	go func() {
 		<-ctx.Done()
 		httpSrv.Close()

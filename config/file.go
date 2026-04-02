@@ -46,14 +46,14 @@ func DefaultFileConfig() FileConfig {
 //
 //	cfg.LoadFromEnv()
 func (c *FileConfig) LoadFromEnv() {
-	if v := os.Getenv("LNS_MODE"); v != "" { c.Network = v }
-	if v := os.Getenv("DAEMON_SEED"); v != "" { c.Seed = v }
-	if v := os.Getenv("CHAIN_DATADIR"); v != "" { c.DataDir = v }
-	if v := os.Getenv("RPC_PORT"); v != "" { c.RPCPort = v }
-	if v := os.Getenv("RPC_BIND"); v != "" { c.RPCBind = v }
-	if v := os.Getenv("HSD_URL"); v != "" { c.HSDUrl = v }
-	if v := os.Getenv("HSD_API_KEY"); v != "" { c.HSDKey = v }
-	if v := os.Getenv("DNS_PORT"); v != "" { c.DNSPort = v }
+	if v := core.Env("LNS_MODE"); v != "" { c.Network = v }
+	if v := core.Env("DAEMON_SEED"); v != "" { c.Seed = v }
+	if v := core.Env("CHAIN_DATADIR"); v != "" { c.DataDir = v }
+	if v := core.Env("RPC_PORT"); v != "" { c.RPCPort = v }
+	if v := core.Env("RPC_BIND"); v != "" { c.RPCBind = v }
+	if v := core.Env("HSD_URL"); v != "" { c.HSDUrl = v }
+	if v := core.Env("HSD_API_KEY"); v != "" { c.HSDKey = v }
+	if v := core.Env("DNS_PORT"); v != "" { c.DNSPort = v }
 }
 
 // IsTestnet returns true if configured for testnet.

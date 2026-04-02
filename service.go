@@ -111,7 +111,7 @@ func (s *BlockchainService) start() core.Result {
 	addr := s.opts.RPCBind + ":" + s.opts.RPCPort
 	go func() {
 		core.Print(nil, "blockchain RPC on %s", addr)
-		http.ListenAndServe(addr, s.daemon)
+		(&http.Server{Addr: addr, Handler: s.daemon, ReadTimeout: 30 * time.Second, WriteTimeout: 120 * time.Second}).ListenAndServe()
 	}()
 
 	core.Print(nil, "blockchain service started (testnet=%v, seed=%s)", s.opts.Testnet, s.opts.Seed)
