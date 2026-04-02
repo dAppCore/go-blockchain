@@ -54,6 +54,13 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.supply.hashrate", makeHashrate(ch))
 	c.Action("blockchain.supply.emission", makeEmission(ch))
 	c.Action("blockchain.supply.circulating", makeCirculating(ch))
+
+	// Relay
+	c.Action("blockchain.relay.info", makeRelayInfo(ch))
+
+	// Identity
+	c.Action("blockchain.identity.lookup", makeIdentityLookup(ch))
+	c.Action("blockchain.identity.verify", makeIdentityVerify(ch))
 }
 
 func makeChainHeight(ch *chain.Chain) core.ActionHandler {
@@ -455,6 +462,79 @@ func makeCirculating(ch *chain.Chain) core.ActionHandler {
 			"circulating":        circulating,
 			"circulating_pct":    float64(circulating) / float64(totalSupply) * 100,
 			"unit":               "LTHN",
+		}, OK: true}
+	}
+}
+
+// makeRelayInfo returns relay network status.
+//
+//	result := c.Action("blockchain.relay.info").Run(ctx, opts)
+func makeRelayInfo(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		h, _ := ch.Height()
+		_, meta, _ := ch.TopBlock()
+		if meta == nil {
+			meta = &chain.BlockMeta{}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"height":        h,
+			"top_hash":      meta.Hash.String(),
+			"synced":        true,
+			"relay_capable": true,
+		}, OK: true}
+	}
+}
+
+// makeIdentityLookup resolves a chain identity (alias → address + capabilities).
+// Per code/core/network/RFC.md: identity is wallet → alias → .lthn → DNS.
+//
+//	result := c.Action("blockchain.identity.lookup").Run(ctx, opts{name: "charon"})
+func makeIdentityLookup(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		name := opts.String("name")
+		if name == "" {
+			return core.Result{OK: false}
+		}
+		alias, err := ch.GetAlias(name)
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		parsed := parseActionComment(alias.Comment)
+		return core.Result{Value: map[string]interface{}{
+			"name":    alias.Name,
+			"address": alias.Address,
+			"version": parsed["v"],
+			"type":    parsed["type"],
+			"caps":    parsed["cap"],
+			"hns":     parsed["hns"],
+			"dns":     alias.Name + ".lthn",
+			"comment": alias.Comment,
+		}, OK: true}
+	}
+}
+
+// makeIdentityVerify checks if a given address matches a registered alias.
+//
+//	result := c.Action("blockchain.identity.verify").Run(ctx, opts{name, address})
+func makeIdentityVerify(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		name := opts.String("name")
+		address := opts.String("address")
+		if name == "" || address == "" {
+			return core.Result{OK: false}
+		}
+		alias, err := ch.GetAlias(name)
+		if err != nil {
+			return core.Result{Value: map[string]interface{}{
+				"verified": false, "reason": "alias not found",
+			}, OK: true}
+		}
+		verified := alias.Address == address
+		return core.Result{Value: map[string]interface{}{
+			"verified": verified,
+			"name":     name,
+			"address":  address,
+			"chain_address": alias.Address,
 		}, OK: true}
 	}
 }
