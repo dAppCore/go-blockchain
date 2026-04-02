@@ -54,6 +54,7 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.network.discover", makeServiceDiscover(ch))
 	c.Action("blockchain.network.vpn.endpoints", makeVPNEndpoints(ch))
 	c.Action("blockchain.network.gateway.register", makeGatewayRegister())
+	c.Action("blockchain.network.status", makeNetworkStatus(ch))
 
 	// Supply + economics
 	c.Action("blockchain.supply.total", makeSupplyTotal(ch))
@@ -448,6 +449,67 @@ func makeGatewayRegister() core.ActionHandler {
 			"dns_records": []string{
 				core.Sprintf("A %s.lthn → <your_ip>", name),
 				core.Sprintf("TXT vpn-endpoint=<your_ip>:51820 vpn-proto=wireguard"),
+			},
+		}, OK: true}
+	}
+}
+
+// makeNetworkStatus returns a complete network overview in one call.
+// This is the "dashboard" action — everything an external human needs.
+//
+//	result := c.Action("blockchain.network.status").Run(ctx, opts)
+func makeNetworkStatus(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		height, _ := ch.Height()
+		_, meta, _ := ch.TopBlock()
+		if meta == nil {
+			meta = &chain.BlockMeta{}
+		}
+		aliases := ch.GetAllAliases()
+
+		// Count by type
+		gateways, services, pools := 0, 0, 0
+		var capCounts = make(map[string]int)
+		for _, a := range aliases {
+			parsed := parseActionComment(a.Comment)
+			if parsed["type"] == "gateway" {
+				gateways++
+			} else {
+				services++
+			}
+			if caps := parsed["cap"]; caps != "" {
+				for _, cap := range core.Split(caps, ",") {
+					capCounts[cap]++
+				}
+			}
+			if core.Contains(a.Comment, "pool") {
+				pools++
+			}
+		}
+
+		hf5Active := height >= 11500
+
+		return core.Result{Value: map[string]interface{}{
+			"chain": map[string]interface{}{
+				"height":     height,
+				"difficulty": meta.Difficulty,
+				"hashrate":   meta.Difficulty / 120,
+				"top_hash":   meta.Hash.String(),
+				"synced":     true,
+				"hf5_active": hf5Active,
+			},
+			"network": map[string]interface{}{
+				"aliases":    len(aliases),
+				"gateways":   gateways,
+				"services":   services,
+				"pools":      pools,
+				"capabilities": capCounts,
+			},
+			"economics": map[string]interface{}{
+				"block_reward": uint64(1),
+				"total_supply": PremineAmount + height,
+				"fee":          float64(config.DefaultFee) / float64(config.Coin),
+				"emission":     "linear",
 			},
 		}, OK: true}
 	}
