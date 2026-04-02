@@ -128,6 +128,7 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_alias_reward":
 		s.rpcGetAliasReward(w, req)
 	case "get_est_height_from_date":
+		s.rpcGetEstHeightFromDate(w, req)
 	case "get_pool_info":
 		s.rpcGetPoolInfo(w, req)
 	case "get_assets_list":
@@ -135,6 +136,7 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "getblockchaininfo":
 		s.rpcGetBlockchainInfo(w, req)
 	case "get_version":
+		s.rpcGetVersion(w, req)
 	case "marketplace_global_get_offers_ex":
 		s.rpcMarketplaceGetOffersEx(w, req)
 	case "get_current_core_tx_expiration_median":
@@ -148,6 +150,7 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_peer_list":
 		s.rpcGetPeerList(w, req)
 	case "get_connections":
+		s.rpcGetConnections(w, req)
 	case "get_all_pool_tx_list":
 		s.rpcGetAllPoolTxList(w, req)
 	case "get_pool_txs_details":
@@ -163,9 +166,11 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_multisig_info":
 		s.rpcGetMultisigInfo(w, req)
 	case "get_alt_blocks_details":
+		s.rpcGetAlternateBlocksDetails(w, req)
 	case "get_main_block_details":
 		s.rpcGetMainBlockDetails(w, req)
 	case "get_alt_block_details":
+		s.rpcGetAltBlockDetails(w, req)
 	case "derive_payment_id":
 		s.rpcDerivePaymentID(w, req)
 	case "get_address_type":
@@ -173,6 +178,7 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_coin_supply":
 		s.rpcGetCoinSupply(w, req)
 	case "get_network_hashrate":
+		s.rpcGetNetworkHashrate(w, req)
 	case "get_gateway_endpoints":
 		s.rpcGetGatewayEndpoints(w, req)
 	case "get_vpn_gateways":
@@ -180,17 +186,16 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_dns_gateways":
 		s.rpcGetDNSGateways(w, req)
 	case "get_network_topology":
+		s.rpcGetNetworkTopology(w, req)
 	case "get_forge_info":
 		s.rpcGetForgeInfo(w, req)
-		s.rpcGetNetworkTopology(w, req)
-		s.rpcGetNetworkHashrate(w, req)
-		s.rpcGetAltBlockDetails(w, req)
-		s.rpcGetAlternateBlocksDetails(w, req)
 	case "get_votes":
 		s.rpcGetVotes(w, req)
 		s.rpcGetConnections(w, req)
 	case "sendrawtransaction":
+		s.rpcSendRawTransaction(w, req)
 	case "validate_signature":
+		s.rpcValidateSignature(w, req)
 	case "generate_key_image":
 		s.rpcGenerateKeyImage(w, req)
 	case "fast_hash":
@@ -198,17 +203,21 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "generate_keys":
 		s.rpcGenerateKeys(w, req)
 	case "check_key":
+		s.rpcCheckKey(w, req)
 	case "make_integrated_address":
 		s.rpcMakeIntegratedAddress(w, req)
 	case "split_integrated_address":
 		s.rpcSplitIntegratedAddress(w, req)
 	case "validate_address":
+		s.rpcValidateAddress(w, req)
 	case "get_block_hash_by_height":
 		s.rpcGetBlockHashByHeight(w, req)
 	case "get_chain_stats":
 		s.rpcGetChainStats(w, req)
 	case "get_recent_blocks":
+		s.rpcGetRecentBlocks(w, req)
 	case "search":
+		s.rpcSearch(w, req)
 	case "get_aliases_by_type":
 		s.rpcGetAliasesByType(w, req)
 	case "get_gateways":
@@ -218,18 +227,13 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_node_info":
 		s.rpcGetNodeInfo(w, req)
 	case "get_difficulty_history":
+		s.rpcGetDifficultyHistory(w, req)
 	case "get_alias_capabilities":
 		s.rpcGetAliasCapabilities(w, req)
 	case "get_service_endpoints":
 		s.rpcGetServiceEndpoints(w, req)
 	case "get_total_coins":
 		s.rpcGetTotalCoins(w, req)
-		s.rpcGetDifficultyHistory(w, req)
-		s.rpcSearch(w, req)
-		s.rpcGetRecentBlocks(w, req)
-		s.rpcValidateAddress(w, req)
-		s.rpcCheckKey(w, req)
-		s.rpcValidateSignature(w, req)
 		s.rpcSendRawTransaction(w, req)
 		s.rpcGetVersion(w, req)
 		s.rpcGetEstHeightFromDate(w, req)
@@ -261,7 +265,7 @@ func (s *Server) handleGetHeight(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
@@ -276,10 +280,10 @@ func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		}
 	}
 
-	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	genesis := s.safeGenesis()
 	var avgBlockTime uint64
 	if meta.Height > 0 && genesis != nil {
-		avgBlockTime = (meta.Timestamp - genesis.Timestamp) / meta.Height
+		if meta.Height > 0 { avgBlockTime = (meta.Timestamp - genesis.Timestamp) / meta.Height }
 	}
 
 	result := map[string]interface{}{
@@ -345,8 +349,8 @@ func (s *Server) rpcGetBlockHeaderByHeight(w http.ResponseWriter, req jsonRPCReq
 }
 
 func (s *Server) rpcGetLastBlockHeader(w http.ResponseWriter, req jsonRPCRequest) {
-	blk, meta, err := s.chain.TopBlock()
-	if err != nil {
+	blk, meta := s.safeTopBlock()
+	if meta.Height == 0 {
 		writeError(w, req.ID, -1, "no blocks")
 		return
 	}
@@ -679,7 +683,7 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 
 	// Estimate: genesis timestamp + (height * 120s avg block time)
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
@@ -689,7 +693,7 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 	}
 
 	// Get genesis timestamp
-	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	genesis := s.safeGenesis()
 	genesisTs := genesis.Timestamp
 	if params.Timestamp <= genesisTs {
 		writeResult(w, req.ID, map[string]interface{}{"height": 0, "status": "OK"})
@@ -698,7 +702,7 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 
 	// Linear estimate: (target_ts - genesis_ts) / avg_block_time
 	elapsed := params.Timestamp - genesisTs
-	avgBlockTime := (meta.Timestamp - genesisTs) / meta.Height
+	avgBlockTime := uint64(0); if meta.Height > 0 { avgBlockTime = (meta.Timestamp - genesisTs) / meta.Height }
 	if avgBlockTime == 0 {
 		avgBlockTime = 120
 	}
@@ -789,11 +793,11 @@ func (s *Server) rpcGetAssetsListHandler(w http.ResponseWriter, req jsonRPCReque
 
 func (s *Server) rpcGetBlockchainInfo(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
-	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	genesis := s.safeGenesis()
 
 	network := "mainnet"
 	if s.config.IsTestnet {
@@ -1139,13 +1143,13 @@ func (s *Server) rpcGetBlockHashByHeight(w http.ResponseWriter, req jsonRPCReque
 
 func (s *Server) rpcGetChainStats(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
-	_, topMeta, _ := s.chain.TopBlock()
-	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	_, topMeta := s.safeTopBlock()
+	genesis := s.safeGenesis()
 	aliases := s.chain.GetAllAliases()
 
 	var avgBlockTime uint64
 	if topMeta.Height > 0 && genesis != nil {
-		avgBlockTime = (topMeta.Timestamp - genesis.Timestamp) / topMeta.Height
+		if topMeta.Height > 0 { avgBlockTime = (topMeta.Timestamp - genesis.Timestamp) / topMeta.Height }
 	}
 
 	// Count gateway aliases
@@ -1471,7 +1475,7 @@ func (s *Server) rpcGetDifficultyHistory(w http.ResponseWriter, req jsonRPCReque
 
 func (s *Server) handleRESTInfo(w http.ResponseWriter, r *http.Request) {
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
@@ -2092,7 +2096,7 @@ func (s *Server) rpcGetCoinSupply(w http.ResponseWriter, req jsonRPCRequest) {
 
 func (s *Server) rpcGetNetworkHashrate(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
@@ -2259,7 +2263,7 @@ func (s *Server) rpcGetForgeInfo(w http.ResponseWriter, req jsonRPCRequest) {
 
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	height, _ := s.chain.Height()
-	_, meta, _ := s.chain.TopBlock()
+	_, meta := s.safeTopBlock()
 	if meta == nil {
 		meta = &chain.BlockMeta{}
 	}
@@ -2294,4 +2298,22 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	)
 
 	w.Write([]byte(metrics))
+}
+
+// safeTopBlock returns TopBlock or zero values if chain is empty.
+func (s *Server) safeTopBlock() (*types.Block, *chain.BlockMeta) {
+	blk, meta, err := s.chain.TopBlock()
+	if err != nil || meta == nil {
+		return &types.Block{}, &chain.BlockMeta{}
+	}
+	return blk, meta
+}
+
+// safeGenesis returns block 0 or a zero block if chain is empty.
+func (s *Server) safeGenesis() *types.Block {
+	blk, _, err := s.chain.GetBlockByHeight(0)
+	if err != nil || blk == nil {
+		return &types.Block{}
+	}
+	return blk
 }
