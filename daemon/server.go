@@ -92,6 +92,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetAliasDetails(w, req)
 	case "getblockcount":
 		s.rpcGetBlockCount(w, req)
+	case "get_alias_by_address":
+		s.rpcGetAliasByAddress(w, req)
 	case "get_asset_info":
 		s.rpcGetAssetInfo(w, req)
 	default:
@@ -303,4 +305,31 @@ func (s *Server) rpcGetAssetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 
 	// For other assets, return not found (until asset index is built)
 	writeError(w, req.ID, -1, core.Sprintf("asset %s not found", params.AssetID))
+}
+
+func (s *Server) rpcGetAliasByAddress(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Address string `json:"address"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// Search all aliases for matching address
+	aliases := s.chain.GetAllAliases()
+	var matches []map[string]string
+	for _, a := range aliases {
+		if a.Address == params.Address {
+			matches = append(matches, map[string]string{
+				"alias":   a.Name,
+				"address": a.Address,
+				"comment": a.Comment,
+			})
+		}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"alias_info_list": matches,
+		"status":          "OK",
+	})
 }
