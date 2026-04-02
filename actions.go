@@ -667,3 +667,10 @@ func makeEstHeightAtTime(ch *chain.Chain) core.ActionHandler {
 		return core.Result{Value: est, OK: true}
 	}
 }
+
+// RegisterMetricsActions registers operational metrics actions.
+func RegisterMetricsActions(c *core.Core, m *Metrics) {
+	c.Action("blockchain.metrics.snapshot", func(ctx context.Context, opts core.Options) core.Result {
+		return core.Result{Value: m.Snapshot(), OK: true}
+	})
+}
