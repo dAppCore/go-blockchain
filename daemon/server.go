@@ -636,13 +636,50 @@ func (s *Server) rpcGetBlocksDetails(w http.ResponseWriter, req jsonRPCRequest) 
 		if err != nil {
 			continue
 		}
+		// Determine block type: 0 = genesis, 1 = PoW, 2 = PoS
+		blockType := uint64(1) // PoW default
+		if h == 0 {
+			blockType = 0
+		}
+
+		// Build transaction details stubs for explorer compatibility
+		txDetails := make([]map[string]interface{}, 0, len(blk.TxHashes)+1)
+		// Miner tx (coinbase)
+		txDetails = append(txDetails, map[string]interface{}{
+			"id":        meta.Hash.String(),
+			"fee":       uint64(0),
+			"timestamp": blk.Timestamp,
+			"size":      uint64(0),
+		})
+		for _, txHash := range blk.TxHashes {
+			txDetails = append(txDetails, map[string]interface{}{
+				"id":        txHash.String(),
+				"fee":       uint64(0),
+				"timestamp": blk.Timestamp,
+				"size":      uint64(0),
+			})
+		}
+
 		blocks = append(blocks, map[string]interface{}{
-			"height":        meta.Height,
-			"hash":          meta.Hash.String(),
-			"timestamp":     blk.Timestamp,
-			"difficulty":    meta.Difficulty,
-			"major_version": blk.MajorVersion,
-			"tx_count":      len(blk.TxHashes),
+			"height":                   meta.Height,
+			"id":                       meta.Hash.String(),
+			"actual_timestamp":         blk.Timestamp,
+			"timestamp":               blk.Timestamp,
+			"difficulty":              meta.Difficulty,
+			"cumulative_diff_adjusted": meta.CumulativeDiff,
+			"cumulative_diff_precise":  core.Sprintf("%d", meta.CumulativeDiff),
+			"base_reward":             config.Coin,
+			"block_cumulative_size":    uint64(0),
+			"block_tself_size":         uint64(0),
+			"is_orphan":               false,
+			"type":                    blockType,
+			"major_version":           blk.MajorVersion,
+			"minor_version":           blk.MinorVersion,
+			"miner_text_info":         "",
+			"total_fee":               uint64(0),
+			"total_txs_size":          uint64(0),
+			"transactions_details":    txDetails,
+			"already_generated_coins": core.Sprintf("%d", meta.GeneratedCoins),
 		})
 	}
 
