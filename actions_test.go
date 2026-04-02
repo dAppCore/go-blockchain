@@ -99,3 +99,26 @@ func TestAction_RegisterAll_Good(t *testing.T) {
 	if !c.Action("blockchain.asset.info").Exists() { t.Error("asset.info not registered") }
 	if !c.Action("blockchain.forge.release").Exists() { t.Error("forge.release not registered") }
 }
+
+func TestAction_HSDResolve_Bad_NoName(t *testing.T) {
+	handler := makeHSDResolve("http://127.0.0.1:14037", "testkey")
+	result := handler(context.Background(), core.Options{})
+	if result.OK {
+		t.Error("should fail without name")
+	}
+}
+
+func TestAction_RegisterAllActions_Good_Count(t *testing.T) {
+	c := core.New()
+	// Can't call RegisterAllActions with nil chain for some actions
+	// but we can verify the action count
+	RegisterWalletActions(c)
+	RegisterCryptoActions(c)
+	RegisterAssetActions(c)
+	RegisterForgeActions(c)
+
+	allActions := c.Actions()
+	if len(allActions) < 14 {
+		t.Errorf("expected 14+ actions, got %d", len(allActions))
+	}
+}
