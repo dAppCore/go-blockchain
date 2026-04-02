@@ -36,6 +36,7 @@ type BlockchainService struct {
 	chain   *chain.Chain
 	store   *store.Store
 	daemon  *daemon.Server
+	events  *EventBus
 	cancel  context.CancelFunc
 }
 
@@ -76,6 +77,15 @@ func (s *BlockchainService) start() core.Result {
 	}
 	s.store = st
 	s.chain = chain.New(st)
+	s.events = NewEventBus()
+
+	// Wire block events
+	s.chain.SetBlockCallback(func(height uint64, hash string, aliasName string) {
+		s.events.Emit(Event{Type: EventBlockNew, Height: height, Data: hash})
+		if aliasName != "" {
+			s.events.Emit(Event{Type: EventAlias, Height: height, Data: aliasName})
+		}
+	})
 
 	cfg, forks := resolveConfig(s.opts.Testnet, &s.opts.Seed)
 
