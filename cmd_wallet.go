@@ -372,7 +372,7 @@ func runWalletTransfer(walletRPC, destination string, amount float64, paymentID 
 		return coreerr.E("runWalletTransfer", "destination must start with iTHN", nil)
 	}
 
-	atomicAmount := uint64(amount * AtomicUnit) // 12 decimal places
+	atomicAmount := uint64(uint64(amount * float64(AtomicUnit))) // 12 decimal places
 
 	core.Print(nil, "Sending %f LTHN to %s...", amount, destination[:20]+"...")
 
