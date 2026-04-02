@@ -7,6 +7,7 @@
 package daemon
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"dappco.re/go/core"
 
 	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/crypto"
 	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wallet"
@@ -126,6 +128,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "check_keyimages":
 		s.rpcCheckKeyImages(w, req)
 	case "sendrawtransaction":
+	case "validate_signature":
+		s.rpcValidateSignature(w, req)
 		s.rpcSendRawTransaction(w, req)
 		s.rpcGetVersion(w, req)
 		s.rpcGetEstHeightFromDate(w, req)
@@ -741,4 +745,68 @@ func (s *Server) rpcSendRawTransaction(w http.ResponseWriter, req jsonRPCRequest
 		return
 	}
 	writeError(w, req.ID, -1, "sendrawtransaction not available (read-only node)")
+}
+
+func (s *Server) rpcValidateSignature(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Buff  string `json:"buff"`  // base64 encoded data
+		PKey  string `json:"pkey"`  // hex public key (or empty to use alias)
+		Sig   string `json:"sig"`   // hex signature
+		Alias string `json:"alias"` // alias to look up public key
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// Get public key from params or alias
+	pubHex := params.PKey
+	if pubHex == "" && params.Alias != "" {
+		alias, err := s.chain.GetAlias(params.Alias)
+		if err != nil {
+			writeError(w, req.ID, -1, core.Sprintf("alias %s not found", params.Alias))
+			return
+		}
+		pubHex = alias.Address // spend public key hex
+	}
+
+	if pubHex == "" {
+		writeError(w, req.ID, -1, "pkey or alias required")
+		return
+	}
+
+	// Decode inputs
+	dataBytes, err := base64.StdEncoding.DecodeString(params.Buff)
+	if err != nil {
+		writeError(w, req.ID, -1, "invalid base64 buff")
+		return
+	}
+
+	pubBytes, err := hex.DecodeString(pubHex)
+	if err != nil || len(pubBytes) != 32 {
+		writeError(w, req.ID, -1, "invalid public key")
+		return
+	}
+
+	sigBytes, err := hex.DecodeString(params.Sig)
+	if err != nil || len(sigBytes) != 64 {
+		writeError(w, req.ID, -1, "invalid signature")
+		return
+	}
+
+	// Hash the data
+	var hash [32]byte
+	hashResult := crypto.FastHash(dataBytes)
+	copy(hash[:], hashResult[:])
+
+	var pub [32]byte
+	var sig [64]byte
+	copy(pub[:], pubBytes)
+	copy(sig[:], sigBytes)
+
+	valid := crypto.CheckSignature(hash, pub, sig)
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"valid":  valid,
+		"status": "OK",
+	})
 }
