@@ -9,6 +9,7 @@ import (
 	"dappco.re/go/core"
 
 	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/wallet"
 )
 
 // RegisterActions registers all blockchain actions with a Core instance.
@@ -237,4 +238,53 @@ func parseActionComment(comment string) map[string]string {
 		}
 	}
 	return parsed
+}
+
+// RegisterWalletActions registers wallet-related Core actions.
+//
+//	blockchain.RegisterWalletActions(c)
+func RegisterWalletActions(c *core.Core) {
+	c.Action("blockchain.wallet.create", actionWalletCreate)
+	c.Action("blockchain.wallet.address", actionWalletAddress)
+	c.Action("blockchain.wallet.seed", actionWalletSeed)
+}
+
+func actionWalletCreate(ctx context.Context, opts core.Options) core.Result {
+	account, err := wallet.GenerateAccount()
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	addr := account.Address()
+	seed, _ := account.ToSeed()
+	return core.Result{Value: map[string]interface{}{
+		"address": addr.Encode(StandardPrefix),
+		"seed":    seed,
+	}, OK: true}
+}
+
+func actionWalletAddress(ctx context.Context, opts core.Options) core.Result {
+	seed := opts.String("seed")
+	if seed == "" {
+		return core.Result{OK: false}
+	}
+	account, err := wallet.RestoreFromSeed(seed)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	addr := account.Address()
+	return core.Result{Value: map[string]interface{}{
+		"standard":   addr.Encode(StandardPrefix),
+		"integrated": addr.Encode(IntegratedPrefix),
+		"auditable":  addr.Encode(AuditablePrefix),
+	}, OK: true}
+}
+
+func actionWalletSeed(ctx context.Context, opts core.Options) core.Result {
+	// Generate a fresh seed (no wallet file needed)
+	account, err := wallet.GenerateAccount()
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	seed, _ := account.ToSeed()
+	return core.Result{Value: seed, OK: true}
 }
