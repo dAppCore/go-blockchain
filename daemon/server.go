@@ -146,6 +146,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_chain_stats":
 		s.rpcGetChainStats(w, req)
 	case "get_recent_blocks":
+	case "search":
+		s.rpcSearch(w, req)
 		s.rpcGetRecentBlocks(w, req)
 		s.rpcValidateAddress(w, req)
 		s.rpcCheckKey(w, req)
@@ -1099,4 +1101,90 @@ func (s *Server) rpcGetRecentBlocks(w http.ResponseWriter, req jsonRPCRequest) {
 		"blocks": blocks,
 		"status": "OK",
 	})
+}
+
+// --- Search & discovery methods ---
+
+func (s *Server) rpcSearch(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Query string `json:"query"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	q := params.Query
+	result := map[string]interface{}{"query": q, "status": "OK"}
+
+	// Try as block height
+	if height, err := parseUint64(q); err == nil {
+		if blk, meta, err := s.chain.GetBlockByHeight(height); err == nil {
+			result["type"] = "block"
+			result["block"] = map[string]interface{}{
+				"height": meta.Height, "hash": meta.Hash.String(),
+				"timestamp": blk.Timestamp,
+			}
+			writeResult(w, req.ID, result)
+			return
+		}
+	}
+
+	// Try as block/tx hash
+	if len(q) == 64 {
+		if hash, err := types.HashFromHex(q); err == nil {
+			if blk, meta, err := s.chain.GetBlockByHash(hash); err == nil {
+				result["type"] = "block"
+				result["block"] = map[string]interface{}{
+					"height": meta.Height, "hash": meta.Hash.String(),
+					"timestamp": blk.Timestamp,
+				}
+				writeResult(w, req.ID, result)
+				return
+			}
+			if tx, meta, err := s.chain.GetTransaction(hash); err == nil {
+				result["type"] = "transaction"
+				result["transaction"] = map[string]interface{}{
+					"hash": q, "block_height": meta.KeeperBlock,
+					"inputs": len(tx.Vin), "outputs": len(tx.Vout),
+				}
+				writeResult(w, req.ID, result)
+				return
+			}
+		}
+	}
+
+	// Try as alias
+	if alias, err := s.chain.GetAlias(q); err == nil {
+		result["type"] = "alias"
+		result["alias"] = map[string]string{
+			"name": alias.Name, "address": alias.Address, "comment": alias.Comment,
+		}
+		writeResult(w, req.ID, result)
+		return
+	}
+
+	// Try as address prefix
+	if len(q) > 4 && (q[:4] == "iTHN" || q[:4] == "iTHn" || q[:4] == "iThN") {
+		_, _, err := types.DecodeAddress(q)
+		if err == nil {
+			result["type"] = "address"
+			result["valid"] = true
+			writeResult(w, req.ID, result)
+			return
+		}
+	}
+
+	result["type"] = "not_found"
+	writeResult(w, req.ID, result)
+}
+
+func parseUint64(s string) (uint64, error) {
+	var n uint64
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, core.E("parse", "not a number", nil)
+		}
+		n = n*10 + uint64(c-'0')
+	}
+	return n, nil
 }
