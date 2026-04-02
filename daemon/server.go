@@ -262,6 +262,9 @@ func (s *Server) handleGetHeight(w http.ResponseWriter, r *http.Request) {
 func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 
 	aliases := s.chain.GetAllAliases()
 
@@ -677,6 +680,9 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 	// Estimate: genesis timestamp + (height * 120s avg block time)
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 	if meta.Height == 0 || params.Timestamp == 0 {
 		writeResult(w, req.ID, map[string]interface{}{"height": 0, "status": "OK"})
 		return
@@ -784,6 +790,9 @@ func (s *Server) rpcGetAssetsListHandler(w http.ResponseWriter, req jsonRPCReque
 func (s *Server) rpcGetBlockchainInfo(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 	genesis, _, _ := s.chain.GetBlockByHeight(0)
 
 	network := "mainnet"
@@ -1463,6 +1472,9 @@ func (s *Server) rpcGetDifficultyHistory(w http.ResponseWriter, req jsonRPCReque
 func (s *Server) handleRESTInfo(w http.ResponseWriter, r *http.Request) {
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 	aliases := s.chain.GetAllAliases()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -2081,6 +2093,9 @@ func (s *Server) rpcGetCoinSupply(w http.ResponseWriter, req jsonRPCRequest) {
 func (s *Server) rpcGetNetworkHashrate(w http.ResponseWriter, req jsonRPCRequest) {
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 
 	// Hashrate ≈ difficulty / block_time
 	hashrate := meta.Difficulty / 120
@@ -2245,6 +2260,9 @@ func (s *Server) rpcGetForgeInfo(w http.ResponseWriter, req jsonRPCRequest) {
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	height, _ := s.chain.Height()
 	_, meta, _ := s.chain.TopBlock()
+	if meta == nil {
+		meta = &chain.BlockMeta{}
+	}
 	aliases := s.chain.GetAllAliases()
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
