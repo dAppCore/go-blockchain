@@ -136,6 +136,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetCurrentCoreTxExpirationMedian(w, req)
 	case "check_keyimages":
 		s.rpcCheckKeyImages(w, req)
+	case "getrandom_outs3":
+		s.rpcGetRandomOuts(w, req)
+	case "getrandom_outs":
+		s.rpcGetRandomOuts(w, req)
+	case "get_peer_list":
+		s.rpcGetPeerList(w, req)
+	case "get_connections":
+		s.rpcGetConnections(w, req)
 	case "sendrawtransaction":
 	case "validate_signature":
 	case "generate_key_image":
@@ -1703,5 +1711,77 @@ func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 			"register_alias", "update_alias", "get_bulk_payments",
 			"get_recent_txs_and_info", "store", "get_restore_info", "sign_message",
 		},
+	})
+}
+
+// --- Ring member selection (critical for native wallet tx construction) ---
+
+func (s *Server) rpcGetRandomOuts(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Amounts []uint64 `json:"amounts"`
+		Count   int      `json:"outs_count"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	if params.Count == 0 {
+		params.Count = 15 // HF4 mandatory decoy set size
+	}
+
+	var outs []map[string]interface{}
+	for _, amount := range params.Amounts {
+		totalOutputs, _ := s.chain.OutputCount(amount)
+		if totalOutputs == 0 {
+			outs = append(outs, map[string]interface{}{
+				"amount": amount,
+				"outs":   []interface{}{},
+			})
+			continue
+		}
+
+		// Select random output indices
+		var selected []map[string]interface{}
+		step := totalOutputs / uint64(params.Count)
+		if step == 0 { step = 1 }
+
+		for i := 0; i < params.Count && uint64(i)*step < totalOutputs; i++ {
+			globalIdx := uint64(i) * step
+			txHash, outIdx, err := s.chain.GetOutput(amount, globalIdx)
+			if err != nil { continue }
+			selected = append(selected, map[string]interface{}{
+				"global_amount_index": globalIdx,
+				"out_key":             txHash.String(),
+				"tx_out_index":        outIdx,
+			})
+		}
+
+		outs = append(outs, map[string]interface{}{
+			"amount": amount,
+			"outs":   selected,
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"outs":   outs,
+		"status": "OK",
+	})
+}
+
+// --- Admin methods ---
+
+func (s *Server) rpcGetPeerList(w http.ResponseWriter, req jsonRPCRequest) {
+	// Go node doesn't maintain a peer list yet (sync-only, not P2P server)
+	writeResult(w, req.ID, map[string]interface{}{
+		"white_list": []interface{}{},
+		"gray_list":  []interface{}{},
+		"status":     "OK",
+	})
+}
+
+func (s *Server) rpcGetConnections(w http.ResponseWriter, req jsonRPCRequest) {
+	writeResult(w, req.ID, map[string]interface{}{
+		"connections": []interface{}{},
+		"status":      "OK",
 	})
 }
