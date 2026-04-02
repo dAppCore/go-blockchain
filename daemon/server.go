@@ -1571,6 +1571,7 @@ func (s *Server) handleSSEBlocks(w http.ResponseWriter, r *http.Request) {
 
 	lastHeight := uint64(0)
 	ctx := r.Context()
+	heartbeat := 0
 
 	for {
 		select {
@@ -1581,17 +1582,29 @@ func (s *Server) handleSSEBlocks(w http.ResponseWriter, r *http.Request) {
 
 		height, _ := s.chain.Height()
 		if height > lastHeight && lastHeight > 0 {
-			// New block(s) arrived
 			for h := lastHeight + 1; h <= height; h++ {
 				blk, meta, err := s.chain.GetBlockByHeight(h)
 				if err != nil { continue }
 				data := core.Sprintf(`{"height":%d,"hash":"%s","timestamp":%d,"difficulty":%d,"tx_count":%d}`,
 					meta.Height, meta.Hash.String(), blk.Timestamp, meta.Difficulty, len(blk.TxHashes))
-				w.Write([]byte(core.Sprintf("event: block\ndata: %s\n\n", data)))
+				if _, err := w.Write([]byte(core.Sprintf("event: block\ndata: %s\n\n", data))); err != nil {
+					return // client disconnected
+				}
 				flusher.Flush()
 			}
+			heartbeat = 0
 		}
 		lastHeight = height
+
+		// Send keepalive every 30s (15 * 2s poll)
+		heartbeat++
+		if heartbeat >= 15 {
+			if _, err := w.Write([]byte(": keepalive\n\n")); err != nil {
+				return // client disconnected
+			}
+			flusher.Flush()
+			heartbeat = 0
+		}
 
 		// Poll every 2 seconds
 		select {
