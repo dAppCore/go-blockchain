@@ -6,6 +6,9 @@ package blockchain
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
 
 	"dappco.re/go/core"
 
@@ -564,6 +567,8 @@ func RegisterWalletActions(c *core.Core) {
 	c.Action("blockchain.wallet.restore", actionWalletRestore)
 	c.Action("blockchain.wallet.info", actionWalletInfo)
 	c.Action("blockchain.wallet.validate", actionWalletValidate)
+	c.Action("blockchain.wallet.balance", actionWalletBalance)
+	c.Action("blockchain.wallet.history", actionWalletHistory)
 }
 
 func actionWalletCreate(ctx context.Context, opts core.Options) core.Result {
@@ -678,6 +683,75 @@ func actionWalletValidate(ctx context.Context, opts core.Options) core.Result {
 		"valid":   valid,
 		"prefix":  address[:4],
 	}, OK: true}
+}
+
+// walletRPC makes a JSON-RPC call to the wallet daemon.
+func walletRPC(walletURL, method string, params interface{}) (interface{}, error) {
+	body := core.Sprintf(`{"jsonrpc":"2.0","id":"0","method":"%s","params":%s}`, method, func() string {
+		if params == nil {
+			return "{}"
+		}
+		return core.JSONMarshalString(params)
+	}())
+
+	resp, err := http.Post(walletURL+"/json_rpc", "application/json", core.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Result interface{} `json:"result"`
+	}
+	json.Unmarshal(raw, &result)
+	return result.Result, nil
+}
+
+// actionWalletBalance queries the wallet RPC for balance.
+// Requires wallet RPC running on WALLET_RPC_URL (default: 127.0.0.1:46944).
+//
+//	c.Action("blockchain.wallet.balance", opts{wallet_url: "http://..."})
+func actionWalletBalance(ctx context.Context, opts core.Options) core.Result {
+	walletURL := opts.String("wallet_url")
+	if walletURL == "" {
+		walletURL = core.Env("WALLET_RPC_URL")
+	}
+	if walletURL == "" {
+		walletURL = "http://127.0.0.1:46944"
+	}
+
+	result, err := walletRPC(walletURL, "getbalance", nil)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: result, OK: true}
+}
+
+// actionWalletHistory queries the wallet RPC for transfer history.
+//
+//	c.Action("blockchain.wallet.history", opts{wallet_url, count, offset})
+func actionWalletHistory(ctx context.Context, opts core.Options) core.Result {
+	walletURL := opts.String("wallet_url")
+	if walletURL == "" {
+		walletURL = core.Env("WALLET_RPC_URL")
+	}
+	if walletURL == "" {
+		walletURL = "http://127.0.0.1:46944"
+	}
+
+	count := opts.Int("count")
+	if count == 0 {
+		count = 20
+	}
+
+	result, err := walletRPC(walletURL, "get_recent_txs_and_info2", map[string]interface{}{
+		"count":  count,
+		"offset": opts.Int("offset"),
+	})
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: result, OK: true}
 }
 
 // RegisterCryptoActions registers native CGo crypto actions.
