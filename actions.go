@@ -46,6 +46,8 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.network.dns", makeDNSGateways(ch))
 	c.Action("blockchain.network.services", makeNetworkServices(ch))
 	c.Action("blockchain.network.discover", makeServiceDiscover(ch))
+	c.Action("blockchain.network.vpn.endpoints", makeVPNEndpoints(ch))
+	c.Action("blockchain.network.gateway.register", makeGatewayRegister())
 
 	// Supply
 	c.Action("blockchain.supply.total", makeSupplyTotal(ch))
@@ -321,6 +323,72 @@ func makeServiceDiscover(ch *chain.Chain) core.ActionHandler {
 			"capability": capability,
 			"count":      len(matches),
 			"providers":  matches,
+		}, OK: true}
+	}
+}
+
+// makeVPNEndpoints returns VPN gateways with their WireGuard endpoints.
+// Queries chain aliases for cap=vpn, then returns endpoint info.
+//
+//	result := c.Action("blockchain.network.vpn.endpoints").Run(ctx, opts)
+//	// [{name, address, endpoint, proto, caps}]
+func makeVPNEndpoints(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		all := ch.GetAllAliases()
+		var endpoints []map[string]interface{}
+		for _, a := range all {
+			if !core.Contains(a.Comment, "vpn") {
+				continue
+			}
+			parsed := parseActionComment(a.Comment)
+			endpoints = append(endpoints, map[string]interface{}{
+				"name":     a.Name,
+				"address":  a.Address,
+				"type":     parsed["type"],
+				"caps":     parsed["cap"],
+				"hns":      parsed["hns"],
+				"endpoint": a.Name + ".lthn:51820",
+				"proto":    "wireguard",
+			})
+		}
+		return core.Result{Value: map[string]interface{}{
+			"count":     len(endpoints),
+			"endpoints": endpoints,
+		}, OK: true}
+	}
+}
+
+// makeGatewayRegister returns the alias comment format for gateway registration.
+// This is a helper that generates the correct v=lthn1 comment string.
+//
+//	result := c.Action("blockchain.network.gateway.register").Run(ctx, opts{name, caps})
+func makeGatewayRegister() core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		name := opts.String("name")
+		caps := opts.String("caps")
+		gatewayType := opts.String("type")
+		if name == "" {
+			return core.Result{OK: false}
+		}
+		if caps == "" {
+			caps = "vpn,dns"
+		}
+		if gatewayType == "" {
+			gatewayType = "gateway"
+		}
+
+		comment := core.Sprintf("v=lthn1;type=%s;cap=%s", gatewayType, caps)
+		hnsName := name + ".lthn"
+
+		return core.Result{Value: map[string]interface{}{
+			"alias_name":  name,
+			"comment":     comment,
+			"hns_name":    hnsName,
+			"instruction": core.Sprintf("Register alias @%s with comment: %s", name, comment),
+			"dns_records": []string{
+				core.Sprintf("A %s.lthn → <your_ip>", name),
+				core.Sprintf("TXT vpn-endpoint=<your_ip>:51820 vpn-proto=wireguard"),
+			},
 		}, OK: true}
 	}
 }
