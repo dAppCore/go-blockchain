@@ -164,6 +164,12 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_node_info":
 		s.rpcGetNodeInfo(w, req)
 	case "get_difficulty_history":
+	case "get_alias_capabilities":
+		s.rpcGetAliasCapabilities(w, req)
+	case "get_service_endpoints":
+		s.rpcGetServiceEndpoints(w, req)
+	case "get_total_coins":
+		s.rpcGetTotalCoins(w, req)
 		s.rpcGetDifficultyHistory(w, req)
 		s.rpcSearch(w, req)
 		s.rpcGetRecentBlocks(w, req)
@@ -1507,3 +1513,117 @@ func (s *Server) handleSSEBlocks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+// --- SWAP & gateway service methods ---
+
+func (s *Server) rpcGetAliasCapabilities(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Alias string `json:"alias"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	alias, err := s.chain.GetAlias(params.Alias)
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("alias %s not found", params.Alias))
+		return
+	}
+
+	// Parse v=lthn1;type=gateway;cap=vpn,dns,proxy;hns=charon.lthn
+	parsed := make(map[string]string)
+	for _, part := range splitSemicolon(alias.Comment) {
+		idx := -1
+		for i, c := range part {
+			if c == '=' { idx = i; break }
+		}
+		if idx > 0 {
+			parsed[part[:idx]] = part[idx+1:]
+		}
+	}
+
+	var caps []string
+	if c, ok := parsed["cap"]; ok {
+		for _, part := range splitComma(c) {
+			caps = append(caps, part)
+		}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"alias":        alias.Name,
+		"version":      parsed["v"],
+		"type":         parsed["type"],
+		"capabilities": caps,
+		"hns":          parsed["hns"],
+		"raw_comment":  alias.Comment,
+		"status":       "OK",
+	})
+}
+
+func splitComma(s string) []string {
+	var parts []string
+	current := ""
+	for _, c := range s {
+		if c == ',' {
+			if current != "" { parts = append(parts, current) }
+			current = ""
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" { parts = append(parts, current) }
+	return parts
+}
+
+func (s *Server) rpcGetServiceEndpoints(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	var endpoints []map[string]interface{}
+
+	for _, a := range all {
+		parsed := make(map[string]string)
+		for _, part := range splitSemicolon(a.Comment) {
+			idx := -1
+			for i, c := range part { if c == '=' { idx = i; break } }
+			if idx > 0 { parsed[part[:idx]] = part[idx+1:] }
+		}
+
+		if parsed["type"] == "" { continue }
+
+		var caps []string
+		if c, ok := parsed["cap"]; ok {
+			for _, p := range splitComma(c) { caps = append(caps, p) }
+		}
+
+		endpoints = append(endpoints, map[string]interface{}{
+			"alias":        a.Name,
+			"type":         parsed["type"],
+			"capabilities": caps,
+			"hns_name":     parsed["hns"],
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"endpoints": endpoints,
+		"count":     len(endpoints),
+		"status":    "OK",
+	})
+}
+
+func (s *Server) rpcGetTotalCoins(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	// Premine: 10M LTHN + 1 LTHN per block after genesis
+	premine := uint64(10000000) // LTHN
+	mined := height             // 1 LTHN per block
+	total := premine + mined
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"total_coins":     total,
+		"premine":         premine,
+		"mined":           mined,
+		"block_reward":    1,
+		"height":          height,
+		"unit":            "LTHN",
+		"atomic_total":    total * 1000000000000,
+		"status":          "OK",
+	})
+}
