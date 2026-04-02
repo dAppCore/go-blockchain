@@ -37,6 +37,8 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.chain.difficulty", makeChainDifficulty(ch))
 	c.Action("blockchain.chain.transaction", makeChainTransaction(ch))
 	c.Action("blockchain.chain.peers", makeChainPeers(ch))
+	c.Action("blockchain.chain.genesis", makeChainGenesis(ch))
+	c.Action("blockchain.chain.mempool", makeChainMempool(ch))
 
 	// Aliases
 	c.Action("blockchain.alias.list", makeAliasList(ch))
@@ -198,6 +200,33 @@ func makeChainPeers(ch *chain.Chain) core.ActionHandler {
 			"white_list": 0,
 			"grey_list":  0,
 			"note":       "Go node syncs via RPC, not P2P peers",
+		}, OK: true}
+	}
+}
+
+func makeChainGenesis(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		blk, meta, err := ch.GetBlockByHeight(0)
+		if err != nil {
+			return core.Result{Value: map[string]interface{}{
+				"hash": chain.GenesisHash, "height": uint64(0),
+			}, OK: true}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"hash":      meta.Hash.String(),
+			"height":    uint64(0),
+			"timestamp": blk.Timestamp,
+			"network":   chain.DetectNetwork(meta.Hash.String()),
+		}, OK: true}
+	}
+}
+
+func makeChainMempool(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		return core.Result{Value: map[string]interface{}{
+			"size":         0,
+			"transactions": []interface{}{},
+			"note":         "Go node does not maintain a local mempool",
 		}, OK: true}
 	}
 }
