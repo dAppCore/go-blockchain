@@ -171,6 +171,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_coin_supply":
 		s.rpcGetCoinSupply(w, req)
 	case "get_network_hashrate":
+	case "get_gateway_endpoints":
+		s.rpcGetGatewayEndpoints(w, req)
+	case "get_vpn_gateways":
+		s.rpcGetVPNGateways(w, req)
+	case "get_dns_gateways":
+		s.rpcGetDNSGateways(w, req)
+	case "get_network_topology":
+		s.rpcGetNetworkTopology(w, req)
 		s.rpcGetNetworkHashrate(w, req)
 		s.rpcGetAltBlockDetails(w, req)
 		s.rpcGetAlternateBlocksDetails(w, req)
@@ -2081,4 +2089,131 @@ func (s *Server) rpcGetNetworkHashrate(w http.ResponseWriter, req jsonRPCRequest
 		"unit":           "H/s",
 		"status":         "OK",
 	})
+}
+
+// --- LetherNet service layer (Go-exclusive, no C++ equivalent) ---
+
+func (s *Server) rpcGetGatewayEndpoints(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	var endpoints []map[string]interface{}
+
+	for _, a := range all {
+		if !core.Contains(a.Comment, "type=gateway") { continue }
+		parsed := parseComment(a.Comment)
+		
+		ep := map[string]interface{}{
+			"alias": a.Name,
+			"type":  "gateway",
+		}
+
+		if hns, ok := parsed["hns"]; ok {
+			ep["dns_name"] = hns
+		} else {
+			ep["dns_name"] = a.Name + ".lthn"
+		}
+
+		if caps, ok := parsed["cap"]; ok {
+			ep["capabilities"] = splitComma(caps)
+		}
+
+		endpoints = append(endpoints, ep)
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"gateways":  endpoints,
+		"count":     len(endpoints),
+		"status":    "OK",
+	})
+}
+
+func (s *Server) rpcGetVPNGateways(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	var vpns []map[string]interface{}
+
+	for _, a := range all {
+		parsed := parseComment(a.Comment)
+		caps := parsed["cap"]
+		if !core.Contains(caps, "vpn") { continue }
+
+		vpns = append(vpns, map[string]interface{}{
+			"alias":        a.Name,
+			"dns_name":     parsed["hns"],
+			"capabilities": splitComma(caps),
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"vpn_gateways": vpns,
+		"count":        len(vpns),
+		"status":       "OK",
+	})
+}
+
+func (s *Server) rpcGetDNSGateways(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	var dns []map[string]interface{}
+
+	for _, a := range all {
+		parsed := parseComment(a.Comment)
+		caps := parsed["cap"]
+		if !core.Contains(caps, "dns") { continue }
+
+		dns = append(dns, map[string]interface{}{
+			"alias":    a.Name,
+			"dns_name": parsed["hns"],
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"dns_gateways": dns,
+		"count":        len(dns),
+		"status":       "OK",
+	})
+}
+
+func (s *Server) rpcGetNetworkTopology(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	
+	topology := map[string]int{
+		"total_aliases": len(all),
+		"gateways":      0,
+		"services":      0,
+		"vpn_capable":   0,
+		"dns_capable":   0,
+		"proxy_capable": 0,
+		"exit_capable":  0,
+	}
+
+	for _, a := range all {
+		parsed := parseComment(a.Comment)
+		switch parsed["type"] {
+		case "gateway":
+			topology["gateways"]++
+		case "service":
+			topology["services"]++
+		}
+		caps := parsed["cap"]
+		if core.Contains(caps, "vpn") { topology["vpn_capable"]++ }
+		if core.Contains(caps, "dns") { topology["dns_capable"]++ }
+		if core.Contains(caps, "proxy") { topology["proxy_capable"]++ }
+		if core.Contains(caps, "exit") { topology["exit_capable"]++ }
+	}
+
+	height, _ := s.chain.Height()
+	topology["chain_height"] = int(height)
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"topology": topology,
+		"status":   "OK",
+	})
+}
+
+func parseComment(comment string) map[string]string {
+	parsed := make(map[string]string)
+	for _, part := range splitSemicolon(comment) {
+		idx := -1
+		for i, c := range part { if c == '=' { idx = i; break } }
+		if idx > 0 { parsed[part[:idx]] = part[idx+1:] }
+	}
+	return parsed
 }
