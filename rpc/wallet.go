@@ -11,6 +11,47 @@ import (
 	"encoding/hex"
 )
 
+// TransferDestination is an address+amount pair for a wallet transfer.
+//
+//	destination := rpc.TransferDestination{Address: "iTHN...", Amount: 1000000000000}
+type TransferDestination struct {
+	Address string `json:"address"`
+	Amount  uint64 `json:"amount"`
+}
+
+// TransferParams holds the parameters for a wallet transfer RPC call.
+//
+//	params := rpc.TransferParams{Destinations: destinations, Fee: 10000000000, Mixin: 15}
+type TransferParams struct {
+	Destinations []TransferDestination `json:"destinations"`
+	Fee          uint64                `json:"fee"`
+	Mixin        uint64                `json:"mixin"`
+	PaymentID    string                `json:"payment_id,omitempty"`
+}
+
+// TransferResult holds the response from a wallet transfer RPC call.
+//
+//	result, err := client.Transfer(params)
+//	core.Print(nil, "TX: %s", result.TxHash)
+type TransferResult struct {
+	TxHash string `json:"tx_hash"`
+}
+
+// Transfer sends LTHN to one or more destinations via the wallet RPC.
+//
+//	result, err := client.Transfer(rpc.TransferParams{
+//		Destinations: []rpc.TransferDestination{{Address: "iTHN...", Amount: 1000000000000}},
+//		Fee:          10000000000,
+//		Mixin:        15,
+//	})
+func (c *Client) Transfer(params TransferParams) (*TransferResult, error) {
+	var result TransferResult
+	if err := c.call("transfer", params, &result); err != nil {
+		return nil, coreerr.E("Client.Transfer", "wallet transfer RPC failed", err)
+	}
+	return &result, nil
+}
+
 // RandomOutputEntry is a decoy output returned by getrandom_outs.
 // Usage: var value rpc.RandomOutputEntry
 type RandomOutputEntry struct {

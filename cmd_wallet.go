@@ -7,9 +7,6 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"io"
-	"net/http"
 
 	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
@@ -376,57 +373,20 @@ func runWalletTransfer(walletRPC, destination string, amount float64, paymentID 
 
 	core.Print(nil, "Sending %f LTHN to %s...", amount, destination[:20]+"...")
 
-	_ = rpc.NewClient(walletRPC) // for future native transfer path
+	client := rpc.NewClient(walletRPC)
 
-	// Use the transfer RPC method on the C++ wallet
-	type transferDest struct {
-		Address string `json:"address"`
-		Amount  uint64 `json:"amount"`
-	}
-	params := struct {
-		Destinations []transferDest `json:"destinations"`
-		Fee          uint64         `json:"fee"`
-		Mixin        uint64         `json:"mixin"`
-		PaymentID    string         `json:"payment_id,omitempty"`
-	}{
-		Destinations: []transferDest{{Address: destination, Amount: atomicAmount}},
+	result, err := client.Transfer(rpc.TransferParams{
+		Destinations: []rpc.TransferDestination{{Address: destination, Amount: atomicAmount}},
 		Fee:          10000000000, // 0.01 LTHN
 		Mixin:        15,
 		PaymentID:    paymentID,
-	}
-	// Call the wallet RPC transfer method
-	reqBody := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      "0",
-		"method":  "transfer",
-		"params":  params,
-	}
-	data := core.JSONMarshalString(reqBody)
-
-	httpResp, err := http.Post(walletRPC+"/json_rpc", "application/json", core.NewReader(data))
+	})
 	if err != nil {
-		return coreerr.E("runWalletTransfer", "wallet RPC call failed", err)
-	}
-	defer httpResp.Body.Close()
-
-	body, _ := io.ReadAll(httpResp.Body)
-
-	var rpcResp struct {
-		Result struct {
-			TxHash string `json:"tx_hash"`
-		} `json:"result"`
-		Error *struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	json.Unmarshal(body, &rpcResp)
-
-	if rpcResp.Error != nil {
-		return coreerr.E("runWalletTransfer", rpcResp.Error.Message, nil)
+		return coreerr.E("runWalletTransfer", "wallet transfer failed", err)
 	}
 
 	core.Print(nil, "Transfer sent!")
-	core.Print(nil, "  TX Hash: %s", rpcResp.Result.TxHash)
+	core.Print(nil, "  TX Hash: %s", result.TxHash)
 	core.Print(nil, "  Amount:  %f LTHN", amount)
 	core.Print(nil, "  Fee:     0.01 LTHN")
 
