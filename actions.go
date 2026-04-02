@@ -8,6 +8,7 @@ import (
 
 	"dappco.re/go/core"
 
+	hsdpkg "dappco.re/go/core/blockchain/hsd"
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/crypto"
 	"dappco.re/go/core/blockchain/types"
@@ -397,4 +398,61 @@ func RegisterAllActions(c *core.Core, ch *chain.Chain) {
 	RegisterCryptoActions(c)
 	RegisterAssetActions(c)
 	RegisterForgeActions(c)
+}
+
+// RegisterHSDActions registers sidechain query actions.
+//
+//	blockchain.RegisterHSDActions(c, hsdClient)
+func RegisterHSDActions(c *core.Core, hsdURL, hsdKey string) {
+	c.Action("blockchain.hsd.info", makeHSDInfo(hsdURL, hsdKey))
+	c.Action("blockchain.hsd.resolve", makeHSDResolve(hsdURL, hsdKey))
+	c.Action("blockchain.hsd.height", makeHSDHeight(hsdURL, hsdKey))
+}
+
+func makeHSDInfo(url, key string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		client := hsdpkg.NewClient(url, key)
+		info, err := client.GetBlockchainInfo()
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"chain": info.Chain, "height": info.Blocks,
+			"tree_root": info.TreeRoot,
+		}, OK: true}
+	}
+}
+
+func makeHSDResolve(url, key string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		name := opts.String("name")
+		if name == "" {
+			return core.Result{OK: false}
+		}
+		client := hsdpkg.NewClient(url, key)
+		resource, err := client.GetNameResource(name)
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		var records []map[string]interface{}
+		for _, r := range resource.Records {
+			records = append(records, map[string]interface{}{
+				"type": r.Type, "address": r.Address, "txt": r.TXT, "ns": r.NS,
+			})
+		}
+		return core.Result{Value: map[string]interface{}{
+			"name": name, "records": records,
+		}, OK: true}
+	}
+}
+
+func makeHSDHeight(url, key string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		client := hsdpkg.NewClient(url, key)
+		height, err := client.GetHeight()
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: height, OK: true}
+	}
 }
