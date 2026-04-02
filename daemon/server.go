@@ -41,6 +41,12 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/json_rpc", s.handleJSONRPC)
 	s.mux.HandleFunc("/getheight", s.handleGetHeight)
 	s.mux.HandleFunc("/start_mining", s.handleStartMining)
+	s.mux.HandleFunc("/api/info", s.handleRESTInfo)
+	s.mux.HandleFunc("/api/block", s.handleRESTBlock)
+	s.mux.HandleFunc("/api/aliases", s.handleRESTAliases)
+	s.mux.HandleFunc("/api/alias", s.handleRESTAlias)
+	s.mux.HandleFunc("/api/search", s.handleRESTSearch)
+	s.mux.HandleFunc("/health", s.handleRESTHealth)
 	s.mux.HandleFunc("/gettransactions", s.handleGetTransactions)
 	s.mux.HandleFunc("/stop_mining", s.handleStopMining)
 	return s
@@ -1364,5 +1370,89 @@ func (s *Server) rpcGetDifficultyHistory(w http.ResponseWriter, req jsonRPCReque
 	writeResult(w, req.ID, map[string]interface{}{
 		"history": history,
 		"status":  "OK",
+	})
+}
+
+// --- REST-style HTTP endpoints (no JSON-RPC wrapper) ---
+
+func (s *Server) handleRESTInfo(w http.ResponseWriter, r *http.Request) {
+	height, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+	aliases := s.chain.GetAllAliases()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"height": height, "difficulty": meta.Difficulty,
+		"aliases": len(aliases), "node": "CoreChain/Go",
+	})
+}
+
+func (s *Server) handleRESTBlock(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("height")
+	h, err := parseUint64(q)
+	if err != nil {
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(map[string]string{"error": "?height= required"})
+		return
+	}
+	blk, meta, err := s.chain.GetBlockByHeight(h)
+	if err != nil {
+		w.WriteHeader(404)
+		json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"height": meta.Height, "hash": meta.Hash.String(),
+		"timestamp": blk.Timestamp, "difficulty": meta.Difficulty,
+		"tx_count": len(blk.TxHashes), "version": blk.MajorVersion,
+	})
+}
+
+func (s *Server) handleRESTAliases(w http.ResponseWriter, r *http.Request) {
+	aliases := s.chain.GetAllAliases()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(aliases)
+}
+
+func (s *Server) handleRESTAlias(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(map[string]string{"error": "?name= required"})
+		return
+	}
+	alias, err := s.chain.GetAlias(name)
+	if err != nil {
+		w.WriteHeader(404)
+		json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(alias)
+}
+
+func (s *Server) handleRESTSearch(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(map[string]string{"error": "?q= required"})
+		return
+	}
+	// Reuse the RPC search logic
+	fakeReq := jsonRPCRequest{Params: json.RawMessage(core.Sprintf(`{"query":"%s"}`, q))}
+	s.rpcSearch(w, fakeReq)
+}
+
+func (s *Server) handleRESTHealth(w http.ResponseWriter, r *http.Request) {
+	height, _ := s.chain.Height()
+	aliases := s.chain.GetAllAliases()
+	status := "ok"
+	if height == 0 {
+		status = "syncing"
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": status, "height": height,
+		"aliases": len(aliases), "node": "CoreChain/Go",
 	})
 }
