@@ -40,6 +40,7 @@ func AddWalletCommands(root *cobra.Command) {
 		newWalletAddressCmd(&walletFile),
 		newWalletSeedCmd(&walletFile),
 		newWalletScanCmd(&walletFile),
+		newWalletRestoreCmd(&walletFile),
 	)
 
 	root.AddCommand(walletCmd)
@@ -291,6 +292,48 @@ func runWalletBalance(walletRPC string) error {
 	log.Printf("Wallet RPC: %s", walletRPC)
 	log.Printf("Use the C++ wallet for balance queries until Go scanner is optimised")
 	log.Printf("  Go scanner: core-chain wallet scan --daemon http://127.0.0.1:46941")
+
+	return nil
+}
+
+func newWalletRestoreCmd(walletFile *string) *cobra.Command {
+	var seed string
+	cmd := &cobra.Command{
+		Use:   "restore",
+		Short: "Restore wallet from seed phrase",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWalletRestore(*walletFile, seed)
+		},
+	}
+	cmd.Flags().StringVar(&seed, "seed", "", "24-word mnemonic seed phrase")
+	cmd.MarkFlagRequired("seed")
+	return cmd
+}
+
+func runWalletRestore(walletFile, seed string) error {
+	if walletFile == "" {
+		walletFile = core.JoinPath(defaultDataDir(), "wallet-restored.db")
+	}
+
+	account, err := wallet.RestoreFromSeed(seed)
+	if err != nil {
+		return coreerr.E("runWalletRestore", "restore from seed", err)
+	}
+
+	s, err := store.New(walletFile)
+	if err != nil {
+		return coreerr.E("runWalletRestore", "open wallet store", err)
+	}
+	defer s.Close()
+
+	if err := account.Save(s, ""); err != nil {
+		return coreerr.E("runWalletRestore", "save wallet", err)
+	}
+
+	addr := account.Address()
+	log.Println("Wallet restored!")
+	log.Printf("  Address: %s", addr.Encode(0x1eaf7))
+	log.Printf("  File:    %s", walletFile)
 
 	return nil
 }
