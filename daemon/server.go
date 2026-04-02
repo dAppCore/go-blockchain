@@ -50,6 +50,7 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/api/search", s.handleRESTSearch)
 	s.mux.HandleFunc("/events/blocks", s.handleSSEBlocks)
 	s.mux.HandleFunc("/openapi", s.handleOpenAPI)
+	s.mux.HandleFunc("/api/topology", s.handleRESTTopology)
 	s.mux.HandleFunc("/health", s.handleRESTHealth)
 	s.mux.HandleFunc("/getblocks.bin", s.handleGetBlocksBin)
 	s.mux.HandleFunc("/get_o_indexes.bin", s.handleGetOutputIndexesBin)
@@ -2216,4 +2217,9 @@ func parseComment(comment string) map[string]string {
 		if idx > 0 { parsed[part[:idx]] = part[idx+1:] }
 	}
 	return parsed
+}
+
+func (s *Server) handleRESTTopology(w http.ResponseWriter, r *http.Request) {
+	fakeReq := jsonRPCRequest{}
+	s.rpcGetNetworkTopology(w, fakeReq)
 }
