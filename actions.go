@@ -64,6 +64,11 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	// Identity
 	c.Action("blockchain.identity.lookup", makeIdentityLookup(ch))
 	c.Action("blockchain.identity.verify", makeIdentityVerify(ch))
+
+	// Mining
+	c.Action("blockchain.mining.template", makeMiningTemplate(ch))
+	c.Action("blockchain.mining.difficulty", makeMiningDifficulty(ch))
+	c.Action("blockchain.mining.reward", makeMiningReward(ch))
 }
 
 func makeChainHeight(ch *chain.Chain) core.ActionHandler {
@@ -538,6 +543,61 @@ func makeIdentityVerify(ch *chain.Chain) core.ActionHandler {
 			"name":     name,
 			"address":  address,
 			"chain_address": alias.Address,
+		}, OK: true}
+	}
+}
+
+// makeMiningTemplate returns current block template info for miners.
+//
+//	result := c.Action("blockchain.mining.template").Run(ctx, opts)
+func makeMiningTemplate(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		h, _ := ch.Height()
+		_, meta, _ := ch.TopBlock()
+		if meta == nil {
+			meta = &chain.BlockMeta{}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"height":     h,
+			"difficulty": meta.Difficulty,
+			"top_hash":   meta.Hash.String(),
+			"reward":     config.Coin,
+			"algo":       "progpowz",
+			"target":     120,
+		}, OK: true}
+	}
+}
+
+// makeMiningDifficulty returns current PoW/PoS difficulty for miners.
+//
+//	result := c.Action("blockchain.mining.difficulty").Run(ctx, opts)
+func makeMiningDifficulty(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		_, meta, _ := ch.TopBlock()
+		if meta == nil {
+			meta = &chain.BlockMeta{}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"pow":        meta.Difficulty,
+			"pos":        uint64(1),
+			"hashrate":   meta.Difficulty / 120,
+			"block_time": 120,
+			"algo":       "progpowz",
+		}, OK: true}
+	}
+}
+
+// makeMiningReward returns current block reward info.
+//
+//	result := c.Action("blockchain.mining.reward").Run(ctx, opts)
+func makeMiningReward(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		return core.Result{Value: map[string]interface{}{
+			"block_reward":       uint64(1),
+			"block_reward_atomic": config.Coin,
+			"fee_model":          "burned",
+			"default_fee":        config.DefaultFee,
+			"halving":            false,
 		}, OK: true}
 	}
 }
