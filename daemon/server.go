@@ -15,6 +15,7 @@ import (
 
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/types"
 )
 
 // Server serves the Lethean daemon JSON-RPC API backed by a Go chain.
@@ -96,6 +97,18 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetBlockCount(w, req)
 	case "get_alias_by_address":
 		s.rpcGetAliasByAddress(w, req)
+	case "getblockheaderbyhash":
+		s.rpcGetBlockHeaderByHash(w, req)
+	case "on_getblockhash":
+		s.rpcOnGetBlockHash(w, req)
+	case "get_tx_details":
+		s.rpcGetTxDetails(w, req)
+	case "get_blocks_details":
+		s.rpcGetBlocksDetails(w, req)
+	case "get_alias_reward":
+		s.rpcGetAliasReward(w, req)
+	case "get_est_height_from_date":
+		s.rpcGetEstHeightFromDate(w, req)
 	case "get_asset_info":
 		s.rpcGetAssetInfo(w, req)
 	default:
@@ -350,6 +363,189 @@ func (s *Server) handleStartMining(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleStopMining(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "OK",
+	})
+}
+
+// --- Additional RPC methods ---
+
+func (s *Server) rpcGetBlockHeaderByHash(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Hash string `json:"hash"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	blockHash, hashErr := types.HashFromHex(params.Hash)
+	if hashErr != nil {
+		writeError(w, req.ID, -1, core.Sprintf("invalid block hash: %s", params.Hash))
+		return
+	}
+	blk, meta, err := s.chain.GetBlockByHash(blockHash)
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("block not found: %s", params.Hash))
+		return
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"block_header": map[string]interface{}{
+			"hash":          meta.Hash.String(),
+			"height":        meta.Height,
+			"timestamp":     blk.Timestamp,
+			"difficulty":    core.Sprintf("%d", meta.Difficulty),
+			"major_version": blk.MajorVersion,
+			"minor_version": blk.MinorVersion,
+			"nonce":         blk.Nonce,
+			"prev_hash":     blk.PrevID.String(),
+		},
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcOnGetBlockHash(w http.ResponseWriter, req jsonRPCRequest) {
+	var params []uint64
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+	if len(params) == 0 {
+		writeError(w, req.ID, -1, "height required")
+		return
+	}
+
+	_, meta, err := s.chain.GetBlockByHeight(params[0])
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("block not found at %d", params[0]))
+		return
+	}
+
+	writeResult(w, req.ID, meta.Hash.String())
+}
+
+func (s *Server) rpcGetTxDetails(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		TxHash string `json:"tx_hash"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	txHash, hashErr := types.HashFromHex(params.TxHash)
+	if hashErr != nil {
+		writeError(w, req.ID, -1, core.Sprintf("invalid tx hash: %s", params.TxHash))
+		return
+	}
+	tx, txMeta, err := s.chain.GetTransaction(txHash)
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("tx not found: %s", params.TxHash))
+		return
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"tx_info": map[string]interface{}{
+			"id":           params.TxHash,
+			"keeper_block": txMeta.KeeperBlock,
+			"amount":       0,
+			"fee":          0,
+			"ins":          len(tx.Vin),
+			"outs":         len(tx.Vout),
+			"version":      tx.Version,
+		},
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetBlocksDetails(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		HeightStart uint64 `json:"height_start"`
+		Count       uint64 `json:"count"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+	if params.Count == 0 {
+		params.Count = 10
+	}
+	if params.Count > 100 {
+		params.Count = 100
+	}
+
+	height, _ := s.chain.Height()
+	var blocks []map[string]interface{}
+
+	for h := params.HeightStart; h < params.HeightStart+params.Count && h < height; h++ {
+		blk, meta, err := s.chain.GetBlockByHeight(h)
+		if err != nil {
+			continue
+		}
+		blocks = append(blocks, map[string]interface{}{
+			"height":        meta.Height,
+			"hash":          meta.Hash.String(),
+			"timestamp":     blk.Timestamp,
+			"difficulty":    meta.Difficulty,
+			"major_version": blk.MajorVersion,
+			"tx_count":      len(blk.TxHashes),
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"blocks": blocks,
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetAliasReward(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Alias string `json:"alias"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// Alias registration costs 1 LTHN (constexpr in currency_config.h)
+	writeResult(w, req.ID, map[string]interface{}{
+		"reward": 1000000000000, // 1 LTHN in atomic units
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Timestamp uint64 `json:"timestamp"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// Estimate: genesis timestamp + (height * 120s avg block time)
+	height, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+	if meta.Height == 0 || params.Timestamp == 0 {
+		writeResult(w, req.ID, map[string]interface{}{"height": 0, "status": "OK"})
+		return
+	}
+
+	// Get genesis timestamp
+	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	genesisTs := genesis.Timestamp
+	if params.Timestamp <= genesisTs {
+		writeResult(w, req.ID, map[string]interface{}{"height": 0, "status": "OK"})
+		return
+	}
+
+	// Linear estimate: (target_ts - genesis_ts) / avg_block_time
+	elapsed := params.Timestamp - genesisTs
+	avgBlockTime := (meta.Timestamp - genesisTs) / meta.Height
+	if avgBlockTime == 0 {
+		avgBlockTime = 120
+	}
+	estimatedHeight := elapsed / avgBlockTime
+	if estimatedHeight > height {
+		estimatedHeight = height
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"height": estimatedHeight,
 		"status": "OK",
 	})
 }
