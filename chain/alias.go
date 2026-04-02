@@ -8,7 +8,6 @@ package chain
 import (
 	"bytes"
 	"encoding/hex"
-	"strings"
 
 	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
