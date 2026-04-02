@@ -179,6 +179,8 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_dns_gateways":
 		s.rpcGetDNSGateways(w, req)
 	case "get_network_topology":
+	case "get_forge_info":
+		s.rpcGetForgeInfo(w, req)
 		s.rpcGetNetworkTopology(w, req)
 		s.rpcGetNetworkHashrate(w, req)
 		s.rpcGetAltBlockDetails(w, req)
@@ -2222,4 +2224,17 @@ func parseComment(comment string) map[string]string {
 func (s *Server) handleRESTTopology(w http.ResponseWriter, r *http.Request) {
 	fakeReq := jsonRPCRequest{}
 	s.rpcGetNetworkTopology(w, fakeReq)
+}
+
+// --- Forge integration ---
+
+func (s *Server) rpcGetForgeInfo(w http.ResponseWriter, req jsonRPCRequest) {
+	writeResult(w, req.ID, map[string]interface{}{
+		"forge_url":    "https://forge.lthn.ai",
+		"org":          "core",
+		"repo":         "go-blockchain",
+		"dev_branch":   "dev",
+		"actions":      []string{"publish_release", "create_issue", "dispatch_build", "chain_event"},
+		"status":       "OK",
+	})
 }
