@@ -49,6 +49,7 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/api/alias", s.handleRESTAlias)
 	s.mux.HandleFunc("/api/search", s.handleRESTSearch)
 	s.mux.HandleFunc("/events/blocks", s.handleSSEBlocks)
+	s.mux.HandleFunc("/metrics", s.handleMetrics)
 	s.mux.HandleFunc("/openapi", s.handleOpenAPI)
 	s.mux.HandleFunc("/api/topology", s.handleRESTTopology)
 	s.mux.HandleFunc("/health", s.handleRESTHealth)
@@ -2237,4 +2238,42 @@ func (s *Server) rpcGetForgeInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		"actions":      []string{"publish_release", "create_issue", "dispatch_build", "chain_event"},
 		"status":       "OK",
 	})
+}
+
+// --- Metrics endpoint (Prometheus-compatible) ---
+
+func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	height, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+	aliases := s.chain.GetAllAliases()
+
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+
+	metrics := core.Concat(
+		core.Sprintf("# HELP lethean_chain_height Current blockchain height\n"),
+		core.Sprintf("# TYPE lethean_chain_height gauge\n"),
+		core.Sprintf("lethean_chain_height %d\n\n", height),
+
+		core.Sprintf("# HELP lethean_difficulty Current mining difficulty\n"),
+		core.Sprintf("# TYPE lethean_difficulty gauge\n"),
+		core.Sprintf("lethean_difficulty %d\n\n", meta.Difficulty),
+
+		core.Sprintf("# HELP lethean_alias_count Number of registered aliases\n"),
+		core.Sprintf("# TYPE lethean_alias_count gauge\n"),
+		core.Sprintf("lethean_alias_count %d\n\n", len(aliases)),
+
+		core.Sprintf("# HELP lethean_cumulative_difficulty Cumulative chain difficulty\n"),
+		core.Sprintf("# TYPE lethean_cumulative_difficulty counter\n"),
+		core.Sprintf("lethean_cumulative_difficulty %d\n\n", meta.CumulativeDiff),
+
+		core.Sprintf("# HELP lethean_rpc_endpoints Number of API endpoints\n"),
+		core.Sprintf("# TYPE lethean_rpc_endpoints gauge\n"),
+		core.Sprintf("lethean_rpc_endpoints 101\n\n"),
+
+		core.Sprintf("# HELP lethean_node_info Node identification\n"),
+		core.Sprintf("# TYPE lethean_node_info gauge\n"),
+		core.Sprintf("lethean_node_info{version=\"0.4.0\",type=\"CoreChain/Go\"} 1\n"),
+	)
+
+	w.Write([]byte(metrics))
 }
