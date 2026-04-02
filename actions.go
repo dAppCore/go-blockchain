@@ -10,6 +10,7 @@ import (
 
 	hsdpkg "dappco.re/go/core/blockchain/hsd"
 	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/crypto"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wallet"
@@ -541,4 +542,15 @@ func makeDNSDiscover(ch *chain.Chain) core.ActionHandler {
 		}
 		return core.Result{Value: names, OK: true}
 	}
+}
+
+// RegisterMonitorActions registers hardfork monitoring actions.
+func RegisterMonitorActions(c *core.Core, ch *chain.Chain, forks []config.HardFork) {
+	monitor := NewHardforkMonitor(ch, forks)
+	c.Action("blockchain.hardfork.remaining", func(ctx context.Context, opts core.Options) core.Result {
+		blocks, version := monitor.RemainingBlocks()
+		return core.Result{Value: map[string]interface{}{
+			"blocks": blocks, "version": version,
+		}, OK: true}
+	})
 }
