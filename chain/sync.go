@@ -280,7 +280,20 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 		CumulativeDiff: cumulDiff,
 		GeneratedCoins: 0, // not available from wire; RPC path passes via bd.BaseReward
 	}
-	return c.PutBlock(&blk, meta)
+	if err := c.PutBlock(&blk, meta); err != nil {
+		return err
+	}
+
+	// Fire block callback if registered.
+	if c.blockCallback != nil {
+		aliasName := ""
+		if alias := ExtractAliasFromExtra(blk.MinerTx.Extra); alias != nil {
+			aliasName = alias.Name
+		}
+		c.blockCallback(height, blockHash.String(), aliasName)
+	}
+
+	return nil
 }
 
 // indexOutputs adds each output of a transaction to the global output index.

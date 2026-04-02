@@ -16,7 +16,8 @@ import (
 // Chain manages blockchain storage and indexing.
 // Usage: var value chain.Chain
 type Chain struct {
-	store *store.Store
+	store         *store.Store
+	blockCallback BlockCallback
 }
 
 // New creates a Chain backed by the given store.
@@ -63,4 +64,14 @@ func (c *Chain) Snapshot() (uint64, *types.Block, *BlockMeta) {
 		return height, nil, &BlockMeta{Height: height}
 	}
 	return height, blk, meta
+}
+
+// BlockCallback is called after a block is successfully stored.
+type BlockCallback func(height uint64, hash string, aliasName string)
+
+// SetBlockCallback sets a function called after each block is stored.
+//
+//	c.SetBlockCallback(func(height uint64, hash string, alias string) { ... })
+func (c *Chain) SetBlockCallback(cb BlockCallback) {
+	c.blockCallback = cb
 }
