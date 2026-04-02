@@ -456,3 +456,87 @@ func makeHSDHeight(url, key string) core.ActionHandler {
 		return core.Result{Value: height, OK: true}
 	}
 }
+
+// RegisterDNSActions registers DNS resolution actions.
+// These bridge go-blockchain (alias discovery) to go-lns (name resolution).
+//
+//	blockchain.RegisterDNSActions(c, chain, hsdURL, hsdKey)
+func RegisterDNSActions(c *core.Core, ch *chain.Chain, hsdURL, hsdKey string) {
+	c.Action("blockchain.dns.resolve", makeDNSResolve(ch, hsdURL, hsdKey))
+	c.Action("blockchain.dns.names", makeDNSNames(ch, hsdURL, hsdKey))
+	c.Action("blockchain.dns.discover", makeDNSDiscover(ch))
+}
+
+func makeDNSResolve(ch *chain.Chain, hsdURL, hsdKey string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		name := opts.String("name")
+		if name == "" {
+			return core.Result{OK: false}
+		}
+		name = core.TrimSuffix(name, ".lthn")
+		name = core.TrimSuffix(name, ".")
+
+		client := hsdpkg.NewClient(hsdURL, hsdKey)
+		resource, err := client.GetNameResource(name)
+		if err != nil || resource == nil {
+			return core.Result{OK: false}
+		}
+
+		var addresses []string
+		var txts []string
+		for _, r := range resource.Records {
+			if r.Type == "GLUE4" { addresses = append(addresses, r.Address) }
+			if r.Type == "TXT" { txts = append(txts, r.TXT...) }
+		}
+
+		return core.Result{Value: map[string]interface{}{
+			"name": name + ".lthn", "a": addresses, "txt": txts,
+		}, OK: true}
+	}
+}
+
+func makeDNSNames(ch *chain.Chain, hsdURL, hsdKey string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		aliases := ch.GetAllAliases()
+		client := hsdpkg.NewClient(hsdURL, hsdKey)
+
+		var names []map[string]interface{}
+		for _, a := range aliases {
+			hnsName := a.Name
+			parsed := parseActionComment(a.Comment)
+			if h, ok := parsed["hns"]; ok {
+				hnsName = core.TrimSuffix(h, ".lthn")
+			}
+
+			resource, err := client.GetNameResource(hnsName)
+			if err != nil || resource == nil { continue }
+
+			var addrs []string
+			for _, r := range resource.Records {
+				if r.Type == "GLUE4" { addrs = append(addrs, r.Address) }
+			}
+			if len(addrs) > 0 {
+				names = append(names, map[string]interface{}{
+					"name": hnsName + ".lthn", "addresses": addrs,
+				})
+			}
+		}
+		return core.Result{Value: names, OK: true}
+	}
+}
+
+func makeDNSDiscover(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		aliases := ch.GetAllAliases()
+		var names []string
+		for _, a := range aliases {
+			hnsName := a.Name
+			parsed := parseActionComment(a.Comment)
+			if h, ok := parsed["hns"]; ok {
+				hnsName = core.TrimSuffix(h, ".lthn")
+			}
+			names = append(names, hnsName)
+		}
+		return core.Result{Value: names, OK: true}
+	}
+}
