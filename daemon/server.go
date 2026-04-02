@@ -240,7 +240,22 @@ func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 
 	aliases := s.chain.GetAllAliases()
 
+	// Count gateway vs service aliases
+	gateways := 0
+	for _, a := range aliases {
+		if core.Contains(a.Comment, "type=gateway") {
+			gateways++
+		}
+	}
+
+	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	var avgBlockTime uint64
+	if meta.Height > 0 && genesis != nil {
+		avgBlockTime = (meta.Timestamp - genesis.Timestamp) / meta.Height
+	}
+
 	result := map[string]interface{}{
+		// Standard (C++ compatible)
 		"height":               height,
 		"difficulty":           meta.Difficulty,
 		"alias_count":          len(aliases),
@@ -249,6 +264,14 @@ func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		"status":               "OK",
 		"pos_allowed":          height > 0,
 		"is_hardfok_active":    buildHardforkArray(height, s.config),
+		// Go-exclusive enrichments
+		"cumulative_difficulty": meta.CumulativeDiff,
+		"gateway_count":         gateways,
+		"service_count":         len(aliases) - gateways,
+		"avg_block_time":        avgBlockTime,
+		"node_type":             "CoreChain/Go",
+		"rpc_methods":           56,
+		"native_crypto":         true,
 	}
 
 	writeResult(w, req.ID, result)

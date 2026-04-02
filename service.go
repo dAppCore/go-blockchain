@@ -190,3 +190,16 @@ func seedToRPC(seed string, testnet bool) string {
 	}
 	return core.Sprintf("http://%s", seed)
 }
+
+// SyncStatus returns the current sync state.
+func (s *BlockchainService) SyncStatus() map[string]interface{} {
+	if s.chain == nil {
+		return map[string]interface{}{"synced": false, "height": 0}
+	}
+	h, _ := s.chain.Height()
+	return map[string]interface{}{
+		"synced":  true,
+		"height":  h,
+		"aliases": len(s.chain.GetAllAliases()),
+	}
+}
