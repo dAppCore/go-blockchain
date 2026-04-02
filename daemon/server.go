@@ -136,6 +136,12 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "generate_keys":
 		s.rpcGenerateKeys(w, req)
 	case "check_key":
+	case "make_integrated_address":
+		s.rpcMakeIntegratedAddress(w, req)
+	case "split_integrated_address":
+		s.rpcSplitIntegratedAddress(w, req)
+	case "validate_address":
+		s.rpcValidateAddress(w, req)
 		s.rpcCheckKey(w, req)
 		s.rpcValidateSignature(w, req)
 		s.rpcSendRawTransaction(w, req)
@@ -908,5 +914,88 @@ func (s *Server) rpcCheckKey(w http.ResponseWriter, req jsonRPCRequest) {
 	writeResult(w, req.ID, map[string]interface{}{
 		"valid":  crypto.CheckKey(key),
 		"status": "OK",
+	})
+}
+
+// --- Address utility methods ---
+
+func (s *Server) rpcMakeIntegratedAddress(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Address   string `json:"address"`
+		PaymentID string `json:"payment_id"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	// Parse the standard address
+	addr, _, err := types.DecodeAddress(params.Address)
+	if err != nil {
+		writeError(w, req.ID, -1, "invalid address")
+		return
+	}
+
+	// Encode as integrated (prefix 0xdeaf7)
+	integrated := addr.Encode(0xdeaf7)
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"integrated_address": integrated,
+		"payment_id":         params.PaymentID,
+		"status":             "OK",
+	})
+}
+
+func (s *Server) rpcSplitIntegratedAddress(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Address string `json:"integrated_address"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	addr, prefix, err := types.DecodeAddress(params.Address)
+	if err != nil {
+		writeError(w, req.ID, -1, "invalid integrated address")
+		return
+	}
+
+	// Re-encode as standard (prefix 0x1eaf7)
+	standard := addr.Encode(0x1eaf7)
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"standard_address": standard,
+		"prefix":           prefix,
+		"status":           "OK",
+	})
+}
+
+func (s *Server) rpcValidateAddress(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Address string `json:"address"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	_, prefix, err := types.DecodeAddress(params.Address)
+	valid := err == nil
+
+	addrType := "unknown"
+	switch prefix {
+	case 0x1eaf7:
+		addrType = "standard"
+	case 0xdeaf7:
+		addrType = "integrated"
+	case 0x3ceff7:
+		addrType = "auditable"
+	case 0x8b077:
+		addrType = "auditable_integrated"
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"valid":   valid,
+		"type":    addrType,
+		"prefix":  prefix,
+		"status":  "OK",
 	})
 }
