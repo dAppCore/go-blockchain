@@ -1,0 +1,21 @@
+{
+  "blockchain.chain.serve.description": "Sync the blockchain and serve JSON-RPC API",
+  "blockchain.chain.sync.description": "Headless P2P chain synchronisation",
+  "blockchain.chain.explorer.description": "Interactive terminal block explorer",
+  "blockchain.chain.status.description": "Show chain and network status",
+  "blockchain.wallet.create.description": "Create a new Lethean wallet with iTHN address",
+  "blockchain.wallet.address.description": "Show wallet address",
+  "blockchain.wallet.seed.description": "Show 24-word mnemonic seed phrase",
+  "blockchain.wallet.restore.description": "Restore wallet from seed phrase",
+  "blockchain.wallet.scan.description": "Scan chain for owned outputs",
+  "blockchain.wallet.transfer.description": "Send LTHN to an address",
+  "blockchain.wallet.info.description": "Show full wallet information",
+  "blockchain.asset.deploy.description": "Deploy a confidential asset (HF5+)",
+  "blockchain.asset.info.description": "Query asset descriptor by ID or ticker",
+  "blockchain.error.daemon_unreachable": "Daemon unreachable at %s",
+  "blockchain.error.invalid_address": "Invalid iTHN address",
+  "blockchain.error.alias_not_found": "Alias @%s not found",
+  "blockchain.status.syncing": "Syncing: %d/%d blocks",
+  "blockchain.status.synced": "Fully synced at height %d",
+  "blockchain.status.hf5_countdown": "HF5 activates in %d blocks (~%.1f hours)"
+}
