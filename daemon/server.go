@@ -191,7 +191,6 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetForgeInfo(w, req)
 	case "get_votes":
 		s.rpcGetVotes(w, req)
-		s.rpcGetConnections(w, req)
 	case "sendrawtransaction":
 		s.rpcSendRawTransaction(w, req)
 	case "validate_signature":
@@ -234,9 +233,6 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetServiceEndpoints(w, req)
 	case "get_total_coins":
 		s.rpcGetTotalCoins(w, req)
-		s.rpcSendRawTransaction(w, req)
-		s.rpcGetVersion(w, req)
-		s.rpcGetEstHeightFromDate(w, req)
 	case "get_asset_info":
 		s.rpcGetAssetInfo(w, req)
 	default:
