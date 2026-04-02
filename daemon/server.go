@@ -635,11 +635,14 @@ func (s *Server) rpcGetTxDetails(w http.ResponseWriter, req jsonRPCRequest) {
 		"tx_info": map[string]interface{}{
 			"id":           params.TxHash,
 			"keeper_block": txMeta.KeeperBlock,
-			"amount":       0,
-			"fee":          0,
+			"amount":       uint64(0),
+			"fee":          uint64(0),
+			"blob_size":    uint64(0),
+			"extra":        []interface{}{},
 			"ins":          len(tx.Vin),
 			"outs":         len(tx.Vout),
 			"version":      tx.Version,
+			"timestamp":    uint64(0),
 		},
 		"status": "OK",
 	})
