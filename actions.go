@@ -1022,6 +1022,7 @@ func RegisterAllActions(c *core.Core, ch *chain.Chain, hsdURL, hsdKey string) {
 	RegisterHSDActions(c, hsdURL, hsdKey)
 	RegisterDNSActions(c, ch, hsdURL, hsdKey)
 	RegisterEscrowActions(c, ch)
+	RegisterEstimateActions(c, ch)
 }
 
 // RegisterHSDActions registers sidechain query actions.

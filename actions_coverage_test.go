@@ -19,21 +19,51 @@ func TestActions_AllRegistered_Good(t *testing.T) {
 	RegisterAllActions(c, ch, "http://127.0.0.1:14037", "testkey")
 
 	expected := []string{
+		// Chain (10)
 		"blockchain.chain.height", "blockchain.chain.info", "blockchain.chain.block",
 		"blockchain.chain.synced", "blockchain.chain.hardforks", "blockchain.chain.stats",
-		"blockchain.chain.search",
+		"blockchain.chain.search", "blockchain.chain.difficulty", "blockchain.chain.transaction",
+		"blockchain.chain.peers",
+		// Alias (3)
 		"blockchain.alias.list", "blockchain.alias.get", "blockchain.alias.capabilities",
+		// Network (8)
 		"blockchain.network.gateways", "blockchain.network.topology",
 		"blockchain.network.vpn", "blockchain.network.dns",
+		"blockchain.network.services", "blockchain.network.discover",
+		"blockchain.network.vpn.endpoints", "blockchain.network.gateway.register",
+		// Supply (4)
 		"blockchain.supply.total", "blockchain.supply.hashrate",
+		"blockchain.supply.emission", "blockchain.supply.circulating",
+		// Wallet (8)
 		"blockchain.wallet.create", "blockchain.wallet.address", "blockchain.wallet.seed",
+		"blockchain.wallet.restore", "blockchain.wallet.info", "blockchain.wallet.validate",
+		"blockchain.wallet.balance", "blockchain.wallet.history",
+		// Crypto (4)
 		"blockchain.crypto.hash", "blockchain.crypto.generate_keys",
 		"blockchain.crypto.check_key", "blockchain.crypto.validate_address",
+		// Asset (8)
 		"blockchain.asset.info", "blockchain.asset.list", "blockchain.asset.deploy",
+		"blockchain.asset.emit", "blockchain.asset.burn", "blockchain.asset.balance",
+		"blockchain.asset.transfer", "blockchain.asset.whitelist",
+		// Escrow (5)
+		"blockchain.escrow.create", "blockchain.escrow.fund",
+		"blockchain.escrow.release", "blockchain.escrow.refund", "blockchain.escrow.status",
+		// Forge (4)
 		"blockchain.forge.release", "blockchain.forge.issue",
 		"blockchain.forge.build", "blockchain.forge.event",
+		// HSD (3)
 		"blockchain.hsd.info", "blockchain.hsd.resolve", "blockchain.hsd.height",
+		// DNS (3)
 		"blockchain.dns.resolve", "blockchain.dns.names", "blockchain.dns.discover",
+		// Relay (1)
+		"blockchain.relay.info",
+		// Identity (2)
+		"blockchain.identity.lookup", "blockchain.identity.verify",
+		// Mining (3)
+		"blockchain.mining.template", "blockchain.mining.difficulty", "blockchain.mining.reward",
+		// Estimate (3)
+		"blockchain.estimate.supply_at_height", "blockchain.estimate.block_time",
+		"blockchain.estimate.height_at_time",
 	}
 
 	missing := 0
