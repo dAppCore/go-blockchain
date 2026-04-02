@@ -48,6 +48,7 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/api/alias", s.handleRESTAlias)
 	s.mux.HandleFunc("/api/search", s.handleRESTSearch)
 	s.mux.HandleFunc("/events/blocks", s.handleSSEBlocks)
+	s.mux.HandleFunc("/openapi", s.handleOpenAPI)
 	s.mux.HandleFunc("/health", s.handleRESTHealth)
 	s.mux.HandleFunc("/gettransactions", s.handleGetTransactions)
 	s.mux.HandleFunc("/stop_mining", s.handleStopMining)
@@ -1625,5 +1626,82 @@ func (s *Server) rpcGetTotalCoins(w http.ResponseWriter, req jsonRPCRequest) {
 		"unit":            "LTHN",
 		"atomic_total":    total * 1000000000000,
 		"status":          "OK",
+	})
+}
+
+// --- Self-documentation ---
+
+func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	methods := []map[string]string{
+		{"method": "getinfo", "type": "chain", "desc": "Chain height, difficulty, alias count, hardfork status"},
+		{"method": "getheight", "type": "chain", "desc": "Current block height"},
+		{"method": "getblockcount", "type": "chain", "desc": "Total block count"},
+		{"method": "getblockheaderbyheight", "type": "chain", "desc": "Block header by height"},
+		{"method": "getblockheaderbyhash", "type": "chain", "desc": "Block header by hash"},
+		{"method": "getlastblockheader", "type": "chain", "desc": "Latest block header"},
+		{"method": "on_getblockhash", "type": "chain", "desc": "Block hash by height"},
+		{"method": "get_blocks_details", "type": "chain", "desc": "Batch block details"},
+		{"method": "get_block_hash_by_height", "type": "chain", "desc": "Height to hash"},
+		{"method": "get_recent_blocks", "type": "chain", "desc": "Last N blocks"},
+		{"method": "get_tx_details", "type": "chain", "desc": "Transaction details by hash"},
+		{"method": "get_all_alias_details", "type": "alias", "desc": "All registered aliases"},
+		{"method": "get_alias_details", "type": "alias", "desc": "Single alias by name"},
+		{"method": "get_alias_by_address", "type": "alias", "desc": "Aliases for an address"},
+		{"method": "get_aliases_by_type", "type": "alias", "desc": "Filter aliases by type"},
+		{"method": "get_alias_capabilities", "type": "alias", "desc": "Parse alias v=lthn1 capabilities"},
+		{"method": "get_alias_reward", "type": "alias", "desc": "Alias registration cost"},
+		{"method": "get_gateways", "type": "discovery", "desc": "All gateway nodes with capabilities"},
+		{"method": "get_service_endpoints", "type": "discovery", "desc": "All service endpoints"},
+		{"method": "get_asset_info", "type": "asset", "desc": "Asset descriptor by ID or ticker"},
+		{"method": "get_assets_list", "type": "asset", "desc": "All known assets"},
+		{"method": "get_pool_info", "type": "chain", "desc": "Transaction pool info"},
+		{"method": "getblockchaininfo", "type": "chain", "desc": "Full blockchain info"},
+		{"method": "get_hardfork_status", "type": "chain", "desc": "Hardfork schedule with countdown"},
+		{"method": "get_chain_stats", "type": "analytics", "desc": "Chain statistics and averages"},
+		{"method": "get_difficulty_history", "type": "analytics", "desc": "Difficulty history for charts"},
+		{"method": "get_total_coins", "type": "analytics", "desc": "Total coin supply calculation"},
+		{"method": "get_est_height_from_date", "type": "chain", "desc": "Estimate height from timestamp"},
+		{"method": "get_current_core_tx_expiration_median", "type": "chain", "desc": "TX expiration median"},
+		{"method": "get_version", "type": "system", "desc": "Node version and type"},
+		{"method": "get_node_info", "type": "system", "desc": "Node capabilities and stats"},
+		{"method": "search", "type": "utility", "desc": "Universal search (block/tx/alias/address)"},
+		{"method": "validate_signature", "type": "crypto", "desc": "Schnorr signature verification (native CGo)"},
+		{"method": "generate_keys", "type": "crypto", "desc": "Ed25519 keypair generation (native CGo)"},
+		{"method": "generate_key_image", "type": "crypto", "desc": "Key image from keypair (native CGo)"},
+		{"method": "fast_hash", "type": "crypto", "desc": "Keccak-256 hash (native CGo)"},
+		{"method": "check_key", "type": "crypto", "desc": "Validate Ed25519 public key (native CGo)"},
+		{"method": "check_keyimages", "type": "crypto", "desc": "Check spent key images (native)"},
+		{"method": "validate_address", "type": "crypto", "desc": "Validate iTHN address format (native)"},
+		{"method": "make_integrated_address", "type": "crypto", "desc": "Encode integrated address (native)"},
+		{"method": "split_integrated_address", "type": "crypto", "desc": "Decode integrated address (native)"},
+		{"method": "marketplace_global_get_offers_ex", "type": "marketplace", "desc": "Marketplace offers"},
+		{"method": "sendrawtransaction", "type": "relay", "desc": "Broadcast raw transaction"},
+	}
+
+	// Count by type
+	counts := make(map[string]int)
+	for _, m := range methods {
+		counts[m["type"]]++
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"node":       "CoreChain/Go v0.3.0",
+		"module":     "dappco.re/go/core/blockchain",
+		"rpc_methods": methods,
+		"method_count": len(methods),
+		"categories": counts,
+		"http_endpoints": []string{
+			"/json_rpc", "/getheight", "/start_mining", "/stop_mining",
+			"/gettransactions", "/api/info", "/api/block", "/api/aliases",
+			"/api/alias", "/api/search", "/health", "/events/blocks", "/openapi",
+		},
+		"wallet_proxy_methods": []string{
+			"getbalance", "getaddress", "get_wallet_info", "transfer",
+			"make_integrated_address", "split_integrated_address",
+			"deploy_asset", "emit_asset", "burn_asset",
+			"register_alias", "update_alias", "get_bulk_payments",
+			"get_recent_txs_and_info", "store", "get_restore_info", "sign_message",
+		},
 	})
 }
