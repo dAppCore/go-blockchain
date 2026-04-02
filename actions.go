@@ -5,6 +5,7 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 
 	"dappco.re/go/core"
 
@@ -364,6 +365,9 @@ func RegisterWalletActions(c *core.Core) {
 	c.Action("blockchain.wallet.create", actionWalletCreate)
 	c.Action("blockchain.wallet.address", actionWalletAddress)
 	c.Action("blockchain.wallet.seed", actionWalletSeed)
+	c.Action("blockchain.wallet.restore", actionWalletRestore)
+	c.Action("blockchain.wallet.info", actionWalletInfo)
+	c.Action("blockchain.wallet.validate", actionWalletValidate)
 }
 
 func actionWalletCreate(ctx context.Context, opts core.Options) core.Result {
@@ -404,6 +408,80 @@ func actionWalletSeed(ctx context.Context, opts core.Options) core.Result {
 	}
 	seed, _ := account.ToSeed()
 	return core.Result{Value: seed, OK: true}
+}
+
+// actionWalletRestore restores a wallet from a 25-word seed phrase.
+//
+//	c.Action("blockchain.wallet.restore", opts{seed: "trip wonderful ..."})
+func actionWalletRestore(ctx context.Context, opts core.Options) core.Result {
+	seed := opts.String("seed")
+	if seed == "" {
+		return core.Result{OK: false}
+	}
+	account, err := wallet.RestoreFromSeed(seed)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	addr := account.Address()
+	return core.Result{Value: map[string]interface{}{
+		"address":    addr.Encode(StandardPrefix),
+		"integrated": addr.Encode(IntegratedPrefix),
+		"auditable":  addr.Encode(AuditablePrefix),
+		"restored":   true,
+	}, OK: true}
+}
+
+// actionWalletInfo returns full wallet details from a seed.
+//
+//	c.Action("blockchain.wallet.info", opts{seed: "trip wonderful ..."})
+func actionWalletInfo(ctx context.Context, opts core.Options) core.Result {
+	seed := opts.String("seed")
+	if seed == "" {
+		// Generate fresh if no seed given
+		account, err := wallet.GenerateAccount()
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		addr := account.Address()
+		newSeed, _ := account.ToSeed()
+		return core.Result{Value: map[string]interface{}{
+			"address":    addr.Encode(StandardPrefix),
+			"integrated": addr.Encode(IntegratedPrefix),
+			"auditable":  addr.Encode(AuditablePrefix),
+			"spend_key":  hex.EncodeToString(account.SpendSecretKey[:]),
+			"view_key":   hex.EncodeToString(account.ViewSecretKey[:]),
+			"seed":       newSeed,
+		}, OK: true}
+	}
+	account, err := wallet.RestoreFromSeed(seed)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	addr := account.Address()
+	return core.Result{Value: map[string]interface{}{
+		"address":    addr.Encode(StandardPrefix),
+		"integrated": addr.Encode(IntegratedPrefix),
+		"auditable":  addr.Encode(AuditablePrefix),
+		"spend_key":  hex.EncodeToString(account.SpendSecretKey[:]),
+		"view_key":   hex.EncodeToString(account.ViewSecretKey[:]),
+		"seed":       seed,
+	}, OK: true}
+}
+
+// actionWalletValidate checks if a Lethean address is valid.
+//
+//	c.Action("blockchain.wallet.validate", opts{address: "iTHN..."})
+func actionWalletValidate(ctx context.Context, opts core.Options) core.Result {
+	address := opts.String("address")
+	if address == "" {
+		return core.Result{OK: false}
+	}
+	valid := core.HasPrefix(address, "iTHN") || core.HasPrefix(address, "iTHn") || core.HasPrefix(address, "iThN")
+	return core.Result{Value: map[string]interface{}{
+		"address": address,
+		"valid":   valid,
+		"prefix":  address[:4],
+	}, OK: true}
 }
 
 // RegisterCryptoActions registers native CGo crypto actions.
