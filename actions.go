@@ -614,3 +614,56 @@ func hexVal(c byte) int {
 	default: return -1
 	}
 }
+
+// RegisterEstimateActions registers estimation/calculation actions.
+func RegisterEstimateActions(c *core.Core, ch *chain.Chain) {
+	c.Action("blockchain.estimate.block_time", makeEstBlockTime(ch))
+	c.Action("blockchain.estimate.supply_at_height", makeEstSupplyAtHeight())
+	c.Action("blockchain.estimate.height_at_time", makeEstHeightAtTime(ch))
+}
+
+func makeEstBlockTime(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		h, _ := ch.Height()
+		if h < 2 {
+			return core.Result{Value: uint64(120), OK: true}
+		}
+		genesis, _, _ := ch.GetBlockByHeight(0)
+		_, top := ch.Snapshot()
+		if genesis == nil || top == nil || top.Height == 0 {
+			return core.Result{Value: uint64(120), OK: true}
+		}
+		avg := (top.Timestamp - genesis.Timestamp) / top.Height
+		return core.Result{Value: avg, OK: true}
+	}
+}
+
+func makeEstSupplyAtHeight() core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		height := uint64(opts.Int("height"))
+		supply := PremineAmount + height*DefaultBlockReward
+		return core.Result{Value: map[string]interface{}{
+			"height": height, "supply_lthn": supply,
+			"supply_atomic": supply * AtomicUnit,
+		}, OK: true}
+	}
+}
+
+func makeEstHeightAtTime(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		targetTime := uint64(opts.Int("timestamp"))
+		if targetTime == 0 {
+			return core.Result{OK: false}
+		}
+		genesis, _, _ := ch.GetBlockByHeight(0)
+		if genesis == nil {
+			return core.Result{OK: false}
+		}
+		if targetTime <= genesis.Timestamp {
+			return core.Result{Value: uint64(0), OK: true}
+		}
+		elapsed := targetTime - genesis.Timestamp
+		est := elapsed / 120 // avg block time
+		return core.Result{Value: est, OK: true}
+	}
+}
