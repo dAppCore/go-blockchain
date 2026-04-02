@@ -47,6 +47,9 @@ func runStatus(seed string, testnet bool) error {
 	if hf5Remaining > 0 {
 		core.Print(nil, "")
 		core.Print(nil, "  HF5 in %d blocks (~%.1f hours)", hf5Remaining, float64(hf5Remaining)*2/60)
+	} else {
+		core.Print(nil, "")
+		core.Print(nil, "  HF5 ACTIVE — confidential assets enabled")
 	}
 
 	return nil
