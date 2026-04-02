@@ -318,7 +318,7 @@ func (s *Server) rpcGetBlockHeaderByHeight(w http.ResponseWriter, req jsonRPCReq
 		Height uint64 `json:"height"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	blk, meta, err := s.chain.GetBlockByHeight(params.Height)
@@ -418,7 +418,7 @@ func (s *Server) rpcGetAliasDetails(w http.ResponseWriter, req jsonRPCRequest) {
 		Alias string `json:"alias"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	alias, err := s.chain.GetAlias(params.Alias)
@@ -458,7 +458,7 @@ func (s *Server) rpcGetAssetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		AssetID string `json:"asset_id"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// For the native LTHN asset, return hardcoded descriptor
@@ -487,7 +487,7 @@ func (s *Server) rpcGetAliasByAddress(w http.ResponseWriter, req jsonRPCRequest)
 		Address string `json:"address"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// Search all aliases for matching address
@@ -534,7 +534,7 @@ func (s *Server) rpcGetBlockHeaderByHash(w http.ResponseWriter, req jsonRPCReque
 		Hash string `json:"hash"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	blockHash, hashErr := types.HashFromHex(params.Hash)
@@ -566,7 +566,7 @@ func (s *Server) rpcGetBlockHeaderByHash(w http.ResponseWriter, req jsonRPCReque
 func (s *Server) rpcOnGetBlockHash(w http.ResponseWriter, req jsonRPCRequest) {
 	var params []uint64
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 	if len(params) == 0 {
 		writeError(w, req.ID, -1, "height required")
@@ -587,7 +587,7 @@ func (s *Server) rpcGetTxDetails(w http.ResponseWriter, req jsonRPCRequest) {
 		TxHash string `json:"tx_hash"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	txHash, hashErr := types.HashFromHex(params.TxHash)
@@ -621,7 +621,7 @@ func (s *Server) rpcGetBlocksDetails(w http.ResponseWriter, req jsonRPCRequest) 
 		Count       uint64 `json:"count"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 	if params.Count == 0 {
 		params.Count = 10
@@ -659,7 +659,7 @@ func (s *Server) rpcGetAliasReward(w http.ResponseWriter, req jsonRPCRequest) {
 		Alias string `json:"alias"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// Alias registration costs 1 LTHN (constexpr in currency_config.h)
@@ -674,7 +674,7 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 		Timestamp uint64 `json:"timestamp"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// Estimate: genesis timestamp + (height * 120s avg block time)
@@ -847,7 +847,7 @@ func (s *Server) rpcCheckKeyImages(w http.ResponseWriter, req jsonRPCRequest) {
 		KeyImages []string `json:"key_images"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	results := make([]map[string]interface{}, len(params.KeyImages))
@@ -887,7 +887,7 @@ func (s *Server) rpcValidateSignature(w http.ResponseWriter, req jsonRPCRequest)
 		Alias string `json:"alias"` // alias to look up public key
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// Get public key from params or alias
@@ -951,7 +951,7 @@ func (s *Server) rpcGenerateKeyImage(w http.ResponseWriter, req jsonRPCRequest) 
 		SecretKey string `json:"secret_key"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	pubBytes, _ := hex.DecodeString(params.PublicKey)
@@ -982,7 +982,7 @@ func (s *Server) rpcFastHash(w http.ResponseWriter, req jsonRPCRequest) {
 		Data string `json:"data"` // hex encoded
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	data, err := hex.DecodeString(params.Data)
@@ -1017,7 +1017,7 @@ func (s *Server) rpcCheckKey(w http.ResponseWriter, req jsonRPCRequest) {
 		Key string `json:"key"` // hex public key
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	keyBytes, _ := hex.DecodeString(params.Key)
@@ -1043,7 +1043,7 @@ func (s *Server) rpcMakeIntegratedAddress(w http.ResponseWriter, req jsonRPCRequ
 		PaymentID string `json:"payment_id"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	// Parse the standard address
@@ -1068,7 +1068,7 @@ func (s *Server) rpcSplitIntegratedAddress(w http.ResponseWriter, req jsonRPCReq
 		Address string `json:"integrated_address"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	addr, prefix, err := types.DecodeAddress(params.Address)
@@ -1092,7 +1092,7 @@ func (s *Server) rpcValidateAddress(w http.ResponseWriter, req jsonRPCRequest) {
 		Address string `json:"address"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	_, prefix, err := types.DecodeAddress(params.Address)
@@ -1125,7 +1125,7 @@ func (s *Server) rpcGetBlockHashByHeight(w http.ResponseWriter, req jsonRPCReque
 		Height uint64 `json:"height"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	_, meta, err := s.chain.GetBlockByHeight(params.Height)
@@ -1178,7 +1178,7 @@ func (s *Server) rpcGetRecentBlocks(w http.ResponseWriter, req jsonRPCRequest) {
 		Count uint64 `json:"count"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 	if params.Count == 0 || params.Count > 50 {
 		params.Count = 10
@@ -1220,7 +1220,7 @@ func (s *Server) rpcSearch(w http.ResponseWriter, req jsonRPCRequest) {
 		Query string `json:"query"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	q := params.Query
@@ -1306,7 +1306,7 @@ func (s *Server) rpcGetAliasesByType(w http.ResponseWriter, req jsonRPCRequest) 
 		Type string `json:"type"` // gateway, service, root
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	all := s.chain.GetAllAliases()
@@ -1437,7 +1437,7 @@ func (s *Server) rpcGetDifficultyHistory(w http.ResponseWriter, req jsonRPCReque
 		Count uint64 `json:"count"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 	if params.Count == 0 || params.Count > 100 {
 		params.Count = 20
@@ -1610,7 +1610,7 @@ func (s *Server) rpcGetAliasCapabilities(w http.ResponseWriter, req jsonRPCReque
 		Alias string `json:"alias"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	alias, err := s.chain.GetAlias(params.Alias)
@@ -1802,7 +1802,7 @@ func (s *Server) rpcGetRandomOuts(w http.ResponseWriter, req jsonRPCRequest) {
 		Count   int      `json:"outs_count"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	if params.Count == 0 {
@@ -1961,7 +1961,7 @@ func (s *Server) rpcGetMainBlockDetails(w http.ResponseWriter, req jsonRPCReques
 		Height uint64 `json:"height"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	blk, meta, err := s.chain.GetBlockByHeight(params.Height)
@@ -2037,7 +2037,7 @@ func (s *Server) rpcGetAddressType(w http.ResponseWriter, req jsonRPCRequest) {
 		Address string `json:"address"`
 	}
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		parseParams(req.Params, &params)
 	}
 
 	addr, prefix, err := types.DecodeAddress(params.Address)
@@ -2312,4 +2312,15 @@ func (s *Server) safeGenesis() *types.Block {
 		return &types.Block{}
 	}
 	return blk
+}
+
+// parseParams unmarshals JSON-RPC params with error logging.
+func parseParams(params json.RawMessage, target interface{}) {
+	if params == nil {
+		return
+	}
+	if err := json.Unmarshal(params, target); err != nil {
+		// Log but don't fail — malformed params get default values
+		_ = err // TODO: core.Print(nil, "malformed RPC params: %v", err)
+	}
 }
