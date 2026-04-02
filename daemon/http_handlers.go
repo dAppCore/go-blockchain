@@ -526,48 +526,77 @@ func (s *Server) rpcGetVotes(w http.ResponseWriter, req jsonRPCRequest) {
 func (s *Server) rpcGetMainBlockDetails(w http.ResponseWriter, req jsonRPCRequest) {
 	var params struct {
 		Height uint64 `json:"height"`
+		ID     string `json:"id"`
 	}
 	if req.Params != nil {
 		parseParams(req.Params, &params)
 	}
 
-	blk, meta, err := s.chain.GetBlockByHeight(params.Height)
+	var blk *types.Block
+	var meta *chain.BlockMeta
+	var err error
+
+	// Support lookup by hash (id) or height
+	if params.ID != "" {
+		blockHash, hashErr := types.HashFromHex(params.ID)
+		if hashErr != nil {
+			writeError(w, req.ID, -1, core.Sprintf("invalid block hash: %s", params.ID))
+			return
+		}
+		blk, meta, err = s.chain.GetBlockByHash(blockHash)
+	} else {
+		blk, meta, err = s.chain.GetBlockByHeight(params.Height)
+	}
 	if err != nil {
-		writeError(w, req.ID, -1, core.Sprintf("block not found at %d", params.Height))
+		writeError(w, req.ID, -1, "block not found")
 		return
 	}
 
-	txHashes := make([]string, len(blk.TxHashes))
-	for i, h := range blk.TxHashes {
-		txHashes[i] = h.String()
+	// Build transaction details for explorer
+	txDetails := make([]map[string]interface{}, 0, len(blk.TxHashes)+1)
+	minerTxHash := wire.TransactionHash(&blk.MinerTx).String()
+	txDetails = append(txDetails, map[string]interface{}{
+		"id": minerTxHash, "fee": uint64(0), "timestamp": blk.Timestamp, "size": uint64(0),
+	})
+	for _, txHash := range blk.TxHashes {
+		txDetails = append(txDetails, map[string]interface{}{
+			"id": txHash.String(), "fee": uint64(0), "timestamp": blk.Timestamp, "size": uint64(0),
+		})
 	}
 
-	minerTxHash := wire.TransactionHash(&blk.MinerTx).String()
-
-	// Check if block is PoS (bit 0 of flags)
-	isPoS := blk.Flags&1 != 0
-	blockType := "PoW"
-	if isPoS {
-		blockType = "PoS"
+	// Block type: 0=genesis, 1=PoW, 2=PoS
+	blockType := uint64(1)
+	if meta.Height == 0 {
+		blockType = 0
+	} else if blk.Flags&1 != 0 {
+		blockType = 2
 	}
 
 	writeResult(w, req.ID, map[string]interface{}{
 		"block_details": map[string]interface{}{
-			"height":          meta.Height,
-			"hash":            meta.Hash.String(),
-			"prev_hash":       blk.PrevID.String(),
-			"timestamp":       blk.Timestamp,
-			"difficulty":      meta.Difficulty,
-			"cumulative_diff": meta.CumulativeDiff,
-			"major_version":   blk.MajorVersion,
-			"minor_version":   blk.MinorVersion,
-			"nonce":           blk.Nonce,
-			"flags":           blk.Flags,
-			"block_type":      blockType,
-			"miner_tx_hash":   minerTxHash,
-			"tx_count":        len(blk.TxHashes),
-			"tx_hashes":       txHashes,
-			"base_reward":     config.Coin, // 1 LTHN
+			"height":                   meta.Height,
+			"id":                       meta.Hash.String(),
+			"actual_timestamp":         blk.Timestamp,
+			"timestamp":               blk.Timestamp,
+			"difficulty":              meta.Difficulty,
+			"cumulative_diff_adjusted": meta.CumulativeDiff,
+			"cumulative_diff_precise":  core.Sprintf("%d", meta.CumulativeDiff),
+			"base_reward":             config.Coin,
+			"block_cumulative_size":    uint64(0),
+			"block_tself_size":         uint64(0),
+			"is_orphan":               false,
+			"type":                    blockType,
+			"major_version":           blk.MajorVersion,
+			"minor_version":           blk.MinorVersion,
+			"nonce":                   blk.Nonce,
+			"prev_hash":               blk.PrevID.String(),
+			"miner_text_info":         "",
+			"total_fee":               uint64(0),
+			"total_txs_size":          uint64(0),
+			"transactions_details":    txDetails,
+			"already_generated_coins": core.Sprintf("%d", meta.GeneratedCoins),
+			"effective_fee_median":    uint64(0),
+			"object_in_json":          "",
 		},
 		"status": "OK",
 	})
