@@ -25,8 +25,9 @@ import (
 
 func newServeCmd(dataDir, seed *string, testnet *bool) *cobra.Command {
 	var (
-		rpcPort string
-		rpcBind string
+		rpcPort   string
+		rpcBind   string
+		walletRPC string
 	)
 
 	cmd := &cobra.Command{
@@ -34,17 +35,18 @@ func newServeCmd(dataDir, seed *string, testnet *bool) *cobra.Command {
 		Short: "Sync chain and serve JSON-RPC",
 		Long:  "Sync the blockchain from a seed node via RPC and serve a JSON-RPC API.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runServe(*dataDir, *seed, *testnet, rpcBind, rpcPort)
+			return runServe(*dataDir, *seed, *testnet, rpcBind, rpcPort, walletRPC)
 		},
 	}
 
 	cmd.Flags().StringVar(&rpcPort, "rpc-port", "47941", "JSON-RPC port")
 	cmd.Flags().StringVar(&rpcBind, "rpc-bind", "127.0.0.1", "JSON-RPC bind address")
+	cmd.Flags().StringVar(&walletRPC, "wallet-rpc", "", "wallet RPC URL for proxy (e.g. http://127.0.0.1:46944)")
 
 	return cmd
 }
 
-func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort string) error {
+func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC string) error {
 	if err := ensureDataDir(dataDir); err != nil {
 		return err
 	}
@@ -77,6 +79,10 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort string) error
 
 	// Start JSON-RPC server.
 	srv := daemon.NewServer(c, &cfg)
+	if walletRPC != "" {
+		srv.SetWalletProxy(walletRPC)
+		core.Print(nil, "Wallet proxy: %s", walletRPC)
+	}
 	addr := rpcBind + ":" + rpcPort
 	core.Print(nil, "Go daemon RPC on %s (syncing from %s)", addr, seed)
 
