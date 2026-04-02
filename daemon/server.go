@@ -280,24 +280,56 @@ func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		if meta.Height > 0 { avgBlockTime = (meta.Timestamp - genesis.Timestamp) / meta.Height }
 	}
 
+	totalCoins := meta.GeneratedCoins
+	if totalCoins == 0 && height > 0 {
+		totalCoins = height * config.Coin
+	}
+
 	result := map[string]interface{}{
-		// Standard (C++ compatible)
-		"height":               height,
-		"difficulty":           meta.Difficulty,
-		"alias_count":          len(aliases),
-		"tx_pool_size":         0,
-		"daemon_network_state": 2,
-		"status":               "OK",
-		"pos_allowed":          height > 0,
-		"is_hardfok_active":    buildHardforkArray(height, s.config),
+		// Standard (C++ compatible — explorer requires these)
+		"height":                       height,
+		"difficulty":                   meta.Difficulty,
+		"pow_difficulty":               meta.Difficulty,
+		"pos_difficulty":               "1",
+		"alias_count":                  len(aliases),
+		"tx_pool_size":                 0,
+		"daemon_network_state":         2,
+		"status":                       "OK",
+		"pos_allowed":                  height > 0,
+		"is_hardfok_active":            buildHardforkArray(height, s.config),
+		"total_coins":                  core.Sprintf("%d", totalCoins),
+		"default_fee":                  config.DefaultFee,
+		"minimum_fee":                  config.DefaultFee,
+		"block_reward":                 config.Coin,
+		"last_block_hash":              meta.Hash.String(),
+		"last_block_timestamp":         meta.Timestamp,
+		"last_block_size":              uint64(0),
+		"last_block_total_reward":      uint64(0),
+		"tx_count":                     uint64(0),
+		"tx_count_in_last_block":       uint64(0),
+		"alt_blocks_count":             uint64(0),
+		"outgoing_connections_count":    uint64(0),
+		"incoming_connections_count":    uint64(0),
+		"white_peerlist_size":          uint64(0),
+		"grey_peerlist_size":           uint64(0),
+		"current_blocks_median":        uint64(125000),
+		"current_max_allowed_block_size": uint64(250000),
+		"current_network_hashrate_350": uint64(0),
+		"current_network_hashrate_50":  uint64(0),
+		"offers_count":                 uint64(0),
+		"seconds_for_10_blocks":        uint64(0),
+		"seconds_for_30_blocks":        uint64(0),
+		"max_net_seen_height":          height,
+		"synchronization_start_height": uint64(0),
+		"synchronized_connections_count": uint64(0),
 		// Go-exclusive enrichments
 		"cumulative_difficulty": meta.CumulativeDiff,
-		"gateway_count":         gateways,
-		"service_count":         len(aliases) - gateways,
-		"avg_block_time":        avgBlockTime,
-		"node_type":             "CoreChain/Go",
-		"rpc_methods":           56,
-		"native_crypto":         true,
+		"gateway_count":        gateways,
+		"service_count":        len(aliases) - gateways,
+		"avg_block_time":       avgBlockTime,
+		"node_type":            "CoreChain/Go",
+		"rpc_methods":          56,
+		"native_crypto":        true,
 	}
 
 	writeResult(w, req.ID, result)
