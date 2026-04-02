@@ -63,7 +63,7 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC st
 
 	// Set genesis hash for testnet.
 	if testnet {
-		chain.GenesisHash = "7cf844dc3e7d8dd6af65642c68164ebe18109aa5167b5f76043f310dd6e142d0"
+		chain.GenesisHash = chain.TestnetGenesisHash
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
