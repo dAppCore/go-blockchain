@@ -2,12 +2,14 @@
 //
 // Licensed under the European Union Public Licence (EUPL) version 1.2.
 // SPDX-License-Identifier: EUPL-1.2
-
 package blockchain
 
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
 
 	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
@@ -40,6 +42,7 @@ func AddWalletCommands(root *cobra.Command) {
 		newWalletSeedCmd(&walletFile),
 		newWalletScanCmd(&walletFile),
 		newWalletRestoreCmd(&walletFile),
+		newWalletTransferCmd(&walletFile),
 	)
 
 	root.AddCommand(walletCmd)
@@ -333,6 +336,98 @@ func runWalletRestore(walletFile, seed string) error {
 	core.Print(nil, "Wallet restored!")
 	core.Print(nil, "  Address: %s", addr.Encode(0x1eaf7))
 	core.Print(nil, "  File:    %s", walletFile)
+
+	return nil
+}
+
+func newWalletTransferCmd(walletFile *string) *cobra.Command {
+	var (
+		destination string
+		amount      float64
+		walletRPC   string
+		paymentID   string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "transfer",
+		Short: "Send LTHN to an address",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWalletTransfer(walletRPC, destination, amount, paymentID)
+		},
+	}
+
+	cmd.Flags().StringVar(&destination, "to", "", "destination iTHN address (required)")
+	cmd.Flags().Float64Var(&amount, "amount", 0, "amount in LTHN (required)")
+	cmd.Flags().StringVar(&walletRPC, "wallet-rpc", "http://127.0.0.1:46944", "wallet RPC URL")
+	cmd.Flags().StringVar(&paymentID, "payment-id", "", "optional payment ID")
+	cmd.MarkFlagRequired("to")
+	cmd.MarkFlagRequired("amount")
+
+	return cmd
+}
+
+func runWalletTransfer(walletRPC, destination string, amount float64, paymentID string) error {
+	if !core.HasPrefix(destination, "iTHN") {
+		return coreerr.E("runWalletTransfer", "destination must start with iTHN", nil)
+	}
+
+	atomicAmount := uint64(amount * 1000000000000) // 12 decimal places
+
+	core.Print(nil, "Sending %f LTHN to %s...", amount, destination[:20]+"...")
+
+	_ = rpc.NewClient(walletRPC) // for future native transfer path
+
+	// Use the transfer RPC method on the C++ wallet
+	type transferDest struct {
+		Address string `json:"address"`
+		Amount  uint64 `json:"amount"`
+	}
+	params := struct {
+		Destinations []transferDest `json:"destinations"`
+		Fee          uint64         `json:"fee"`
+		Mixin        uint64         `json:"mixin"`
+		PaymentID    string         `json:"payment_id,omitempty"`
+	}{
+		Destinations: []transferDest{{Address: destination, Amount: atomicAmount}},
+		Fee:          10000000000, // 0.01 LTHN
+		Mixin:        15,
+		PaymentID:    paymentID,
+	}
+	// Call the wallet RPC transfer method
+	reqBody := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      "0",
+		"method":  "transfer",
+		"params":  params,
+	}
+	data := core.JSONMarshalString(reqBody)
+
+	httpResp, err := http.Post(walletRPC+"/json_rpc", "application/json", core.NewReader(data))
+	if err != nil {
+		return coreerr.E("runWalletTransfer", "wallet RPC call failed", err)
+	}
+	defer httpResp.Body.Close()
+
+	body, _ := io.ReadAll(httpResp.Body)
+
+	var rpcResp struct {
+		Result struct {
+			TxHash string `json:"tx_hash"`
+		} `json:"result"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	json.Unmarshal(body, &rpcResp)
+
+	if rpcResp.Error != nil {
+		return coreerr.E("runWalletTransfer", rpcResp.Error.Message, nil)
+	}
+
+	core.Print(nil, "Transfer sent!")
+	core.Print(nil, "  TX Hash: %s", rpcResp.Result.TxHash)
+	core.Print(nil, "  Amount:  %f LTHN", amount)
+	core.Print(nil, "  Fee:     0.01 LTHN")
 
 	return nil
 }
