@@ -7,6 +7,7 @@
 package daemon
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/types"
+	"dappco.re/go/core/blockchain/wallet"
 )
 
 // Server serves the Lethean daemon JSON-RPC API backed by a Go chain.
@@ -36,6 +38,7 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/json_rpc", s.handleJSONRPC)
 	s.mux.HandleFunc("/getheight", s.handleGetHeight)
 	s.mux.HandleFunc("/start_mining", s.handleStartMining)
+	s.mux.HandleFunc("/gettransactions", s.handleGetTransactions)
 	s.mux.HandleFunc("/stop_mining", s.handleStopMining)
 	return s
 }
@@ -547,5 +550,48 @@ func (s *Server) rpcGetEstHeightFromDate(w http.ResponseWriter, req jsonRPCReque
 	writeResult(w, req.ID, map[string]interface{}{
 		"height": estimatedHeight,
 		"status": "OK",
+	})
+}
+
+func (s *Server) handleGetTransactions(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
+
+	var params struct {
+		TxHashes []string `json:"txs_hashes"`
+	}
+	json.Unmarshal(body, &params)
+
+	var txsHex []string
+	var missed []string
+
+	for _, hashStr := range params.TxHashes {
+		txHash, err := types.HashFromHex(hashStr)
+		if err != nil {
+			missed = append(missed, hashStr)
+			continue
+		}
+		tx, _, err := s.chain.GetTransaction(txHash)
+		if err != nil || tx == nil {
+			missed = append(missed, hashStr)
+			continue
+		}
+		// Serialize tx back to wire format
+		txBlob, err := wallet.SerializeTransaction(tx)
+		if err != nil {
+			missed = append(missed, hashStr)
+			continue
+		}
+		txsHex = append(txsHex, hex.EncodeToString(txBlob))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"txs_as_hex":  txsHex,
+		"missed_tx":   missed,
+		"status":      "OK",
 	})
 }
