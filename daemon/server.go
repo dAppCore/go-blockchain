@@ -112,6 +112,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_alias_reward":
 		s.rpcGetAliasReward(w, req)
 	case "get_est_height_from_date":
+	case "get_pool_info":
+		s.rpcGetPoolInfo(w, req)
+	case "get_assets_list":
+		s.rpcGetAssetsListHandler(w, req)
+	case "getblockchaininfo":
+		s.rpcGetBlockchainInfo(w, req)
+	case "get_version":
+		s.rpcGetVersion(w, req)
 		s.rpcGetEstHeightFromDate(w, req)
 	case "get_asset_info":
 		s.rpcGetAssetInfo(w, req)
@@ -604,5 +612,67 @@ func (s *Server) handleGetTransactions(w http.ResponseWriter, r *http.Request) {
 		"txs_as_hex":  txsHex,
 		"missed_tx":   missed,
 		"status":      "OK",
+	})
+}
+
+// --- Explorer & monitoring methods ---
+
+func (s *Server) rpcGetPoolInfo(w http.ResponseWriter, req jsonRPCRequest) {
+	// Go daemon doesn't have a tx pool (read-only node)
+	writeResult(w, req.ID, map[string]interface{}{
+		"tx_pool_size":    0,
+		"transactions":    []interface{}{},
+		"status":          "OK",
+	})
+}
+
+func (s *Server) rpcGetAssetsListHandler(w http.ResponseWriter, req jsonRPCRequest) {
+	// Return native LTHN asset
+	writeResult(w, req.ID, map[string]interface{}{
+		"assets_list": []map[string]interface{}{
+			{
+				"asset_id": "d6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a",
+				"is_native": true,
+				"asset_descriptor": map[string]interface{}{
+					"ticker":           "LTHN",
+					"full_name":        "Lethean",
+					"decimal_point":    12,
+					"total_max_supply": 0,
+					"hidden_supply":    false,
+				},
+			},
+		},
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetBlockchainInfo(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+	genesis, _, _ := s.chain.GetBlockByHeight(0)
+
+	network := "mainnet"
+	if s.config.IsTestnet {
+		network = "testnet"
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"chain":                 network,
+		"blocks":                height,
+		"headers":               height,
+		"bestblockhash":         meta.Hash.String(),
+		"difficulty":            meta.Difficulty,
+		"genesis_hash":          chain.DetectNetwork(meta.Hash.String()),
+		"genesis_timestamp":     genesis.Timestamp,
+		"status":                "OK",
+	})
+}
+
+func (s *Server) rpcGetVersion(w http.ResponseWriter, req jsonRPCRequest) {
+	writeResult(w, req.ID, map[string]interface{}{
+		"version":  "go-blockchain/0.2.0",
+		"rpc_api":  "1.0",
+		"node":     "CoreChain",
+		"status":   "OK",
 	})
 }
