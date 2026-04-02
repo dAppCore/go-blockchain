@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"dappco.re/go/core"
 
@@ -46,6 +47,7 @@ func NewServer(c *chain.Chain, cfg *config.ChainConfig) *Server {
 	s.mux.HandleFunc("/api/aliases", s.handleRESTAliases)
 	s.mux.HandleFunc("/api/alias", s.handleRESTAlias)
 	s.mux.HandleFunc("/api/search", s.handleRESTSearch)
+	s.mux.HandleFunc("/events/blocks", s.handleSSEBlocks)
 	s.mux.HandleFunc("/health", s.handleRESTHealth)
 	s.mux.HandleFunc("/gettransactions", s.handleGetTransactions)
 	s.mux.HandleFunc("/stop_mining", s.handleStopMining)
@@ -1456,3 +1458,52 @@ func (s *Server) handleRESTHealth(w http.ResponseWriter, r *http.Request) {
 		"aliases": len(aliases), "node": "CoreChain/Go",
 	})
 }
+
+// --- Server-Sent Events for real-time updates ---
+// (SSE is simpler than WebSocket and works with curl)
+
+func (s *Server) handleSSEBlocks(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", 500)
+		return
+	}
+
+	lastHeight := uint64(0)
+	ctx := r.Context()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		height, _ := s.chain.Height()
+		if height > lastHeight && lastHeight > 0 {
+			// New block(s) arrived
+			for h := lastHeight + 1; h <= height; h++ {
+				blk, meta, err := s.chain.GetBlockByHeight(h)
+				if err != nil { continue }
+				data := core.Sprintf(`{"height":%d,"hash":"%s","timestamp":%d,"difficulty":%d,"tx_count":%d}`,
+					meta.Height, meta.Hash.String(), blk.Timestamp, meta.Difficulty, len(blk.TxHashes))
+				w.Write([]byte(core.Sprintf("event: block\ndata: %s\n\n", data)))
+				flusher.Flush()
+			}
+		}
+		lastHeight = height
+
+		// Poll every 2 seconds
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
