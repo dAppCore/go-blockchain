@@ -122,3 +122,55 @@ func TestAction_RegisterAllActions_Good_Count(t *testing.T) {
 		t.Errorf("expected 14+ actions, got %d", len(allActions))
 	}
 }
+
+
+func TestAction_WalletRestore_Good(t *testing.T) {
+	// Create wallet to get seed
+	create := actionWalletCreate(context.Background(), core.Options{})
+	seed := create.Value.(map[string]interface{})["seed"].(string)
+	addr := create.Value.(map[string]interface{})["address"].(string)
+
+	// Restore from seed
+	opts := core.NewOptions(core.Option{Key: "seed", Value: seed})
+	result := actionWalletRestore(context.Background(), opts)
+	if !result.OK {
+		t.Fatal("restore failed")
+	}
+	restored := result.Value.(map[string]interface{})["address"].(string)
+	if restored != addr {
+		t.Errorf("address mismatch: got %s, want %s", restored[:20], addr[:20])
+	}
+}
+
+func TestAction_WalletValidate_Good(t *testing.T) {
+	opts := core.NewOptions(core.Option{Key: "address", Value: "iTHNtest123"})
+	result := actionWalletValidate(context.Background(), opts)
+	if !result.OK {
+		t.Fatal("validate failed")
+	}
+	m := result.Value.(map[string]interface{})
+	if !m["valid"].(bool) {
+		t.Error("iTHN address should be valid")
+	}
+}
+
+func TestAction_AssetWhitelist_Good(t *testing.T) {
+	result := actionAssetWhitelist(context.Background(), core.Options{})
+	if !result.OK {
+		t.Fatal("whitelist failed")
+	}
+}
+
+func TestAction_AssetEmit_Bad_NoParams(t *testing.T) {
+	result := actionAssetEmit(context.Background(), core.Options{})
+	if result.OK {
+		t.Error("emit with no params should fail")
+	}
+}
+
+func TestAction_AssetBurn_Bad_NoParams(t *testing.T) {
+	result := actionAssetBurn(context.Background(), core.Options{})
+	if result.OK {
+		t.Error("burn with no params should fail")
+	}
+}
