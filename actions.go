@@ -9,6 +9,7 @@ import (
 	"dappco.re/go/core"
 
 	hsdpkg "dappco.re/go/core/blockchain/hsd"
+	"dappco.re/go/core/blockchain/rpc"
 	"dappco.re/go/core/blockchain/chain"
 	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/crypto"
@@ -553,4 +554,63 @@ func RegisterMonitorActions(c *core.Core, ch *chain.Chain, forks []config.HardFo
 			"blocks": blocks, "version": version,
 		}, OK: true}
 	})
+}
+
+// RegisterRelayActions registers transaction relay actions.
+func RegisterRelayActions(c *core.Core, rpcURL string) {
+	c.Action("blockchain.tx.relay", makeRelayTx(rpcURL))
+	c.Action("blockchain.tx.pool", makeTxPool(rpcURL))
+}
+
+func makeRelayTx(rpcURL string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		txHex := opts.String("tx_hex")
+		if txHex == "" {
+			return core.Result{OK: false}
+		}
+		client := rpc.NewClient(rpcURL)
+		txBytes, err := hexDecode(txHex)
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		if err := client.SendRawTransaction(txBytes); err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: "relayed", OK: true}
+	}
+}
+
+func makeTxPool(rpcURL string) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		client := rpc.NewClient(rpcURL)
+		info, err := client.GetInfo()
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"pool_size": info.TxPoolSize,
+		}, OK: true}
+	}
+}
+
+func hexDecode(s string) ([]byte, error) {
+	b := make([]byte, len(s)/2)
+	for i := 0; i < len(s); i += 2 {
+		hi := hexVal(s[i])
+		lo := hexVal(s[i+1])
+		if hi < 0 || lo < 0 {
+			return nil, core.E("hexDecode", "invalid hex", nil)
+		}
+		b[i/2] = byte(hi<<4 | lo)
+	}
+	return b, nil
+}
+
+func hexVal(c byte) int {
+	switch {
+	case c >= '0' && c <= '9': return int(c - '0')
+	case c >= 'a' && c <= 'f': return int(c - 'a' + 10)
+	case c >= 'A' && c <= 'F': return int(c - 'A' + 10)
+	default: return -1
+	}
 }
