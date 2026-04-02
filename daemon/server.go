@@ -147,6 +147,16 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 		s.rpcGetChainStats(w, req)
 	case "get_recent_blocks":
 	case "search":
+	case "get_aliases_by_type":
+		s.rpcGetAliasesByType(w, req)
+	case "get_gateways":
+		s.rpcGetGateways(w, req)
+	case "get_hardfork_status":
+		s.rpcGetHardforkStatus(w, req)
+	case "get_node_info":
+		s.rpcGetNodeInfo(w, req)
+	case "get_difficulty_history":
+		s.rpcGetDifficultyHistory(w, req)
 		s.rpcSearch(w, req)
 		s.rpcGetRecentBlocks(w, req)
 		s.rpcValidateAddress(w, req)
@@ -1187,4 +1197,172 @@ func parseUint64(s string) (uint64, error) {
 		n = n*10 + uint64(c-'0')
 	}
 	return n, nil
+}
+
+// --- Service discovery & network methods ---
+
+func (s *Server) rpcGetAliasesByType(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Type string `json:"type"` // gateway, service, root
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	all := s.chain.GetAllAliases()
+	var filtered []map[string]string
+	for _, a := range all {
+		if params.Type == "" || core.Contains(a.Comment, "type="+params.Type) {
+			filtered = append(filtered, map[string]string{
+				"alias": a.Name, "address": a.Address, "comment": a.Comment,
+			})
+		}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"aliases": filtered,
+		"count":   len(filtered),
+		"status":  "OK",
+	})
+}
+
+func (s *Server) rpcGetGateways(w http.ResponseWriter, req jsonRPCRequest) {
+	all := s.chain.GetAllAliases()
+	var gateways []map[string]interface{}
+	for _, a := range all {
+		if !core.Contains(a.Comment, "type=gateway") {
+			continue
+		}
+		caps := ""
+		for _, part := range splitSemicolon(a.Comment) {
+			if core.HasPrefix(part, "cap=") {
+				caps = part[4:]
+			}
+		}
+		gateways = append(gateways, map[string]interface{}{
+			"alias":        a.Name,
+			"address":      a.Address,
+			"capabilities": caps,
+			"comment":      a.Comment,
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"gateways": gateways,
+		"count":    len(gateways),
+		"status":   "OK",
+	})
+}
+
+func splitSemicolon(s string) []string {
+	var parts []string
+	current := ""
+	for _, c := range s {
+		if c == ';' {
+			if current != "" { parts = append(parts, current) }
+			current = ""
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" { parts = append(parts, current) }
+	return parts
+}
+
+func (s *Server) rpcGetHardforkStatus(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+
+	type hfStatus struct {
+		Version     int    `json:"version"`
+		Height      uint64 `json:"activation_height"`
+		Active      bool   `json:"active"`
+		Description string `json:"description"`
+	}
+
+	forks := []hfStatus{
+		{0, 0, true, "Genesis"},
+		{1, 0, height >= 0, "PoS staking rules"},
+		{2, 10000, height >= 10000, "Difficulty fix + 120s blocks"},
+		{3, 10500, height >= 10500, "Block version bump"},
+		{4, 11000, height >= 11000, "Zarcanum (aliases, transfers, assets)"},
+		{5, 11500, height >= 11500, "Asset operations (deploy, emit, burn)"},
+	}
+
+	nextHF := "none"
+	nextHeight := uint64(0)
+	for _, f := range forks {
+		if !f.Active {
+			nextHF = core.Sprintf("HF%d", f.Version)
+			nextHeight = f.Height
+			break
+		}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"hardforks":        forks,
+		"current_height":   height,
+		"next_hardfork":    nextHF,
+		"next_hf_height":   nextHeight,
+		"blocks_remaining": int64(nextHeight) - int64(height),
+		"status":           "OK",
+	})
+}
+
+func (s *Server) rpcGetNodeInfo(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	aliases := s.chain.GetAllAliases()
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"node_type":    "CoreChain (Go)",
+		"version":      "0.3.0",
+		"module":       "dappco.re/go/core/blockchain",
+		"height":       height,
+		"aliases":      len(aliases),
+		"endpoints":    56,
+		"native_crypto": []string{
+			"validate_signature", "check_keyimages", "generate_keys",
+			"generate_key_image", "fast_hash", "check_key",
+			"make_integrated_address", "validate_address",
+		},
+		"capabilities": []string{
+			"chain_sync", "rpc_server", "wallet_proxy",
+			"alias_index", "block_explorer", "crypto_utils",
+		},
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetDifficultyHistory(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Count uint64 `json:"count"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+	if params.Count == 0 || params.Count > 100 {
+		params.Count = 20
+	}
+
+	height, _ := s.chain.Height()
+	var history []map[string]interface{}
+
+	start := uint64(0)
+	if height > params.Count {
+		start = height - params.Count
+	}
+
+	for h := start; h < height; h++ {
+		_, meta, err := s.chain.GetBlockByHeight(h)
+		if err != nil { continue }
+		history = append(history, map[string]interface{}{
+			"height":     meta.Height,
+			"difficulty": meta.Difficulty,
+			"timestamp":  meta.Timestamp,
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"history": history,
+		"status":  "OK",
+	})
 }
