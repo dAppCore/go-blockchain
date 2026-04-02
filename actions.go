@@ -643,6 +643,8 @@ func RegisterWalletActions(c *core.Core) {
 	c.Action("blockchain.wallet.validate", actionWalletValidate)
 	c.Action("blockchain.wallet.balance", actionWalletBalance)
 	c.Action("blockchain.wallet.history", actionWalletHistory)
+	c.Action("blockchain.wallet.transfer", actionWalletTransfer)
+	c.Action("blockchain.wallet.integrated_address", actionWalletIntegratedAddress)
 }
 
 func actionWalletCreate(ctx context.Context, opts core.Options) core.Result {
@@ -821,6 +823,68 @@ func actionWalletHistory(ctx context.Context, opts core.Options) core.Result {
 	result, err := walletRPC(walletURL, "get_recent_txs_and_info2", map[string]interface{}{
 		"count":  count,
 		"offset": opts.Int("offset"),
+	})
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: result, OK: true}
+}
+
+// actionWalletTransfer sends LTHN via the wallet RPC.
+// This is the core payment action — enables service payments, SWAP claims, etc.
+//
+//	c.Action("blockchain.wallet.transfer", opts{destination, amount, wallet_url})
+func actionWalletTransfer(ctx context.Context, opts core.Options) core.Result {
+	destination := opts.String("destination")
+	amount := opts.String("amount")
+	if destination == "" || amount == "" {
+		return core.Result{OK: false}
+	}
+
+	walletURL := opts.String("wallet_url")
+	if walletURL == "" {
+		walletURL = core.Env("WALLET_RPC_URL")
+	}
+	if walletURL == "" {
+		walletURL = "http://127.0.0.1:46944"
+	}
+
+	// Validate destination starts with iTHN
+	if !core.HasPrefix(destination, "iTHN") && !core.HasPrefix(destination, "iTHn") {
+		return core.Result{Value: map[string]interface{}{
+			"error": "destination must start with iTHN or iTHn",
+		}, OK: false}
+	}
+
+	result, err := walletRPC(walletURL, "transfer", map[string]interface{}{
+		"destinations": []map[string]interface{}{
+			{"address": destination, "amount": amount},
+		},
+		"fee":   config.DefaultFee,
+		"mixin": 15,
+	})
+	if err != nil {
+		return core.Result{Value: map[string]interface{}{
+			"error": core.Sprintf("wallet RPC failed: %v", err),
+		}, OK: false}
+	}
+	return core.Result{Value: result, OK: true}
+}
+
+// actionWalletIntegratedAddress creates an integrated address with payment ID.
+//
+//	c.Action("blockchain.wallet.integrated_address", opts{wallet_url})
+func actionWalletIntegratedAddress(ctx context.Context, opts core.Options) core.Result {
+	walletURL := opts.String("wallet_url")
+	if walletURL == "" {
+		walletURL = core.Env("WALLET_RPC_URL")
+	}
+	if walletURL == "" {
+		walletURL = "http://127.0.0.1:46944"
+	}
+
+	result, err := walletRPC(walletURL, "make_integrated_address", map[string]interface{}{
+		"payment_id": "",
 	})
 	if err != nil {
 		return core.Result{OK: false}
