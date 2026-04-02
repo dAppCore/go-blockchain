@@ -112,3 +112,61 @@ func TestIntegration_BlockHeader_MatchesCpp_Good(t *testing.T) {
 			cppResult.Result.BlockHeader.Hash, goResult.Result.BlockHeader.Hash)
 	}
 }
+
+func TestIntegration_HardforkStatus_Good(t *testing.T) {
+	go_ := rpcCall(t, goDaemon, "get_hardfork_status")
+	if go_ == nil {
+		t.Fatal("get_hardfork_status returned nil")
+	}
+
+	forks := go_["hardforks"].([]interface{})
+	if len(forks) < 5 {
+		t.Errorf("expected 5+ hardforks, got %d", len(forks))
+	}
+
+	// HF0-HF4 should all be active
+	for i := 0; i < 5; i++ {
+		f := forks[i].(map[string]interface{})
+		if !f["active"].(bool) {
+			t.Errorf("HF%d should be active", i)
+		}
+	}
+}
+
+func TestIntegration_ChainStats_Good(t *testing.T) {
+	go_ := rpcCall(t, goDaemon, "get_chain_stats")
+	if go_ == nil {
+		t.Fatal("get_chain_stats returned nil")
+	}
+
+	height := int(go_["height"].(float64))
+	if height < 11000 {
+		t.Errorf("expected height > 11000, got %d", height)
+	}
+
+	aliases := int(go_["total_aliases"].(float64))
+	if aliases != 14 {
+		t.Errorf("expected 14 aliases, got %d", aliases)
+	}
+}
+
+
+
+
+
+func TestIntegration_RESTHealth_Good(t *testing.T) {
+	resp, err := http.Get(goDaemon + "/health")
+	if err != nil {
+		t.Fatalf("health: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var health map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&health)
+
+	if health["status"] != "ok" {
+		t.Errorf("health status: %v", health["status"])
+	}
+}
+
+
