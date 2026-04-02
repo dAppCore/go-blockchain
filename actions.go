@@ -43,6 +43,8 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.network.topology", makeTopology(ch))
 	c.Action("blockchain.network.vpn", makeVPNGateways(ch))
 	c.Action("blockchain.network.dns", makeDNSGateways(ch))
+	c.Action("blockchain.network.services", makeNetworkServices(ch))
+	c.Action("blockchain.network.discover", makeServiceDiscover(ch))
 
 	// Supply
 	c.Action("blockchain.supply.total", makeSupplyTotal(ch))
@@ -248,6 +250,77 @@ func makeDNSGateways(ch *chain.Chain) core.ActionHandler {
 			}
 		}
 		return core.Result{Value: dns, OK: true}
+	}
+}
+
+// makeNetworkServices returns all services indexed by capability.
+//
+//	result := c.Action("blockchain.network.services").Run(ctx, opts)
+//	// {"vpn":["charon","gateway"], "dns":["charon","network"], ...}
+func makeNetworkServices(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		all := ch.GetAllAliases()
+		services := make(map[string][]map[string]interface{})
+		for _, a := range all {
+			parsed := parseActionComment(a.Comment)
+			capsStr := parsed["cap"]
+			if capsStr == "" {
+				continue
+			}
+			// Parse caps list (e.g. "vpn,dns,proxy")
+			current := ""
+			for _, char := range capsStr {
+				if char == ',' {
+					if current != "" {
+						services[current] = append(services[current], map[string]interface{}{
+							"name": a.Name, "address": a.Address, "comment": a.Comment,
+							"type": parsed["type"], "hns": parsed["hns"],
+						})
+					}
+					current = ""
+				} else {
+					current += string(char)
+				}
+			}
+			if current != "" {
+				services[current] = append(services[current], map[string]interface{}{
+					"name": a.Name, "address": a.Address, "comment": a.Comment,
+					"type": parsed["type"], "hns": parsed["hns"],
+				})
+			}
+		}
+		return core.Result{Value: services, OK: true}
+	}
+}
+
+// makeServiceDiscover finds services matching a capability filter.
+//
+//	result := c.Action("blockchain.network.discover").Run(ctx, opts{capability: "vpn"})
+func makeServiceDiscover(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		capability := opts.String("capability")
+		if capability == "" {
+			return core.Result{OK: false}
+		}
+		all := ch.GetAllAliases()
+		var matches []map[string]interface{}
+		for _, a := range all {
+			if core.Contains(a.Comment, capability) {
+				parsed := parseActionComment(a.Comment)
+				matches = append(matches, map[string]interface{}{
+					"name":    a.Name,
+					"address": a.Address,
+					"type":    parsed["type"],
+					"caps":    parsed["cap"],
+					"hns":     parsed["hns"],
+				})
+			}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"capability": capability,
+			"count":      len(matches),
+			"providers":  matches,
+		}, OK: true}
 	}
 }
 
