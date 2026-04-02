@@ -48,3 +48,19 @@ func (c *Chain) TopBlock() (*types.Block, *BlockMeta, error) {
 	}
 	return c.GetBlockByHeight(h - 1)
 }
+
+// Snapshot returns a consistent view of chain height and top block.
+// This avoids TOCTOU between Height() and TopBlock() calls.
+//
+//	height, blk, meta := c.Snapshot()
+func (c *Chain) Snapshot() (uint64, *types.Block, *BlockMeta) {
+	height, err := c.Height()
+	if err != nil || height == 0 {
+		return 0, nil, &BlockMeta{}
+	}
+	blk, meta, err := c.TopBlock()
+	if err != nil {
+		return height, nil, &BlockMeta{Height: height}
+	}
+	return height, blk, meta
+}

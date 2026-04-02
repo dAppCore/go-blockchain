@@ -664,7 +664,7 @@ func (s *Server) rpcGetAliasReward(w http.ResponseWriter, req jsonRPCRequest) {
 
 	// Alias registration costs 1 LTHN (constexpr in currency_config.h)
 	writeResult(w, req.ID, map[string]interface{}{
-		"reward": 1000000000000, // 1 LTHN in atomic units
+		"reward": config.Coin, // 1 LTHN in atomic units
 		"status": "OK",
 	})
 }
@@ -2000,7 +2000,7 @@ func (s *Server) rpcGetMainBlockDetails(w http.ResponseWriter, req jsonRPCReques
 			"miner_tx_hash":   minerTxHash,
 			"tx_count":        len(blk.TxHashes),
 			"tx_hashes":       txHashes,
-			"base_reward":     1000000000000, // 1 LTHN
+			"base_reward":     config.Coin, // 1 LTHN
 		},
 		"status": "OK",
 	})
