@@ -164,6 +164,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_main_block_details":
 		s.rpcGetMainBlockDetails(w, req)
 	case "get_alt_block_details":
+	case "derive_payment_id":
+		s.rpcDerivePaymentID(w, req)
+	case "get_address_type":
+		s.rpcGetAddressType(w, req)
+	case "get_coin_supply":
+		s.rpcGetCoinSupply(w, req)
+	case "get_network_hashrate":
+		s.rpcGetNetworkHashrate(w, req)
 		s.rpcGetAltBlockDetails(w, req)
 		s.rpcGetAlternateBlocksDetails(w, req)
 	case "get_votes":
@@ -1979,5 +1987,98 @@ func (s *Server) rpcGetAltBlockDetails(w http.ResponseWriter, req jsonRPCRequest
 	writeResult(w, req.ID, map[string]interface{}{
 		"block_details": map[string]interface{}{},
 		"status":        "NOT_FOUND",
+	})
+}
+
+// --- Native wallet utility methods (no C++ wallet needed) ---
+
+func (s *Server) rpcDerivePaymentID(w http.ResponseWriter, req jsonRPCRequest) {
+	// Generate a random 8-byte payment ID
+	var id [8]byte
+	pubKey, _, err := crypto.GenerateKeys()
+	if err != nil {
+		writeError(w, req.ID, -1, "random generation failed")
+		return
+	}
+	copy(id[:], pubKey[:8])
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"payment_id": hex.EncodeToString(id[:]),
+		"status":     "OK",
+	})
+}
+
+func (s *Server) rpcGetAddressType(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Address string `json:"address"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	addr, prefix, err := types.DecodeAddress(params.Address)
+	if err != nil {
+		writeResult(w, req.ID, map[string]interface{}{
+			"valid": false, "error": err.Error(), "status": "OK",
+		})
+		return
+	}
+
+	addrType := "standard"
+	switch prefix {
+	case 0x1eaf7: addrType = "standard"
+	case 0xdeaf7: addrType = "integrated"
+	case 0x3ceff7: addrType = "auditable"
+	case 0x8b077: addrType = "auditable_integrated"
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"valid":       true,
+		"type":        addrType,
+		"prefix":      prefix,
+		"spend_key":   hex.EncodeToString(addr.SpendPublicKey[:]),
+		"view_key":    hex.EncodeToString(addr.ViewPublicKey[:]),
+		"flags":       addr.Flags,
+		"is_auditable": addr.Flags != 0,
+		"status":      "OK",
+	})
+}
+
+func (s *Server) rpcGetCoinSupply(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	premine := uint64(10000000)
+	mined := height
+	total := premine + mined
+	burned := uint64(0) // fees are burned post-HF4
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"total_supply":      total,
+		"circulating":       total - burned,
+		"premine":           premine,
+		"mined":             mined,
+		"burned_fees":       burned,
+		"block_reward":      1,
+		"blocks_per_day":    720, // ~120s blocks, PoW+PoS alternating
+		"daily_emission":    720,
+		"annual_emission":   262800,
+		"height":            height,
+		"status":            "OK",
+	})
+}
+
+func (s *Server) rpcGetNetworkHashrate(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+
+	// Hashrate ≈ difficulty / block_time
+	hashrate := meta.Difficulty / 120
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"hashrate":       hashrate,
+		"difficulty":     meta.Difficulty,
+		"height":         height,
+		"avg_block_time": 120,
+		"unit":           "H/s",
+		"status":         "OK",
 	})
 }
