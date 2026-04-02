@@ -91,7 +91,7 @@ func TestAction_AssetDeploy_Bad(t *testing.T) {
 
 func TestAction_RegisterAll_Good(t *testing.T) {
 	c := core.New()
-	RegisterAllActions(c, nil)
+	RegisterAllActions(c, nil, "", "")
 	// Verify actions exist
 	if !c.Action("blockchain.chain.height").Exists() { t.Error("chain.height not registered") }
 	if !c.Action("blockchain.wallet.create").Exists() { t.Error("wallet.create not registered") }

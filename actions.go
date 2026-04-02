@@ -392,12 +392,14 @@ func RegisterForgeActions(c *core.Core) {
 // RegisterAllActions registers every blockchain action with Core.
 //
 //	blockchain.RegisterAllActions(c, chain)
-func RegisterAllActions(c *core.Core, ch *chain.Chain) {
+func RegisterAllActions(c *core.Core, ch *chain.Chain, hsdURL, hsdKey string) {
 	RegisterActions(c, ch)
 	RegisterWalletActions(c)
 	RegisterCryptoActions(c)
 	RegisterAssetActions(c)
 	RegisterForgeActions(c)
+	RegisterHSDActions(c, hsdURL, hsdKey)
+	RegisterDNSActions(c, ch, hsdURL, hsdKey)
 }
 
 // RegisterHSDActions registers sidechain query actions.
