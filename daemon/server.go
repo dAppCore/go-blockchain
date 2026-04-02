@@ -25,6 +25,7 @@ import (
 //	server := daemon.NewServer(myChain, myConfig)
 //	http.ListenAndServe(":46941", server)
 type Server struct {
+	walletProxy *WalletProxy
 	chain  *chain.Chain
 	config *config.ChainConfig
 	mux    *http.ServeMux
@@ -115,7 +116,17 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_asset_info":
 		s.rpcGetAssetInfo(w, req)
 	default:
-		writeError(w, req.ID, -32601, core.Sprintf("method %s not found", req.Method))
+		if s.walletProxy != nil && IsWalletMethod(req.Method) {
+			result, err := s.walletProxy.Forward(req.Method, req.Params)
+			if err != nil {
+				writeError(w, req.ID, -1, err.Error())
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"jsonrpc": "2.0", "id": req.ID, "result": result})
+		} else {
+			writeError(w, req.ID, -32601, core.Sprintf("method %s not found", req.Method))
+		}
 	}
 }
 
