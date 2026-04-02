@@ -49,9 +49,11 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.network.vpn.endpoints", makeVPNEndpoints(ch))
 	c.Action("blockchain.network.gateway.register", makeGatewayRegister())
 
-	// Supply
+	// Supply + economics
 	c.Action("blockchain.supply.total", makeSupplyTotal(ch))
 	c.Action("blockchain.supply.hashrate", makeHashrate(ch))
+	c.Action("blockchain.supply.emission", makeEmission(ch))
+	c.Action("blockchain.supply.circulating", makeCirculating(ch))
 }
 
 func makeChainHeight(ch *chain.Chain) core.ActionHandler {
@@ -408,6 +410,52 @@ func makeHashrate(ch *chain.Chain) core.ActionHandler {
 		_, meta, _ := ch.TopBlock()
 		if meta == nil { meta = &chain.BlockMeta{} }
 		return core.Result{Value: meta.Difficulty / 120, OK: true}
+	}
+}
+
+// makeEmission returns emission curve data per RFC.tokenomics.md.
+//
+//	result := c.Action("blockchain.supply.emission").Run(ctx, opts)
+func makeEmission(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		h, _ := ch.Height()
+		dailyBlocks := uint64(720) // ~720 blocks/day (120s target, PoW+PoS)
+		return core.Result{Value: map[string]interface{}{
+			"block_reward":      uint64(1),
+			"block_reward_atomic": config.Coin,
+			"blocks_per_day":    dailyBlocks,
+			"daily_emission":    dailyBlocks,
+			"annual_emission":   dailyBlocks * 365,
+			"current_height":    h,
+			"total_mined":       h,
+			"premine":           PremineAmount,
+			"fee_model":         "burned",
+			"default_fee":       float64(config.DefaultFee) / float64(config.Coin),
+			"halving":           "none (linear emission)",
+		}, OK: true}
+	}
+}
+
+// makeCirculating returns circulating supply accounting for locked outputs.
+//
+//	result := c.Action("blockchain.supply.circulating").Run(ctx, opts)
+func makeCirculating(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		h, _ := ch.Height()
+		totalSupply := PremineAmount + h
+		// SWAP pool holds ~10M, not all circulating
+		swapReserve := uint64(10000000) // 10M LTHN reserved for SWAP
+		circulating := totalSupply - swapReserve
+		if circulating > totalSupply {
+			circulating = 0 // underflow guard
+		}
+		return core.Result{Value: map[string]interface{}{
+			"total_supply":       totalSupply,
+			"swap_reserve":       swapReserve,
+			"circulating":        circulating,
+			"circulating_pct":    float64(circulating) / float64(totalSupply) * 100,
+			"unit":               "LTHN",
+		}, OK: true}
 	}
 }
 
