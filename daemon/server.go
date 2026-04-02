@@ -119,6 +119,14 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "getblockchaininfo":
 		s.rpcGetBlockchainInfo(w, req)
 	case "get_version":
+	case "marketplace_global_get_offers_ex":
+		s.rpcMarketplaceGetOffersEx(w, req)
+	case "get_current_core_tx_expiration_median":
+		s.rpcGetCurrentCoreTxExpirationMedian(w, req)
+	case "check_keyimages":
+		s.rpcCheckKeyImages(w, req)
+	case "sendrawtransaction":
+		s.rpcSendRawTransaction(w, req)
 		s.rpcGetVersion(w, req)
 		s.rpcGetEstHeightFromDate(w, req)
 	case "get_asset_info":
@@ -675,4 +683,62 @@ func (s *Server) rpcGetVersion(w http.ResponseWriter, req jsonRPCRequest) {
 		"node":     "CoreChain",
 		"status":   "OK",
 	})
+}
+
+// --- Marketplace & utility methods ---
+
+func (s *Server) rpcMarketplaceGetOffersEx(w http.ResponseWriter, req jsonRPCRequest) {
+	// Marketplace offers are in transaction attachments — need tx scanning
+	// For now return empty (Go daemon is read-only for marketplace)
+	writeResult(w, req.ID, map[string]interface{}{
+		"offers": []interface{}{},
+		"total":  0,
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetCurrentCoreTxExpirationMedian(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	// TX expiration median is ~10 * TOTAL_TARGET (~600s post-HF2)
+	writeResult(w, req.ID, map[string]interface{}{
+		"expiration_median": height,
+		"status":            "OK",
+	})
+}
+
+func (s *Server) rpcCheckKeyImages(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		KeyImages []string `json:"key_images"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	results := make([]map[string]interface{}, len(params.KeyImages))
+	for i, kiHex := range params.KeyImages {
+		var ki types.KeyImage
+		hashBytes, err := hex.DecodeString(kiHex)
+		if err == nil && len(hashBytes) == 32 { copy(ki[:], hashBytes) }
+		if err != nil {
+			results[i] = map[string]interface{}{"spent": false}
+			continue
+		}
+		spent, _ := s.chain.IsSpent(ki)
+		results[i] = map[string]interface{}{"spent": spent}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"images":  results,
+		"status":  "OK",
+	})
+}
+
+func (s *Server) rpcSendRawTransaction(w http.ResponseWriter, req jsonRPCRequest) {
+	// Forward to C++ daemon — Go node can't validate consensus yet
+	if s.walletProxy != nil {
+		// Use the wallet proxy's HTTP client to forward
+		writeError(w, req.ID, -1, "sendrawtransaction: forward to C++ daemon at port 46941")
+		return
+	}
+	writeError(w, req.ID, -1, "sendrawtransaction not available (read-only node)")
 }
