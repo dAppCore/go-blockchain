@@ -322,6 +322,10 @@ func (s *Server) rpcGetInfo(w http.ResponseWriter, req jsonRPCRequest) {
 		"max_net_seen_height":          height,
 		"synchronization_start_height": uint64(0),
 		"synchronized_connections_count": uint64(0),
+		"performance_data":          map[string]interface{}{},
+		"tx_pool_performance_data":  map[string]interface{}{},
+		"outs_stat":                map[string]interface{}{},
+		"mi":                       map[string]interface{}{"build_no": 0, "mode": 0, "ver_major": 0, "ver_minor": 0, "ver_revision": 0},
 		// Go-exclusive enrichments
 		"cumulative_difficulty": meta.CumulativeDiff,
 		"gateway_count":        gateways,
@@ -357,15 +361,24 @@ func (s *Server) rpcGetBlockHeaderByHeight(w http.ResponseWriter, req jsonRPCReq
 		return
 	}
 
+	topHeight, _ := s.chain.Height()
+	depth := uint64(0)
+	if topHeight > meta.Height {
+		depth = topHeight - meta.Height - 1
+	}
+
 	header := map[string]interface{}{
 		"hash":          meta.Hash.String(),
 		"height":        meta.Height,
 		"timestamp":     blk.Timestamp,
-		"difficulty":    core.Sprintf("%d", meta.Difficulty),
+		"difficulty":    meta.Difficulty,
 		"major_version": blk.MajorVersion,
 		"minor_version": blk.MinorVersion,
 		"nonce":         blk.Nonce,
 		"prev_hash":     blk.PrevID.String(),
+		"depth":         depth,
+		"orphan_status": false,
+		"reward":        config.Coin,
 	}
 
 	writeResult(w, req.ID, map[string]interface{}{
@@ -385,8 +398,14 @@ func (s *Server) rpcGetLastBlockHeader(w http.ResponseWriter, req jsonRPCRequest
 		"hash":          meta.Hash.String(),
 		"height":        meta.Height,
 		"timestamp":     blk.Timestamp,
-		"difficulty":    core.Sprintf("%d", meta.Difficulty),
+		"difficulty":    meta.Difficulty,
 		"major_version": blk.MajorVersion,
+		"minor_version": blk.MinorVersion,
+		"nonce":         blk.Nonce,
+		"prev_hash":     blk.PrevID.String(),
+		"depth":         uint64(0),
+		"orphan_status": false,
+		"reward":        config.Coin,
 	}
 
 	writeResult(w, req.ID, map[string]interface{}{
