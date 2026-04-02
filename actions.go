@@ -340,3 +340,61 @@ func actionValidateAddress(ctx context.Context, opts core.Options) core.Result {
 		"valid": valid, "type": addrType,
 	}, OK: true}
 }
+
+// RegisterAssetActions registers HF5 confidential asset actions.
+//
+//	blockchain.RegisterAssetActions(c)
+func RegisterAssetActions(c *core.Core) {
+	c.Action("blockchain.asset.info", actionAssetInfo)
+	c.Action("blockchain.asset.list", actionAssetList)
+	c.Action("blockchain.asset.deploy", actionAssetDeploy)
+}
+
+func actionAssetInfo(ctx context.Context, opts core.Options) core.Result {
+	assetID := opts.String("asset_id")
+	if assetID == "" || assetID == "LTHN" {
+		return core.Result{Value: map[string]interface{}{
+			"ticker": "LTHN", "name": "Lethean", "decimals": 12,
+			"native": true,
+		}, OK: true}
+	}
+	return core.Result{OK: false}
+}
+
+func actionAssetList(ctx context.Context, opts core.Options) core.Result {
+	return core.Result{Value: []map[string]interface{}{
+		{"ticker": "LTHN", "name": "Lethean", "native": true},
+	}, OK: true}
+}
+
+func actionAssetDeploy(ctx context.Context, opts core.Options) core.Result {
+	ticker := opts.String("ticker")
+	name := opts.String("name")
+	if ticker == "" || name == "" {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"ticker": ticker, "name": name, "status": "ready_for_hf5",
+	}, OK: true}
+}
+
+// RegisterForgeActions registers forge integration actions.
+//
+//	blockchain.RegisterForgeActions(c)
+func RegisterForgeActions(c *core.Core) {
+	c.Action("blockchain.forge.release", forgePublishRelease)
+	c.Action("blockchain.forge.issue", forgeCreateIssue)
+	c.Action("blockchain.forge.build", forgeDispatchBuild)
+	c.Action("blockchain.forge.event", forgeChainEvent)
+}
+
+// RegisterAllActions registers every blockchain action with Core.
+//
+//	blockchain.RegisterAllActions(c, chain)
+func RegisterAllActions(c *core.Core, ch *chain.Chain) {
+	RegisterActions(c, ch)
+	RegisterWalletActions(c)
+	RegisterCryptoActions(c)
+	RegisterAssetActions(c)
+	RegisterForgeActions(c)
+}

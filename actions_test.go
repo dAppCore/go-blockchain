@@ -71,3 +71,31 @@ func TestAction_ValidateAddress_Good(t *testing.T) {
 		t.Errorf("type: got %v, want standard", m["type"])
 	}
 }
+
+func TestAction_AssetInfo_Good(t *testing.T) {
+	result := actionAssetInfo(context.Background(), core.NewOptions(core.Option{Key: "asset_id", Value: "LTHN"}))
+	if !result.OK { t.Fatal("failed") }
+	m := result.Value.(map[string]interface{})
+	if m["ticker"] != "LTHN" { t.Error("wrong ticker") }
+}
+
+func TestAction_AssetList_Good(t *testing.T) {
+	result := actionAssetList(context.Background(), core.Options{})
+	if !result.OK { t.Fatal("failed") }
+}
+
+func TestAction_AssetDeploy_Bad(t *testing.T) {
+	result := actionAssetDeploy(context.Background(), core.Options{})
+	if result.OK { t.Error("should fail without ticker") }
+}
+
+func TestAction_RegisterAll_Good(t *testing.T) {
+	c := core.New()
+	RegisterAllActions(c, nil)
+	// Verify actions exist
+	if !c.Action("blockchain.chain.height").Exists() { t.Error("chain.height not registered") }
+	if !c.Action("blockchain.wallet.create").Exists() { t.Error("wallet.create not registered") }
+	if !c.Action("blockchain.crypto.hash").Exists() { t.Error("crypto.hash not registered") }
+	if !c.Action("blockchain.asset.info").Exists() { t.Error("asset.info not registered") }
+	if !c.Action("blockchain.forge.release").Exists() { t.Error("forge.release not registered") }
+}
