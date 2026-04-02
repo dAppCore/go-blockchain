@@ -77,6 +77,16 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC st
 		rpcSyncLoop(ctx, c, &cfg, forks, seed)
 	}()
 
+	// Start hardfork monitor.
+	monitor := NewHardforkMonitor(c, forks)
+	monitor.OnActivation = func(version int, height uint64) {
+		core.Print(nil, "HARDFORK %d ACTIVATED at height %d", version, height)
+		if version == 5 && walletRPC != "" {
+			core.Print(nil, "HF5 ACTIVE — run: core-chain asset deploy-itns --wallet-rpc %s", walletRPC)
+		}
+	}
+	go monitor.Start(ctx)
+
 	// Start JSON-RPC server.
 	srv := daemon.NewServer(c, &cfg)
 	if walletRPC != "" {
