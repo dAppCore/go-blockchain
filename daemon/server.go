@@ -141,6 +141,12 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "split_integrated_address":
 		s.rpcSplitIntegratedAddress(w, req)
 	case "validate_address":
+	case "get_block_hash_by_height":
+		s.rpcGetBlockHashByHeight(w, req)
+	case "get_chain_stats":
+		s.rpcGetChainStats(w, req)
+	case "get_recent_blocks":
+		s.rpcGetRecentBlocks(w, req)
 		s.rpcValidateAddress(w, req)
 		s.rpcCheckKey(w, req)
 		s.rpcValidateSignature(w, req)
@@ -997,5 +1003,100 @@ func (s *Server) rpcValidateAddress(w http.ResponseWriter, req jsonRPCRequest) {
 		"type":    addrType,
 		"prefix":  prefix,
 		"status":  "OK",
+	})
+}
+
+// --- Block search & chain statistics ---
+
+func (s *Server) rpcGetBlockHashByHeight(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Height uint64 `json:"height"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	_, meta, err := s.chain.GetBlockByHeight(params.Height)
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("no block at height %d", params.Height))
+		return
+	}
+
+	writeResult(w, req.ID, meta.Hash.String())
+}
+
+func (s *Server) rpcGetChainStats(w http.ResponseWriter, req jsonRPCRequest) {
+	height, _ := s.chain.Height()
+	_, topMeta, _ := s.chain.TopBlock()
+	genesis, _, _ := s.chain.GetBlockByHeight(0)
+	aliases := s.chain.GetAllAliases()
+
+	var avgBlockTime uint64
+	if topMeta.Height > 0 && genesis != nil {
+		avgBlockTime = (topMeta.Timestamp - genesis.Timestamp) / topMeta.Height
+	}
+
+	// Count gateway aliases
+	gateways := 0
+	services := 0
+	for _, a := range aliases {
+		if core.Contains(a.Comment, "type=gateway") {
+			gateways++
+		} else if core.Contains(a.Comment, "type=service") {
+			services++
+		}
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"height":          height,
+		"difficulty":      topMeta.Difficulty,
+		"cumulative_diff": topMeta.CumulativeDiff,
+		"total_aliases":   len(aliases),
+		"gateways":        gateways,
+		"services":        services,
+		"avg_block_time":  avgBlockTime,
+		"chain_age_hours": (topMeta.Timestamp - genesis.Timestamp) / 3600,
+		"node_type":       "go-blockchain",
+		"status":          "OK",
+	})
+}
+
+func (s *Server) rpcGetRecentBlocks(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Count uint64 `json:"count"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+	if params.Count == 0 || params.Count > 50 {
+		params.Count = 10
+	}
+
+	height, _ := s.chain.Height()
+	var blocks []map[string]interface{}
+
+	start := uint64(0)
+	if height > params.Count {
+		start = height - params.Count
+	}
+
+	for h := height - 1; h >= start && h < height; h-- {
+		blk, meta, err := s.chain.GetBlockByHeight(h)
+		if err != nil {
+			continue
+		}
+		blocks = append(blocks, map[string]interface{}{
+			"height":    meta.Height,
+			"hash":      meta.Hash.String(),
+			"timestamp": blk.Timestamp,
+			"difficulty": meta.Difficulty,
+			"tx_count":  len(blk.TxHashes),
+			"major_version": blk.MajorVersion,
+		})
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"blocks": blocks,
+		"status": "OK",
 	})
 }
