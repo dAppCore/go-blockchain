@@ -597,16 +597,25 @@ func (s *Server) rpcGetBlockHeaderByHash(w http.ResponseWriter, req jsonRPCReque
 		return
 	}
 
+	topHeight, _ := s.chain.Height()
+	blockDepth := uint64(0)
+	if topHeight > meta.Height {
+		blockDepth = topHeight - meta.Height - 1
+	}
+
 	writeResult(w, req.ID, map[string]interface{}{
 		"block_header": map[string]interface{}{
 			"hash":          meta.Hash.String(),
 			"height":        meta.Height,
 			"timestamp":     blk.Timestamp,
-			"difficulty":    core.Sprintf("%d", meta.Difficulty),
+			"difficulty":    meta.Difficulty,
 			"major_version": blk.MajorVersion,
 			"minor_version": blk.MinorVersion,
 			"nonce":         blk.Nonce,
 			"prev_hash":     blk.PrevID.String(),
+			"depth":         blockDepth,
+			"orphan_status": false,
+			"reward":        config.Coin,
 		},
 		"status": "OK",
 	})
