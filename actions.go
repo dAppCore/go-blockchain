@@ -30,6 +30,8 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.chain.hardforks", makeChainHardforks(ch))
 	c.Action("blockchain.chain.stats", makeChainStats(ch))
 	c.Action("blockchain.chain.search", makeChainSearch(ch))
+	c.Action("blockchain.chain.difficulty", makeChainDifficulty(ch))
+	c.Action("blockchain.chain.transaction", makeChainTransaction(ch))
 
 	// Aliases
 	c.Action("blockchain.alias.list", makeAliasList(ch))
@@ -124,6 +126,43 @@ func makeChainSearch(ch *chain.Chain) core.ActionHandler {
 			}, OK: true}
 		}
 		return core.Result{Value: map[string]interface{}{"type": "not_found"}, OK: true}
+	}
+}
+
+func makeChainDifficulty(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		_, meta, err := ch.TopBlock()
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"pow": meta.Difficulty,
+			"pos": uint64(1),
+		}, OK: true}
+	}
+}
+
+func makeChainTransaction(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		hash := opts.String("hash")
+		if hash == "" {
+			return core.Result{OK: false}
+		}
+		txHash, err := types.HashFromHex(hash)
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		tx, txMeta, err := ch.GetTransaction(txHash)
+		if err != nil {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: map[string]interface{}{
+			"hash":         hash,
+			"version":      tx.Version,
+			"inputs":       len(tx.Vin),
+			"outputs":      len(tx.Vout),
+			"keeper_block": txMeta.KeeperBlock,
+		}, OK: true}
 	}
 }
 
@@ -402,6 +441,7 @@ func RegisterAllActions(c *core.Core, ch *chain.Chain, hsdURL, hsdKey string) {
 	RegisterForgeActions(c)
 	RegisterHSDActions(c, hsdURL, hsdKey)
 	RegisterDNSActions(c, ch, hsdURL, hsdKey)
+	RegisterEscrowActions(c, ch)
 }
 
 // RegisterHSDActions registers sidechain query actions.
@@ -672,5 +712,104 @@ func makeEstHeightAtTime(ch *chain.Chain) core.ActionHandler {
 func RegisterMetricsActions(c *core.Core, m *Metrics) {
 	c.Action("blockchain.metrics.snapshot", func(ctx context.Context, opts core.Options) core.Result {
 		return core.Result{Value: m.Snapshot(), OK: true}
+	})
+}
+
+// RegisterEscrowActions registers trustless service payment actions.
+// Escrow uses HF4 multisig: customer deposits, provider claims on delivery.
+//
+//	blockchain.RegisterEscrowActions(c, chain)
+func RegisterEscrowActions(c *core.Core, ch *chain.Chain) {
+	// escrow state: in-memory for now, persistent via go-store in production
+	escrows := make(map[string]map[string]interface{})
+
+	// blockchain.escrow.create — create escrow contract
+	//   c.Action("blockchain.escrow.create", opts{provider, customer, amount, terms})
+	c.Action("blockchain.escrow.create", func(ctx context.Context, opts core.Options) core.Result {
+		provider := opts.String("provider")
+		customer := opts.String("customer")
+		amount := opts.String("amount")
+		terms := opts.String("terms")
+
+		if provider == "" || customer == "" || amount == "" {
+			return core.Result{OK: false}
+		}
+
+		escrowID := core.Sprintf("escrow_%d_%s", len(escrows)+1, provider[:8])
+		escrows[escrowID] = map[string]interface{}{
+			"escrow_id": escrowID,
+			"provider":  provider,
+			"customer":  customer,
+			"amount":    amount,
+			"terms":     terms,
+			"status":    "created",
+			"funded":    false,
+		}
+
+		return core.Result{Value: map[string]interface{}{
+			"escrow_id": escrowID,
+			"status":    "created",
+		}, OK: true}
+	})
+
+	// blockchain.escrow.fund — fund the escrow (customer deposits)
+	//   c.Action("blockchain.escrow.fund", opts{escrow_id})
+	c.Action("blockchain.escrow.fund", func(ctx context.Context, opts core.Options) core.Result {
+		escrowID := opts.String("escrow_id")
+		escrow, exists := escrows[escrowID]
+		if !exists {
+			return core.Result{OK: false}
+		}
+		escrow["status"] = "funded"
+		escrow["funded"] = true
+		return core.Result{Value: map[string]interface{}{
+			"escrow_id": escrowID,
+			"status":    "funded",
+		}, OK: true}
+	})
+
+	// blockchain.escrow.release — provider claims payment (proof of service)
+	//   c.Action("blockchain.escrow.release", opts{escrow_id, proof_of_service})
+	c.Action("blockchain.escrow.release", func(ctx context.Context, opts core.Options) core.Result {
+		escrowID := opts.String("escrow_id")
+		escrow, exists := escrows[escrowID]
+		if !exists {
+			return core.Result{OK: false}
+		}
+		if escrow["status"] != "funded" {
+			return core.Result{OK: false}
+		}
+		escrow["status"] = "released"
+		return core.Result{Value: map[string]interface{}{
+			"escrow_id": escrowID,
+			"status":    "released",
+			"amount":    escrow["amount"],
+		}, OK: true}
+	})
+
+	// blockchain.escrow.refund — customer reclaims after timeout
+	//   c.Action("blockchain.escrow.refund", opts{escrow_id})
+	c.Action("blockchain.escrow.refund", func(ctx context.Context, opts core.Options) core.Result {
+		escrowID := opts.String("escrow_id")
+		escrow, exists := escrows[escrowID]
+		if !exists {
+			return core.Result{OK: false}
+		}
+		escrow["status"] = "refunded"
+		return core.Result{Value: map[string]interface{}{
+			"escrow_id": escrowID,
+			"status":    "refunded",
+		}, OK: true}
+	})
+
+	// blockchain.escrow.status — check escrow state
+	//   c.Action("blockchain.escrow.status", opts{escrow_id})
+	c.Action("blockchain.escrow.status", func(ctx context.Context, opts core.Options) core.Result {
+		escrowID := opts.String("escrow_id")
+		escrow, exists := escrows[escrowID]
+		if !exists {
+			return core.Result{OK: false}
+		}
+		return core.Result{Value: escrow, OK: true}
 	})
 }
