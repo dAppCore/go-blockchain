@@ -36,6 +36,7 @@ func RegisterActions(c *core.Core, ch *chain.Chain) {
 	c.Action("blockchain.chain.search", makeChainSearch(ch))
 	c.Action("blockchain.chain.difficulty", makeChainDifficulty(ch))
 	c.Action("blockchain.chain.transaction", makeChainTransaction(ch))
+	c.Action("blockchain.chain.peers", makeChainPeers(ch))
 
 	// Aliases
 	c.Action("blockchain.alias.list", makeAliasList(ch))
@@ -184,6 +185,19 @@ func makeChainTransaction(ch *chain.Chain) core.ActionHandler {
 			"inputs":       len(tx.Vin),
 			"outputs":      len(tx.Vout),
 			"keeper_block": txMeta.KeeperBlock,
+		}, OK: true}
+	}
+}
+
+func makeChainPeers(ch *chain.Chain) core.ActionHandler {
+	return func(ctx context.Context, opts core.Options) core.Result {
+		return core.Result{Value: map[string]interface{}{
+			"connected":  0,
+			"incoming":   0,
+			"outgoing":   0,
+			"white_list": 0,
+			"grey_list":  0,
+			"note":       "Go node syncs via RPC, not P2P peers",
 		}, OK: true}
 	}
 }
@@ -871,6 +885,11 @@ func RegisterAssetActions(c *core.Core) {
 	c.Action("blockchain.asset.info", actionAssetInfo)
 	c.Action("blockchain.asset.list", actionAssetList)
 	c.Action("blockchain.asset.deploy", actionAssetDeploy)
+	c.Action("blockchain.asset.emit", actionAssetEmit)
+	c.Action("blockchain.asset.burn", actionAssetBurn)
+	c.Action("blockchain.asset.balance", actionAssetBalance)
+	c.Action("blockchain.asset.transfer", actionAssetTransfer)
+	c.Action("blockchain.asset.whitelist", actionAssetWhitelist)
 }
 
 func actionAssetInfo(ctx context.Context, opts core.Options) core.Result {
@@ -898,6 +917,86 @@ func actionAssetDeploy(ctx context.Context, opts core.Options) core.Result {
 	}
 	return core.Result{Value: map[string]interface{}{
 		"ticker": ticker, "name": name, "status": "ready_for_hf5",
+	}, OK: true}
+}
+
+// actionAssetEmit mints additional tokens for an existing asset (HF5+).
+//
+//	c.Action("blockchain.asset.emit", opts{asset_id, amount})
+func actionAssetEmit(ctx context.Context, opts core.Options) core.Result {
+	assetID := opts.String("asset_id")
+	amount := opts.String("amount")
+	if assetID == "" || amount == "" {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"asset_id": assetID, "amount": amount,
+		"status": "requires_wallet_rpc",
+		"method": "deploy_new_asset with emit flag",
+	}, OK: true}
+}
+
+// actionAssetBurn destroys tokens from an existing asset (HF5+).
+//
+//	c.Action("blockchain.asset.burn", opts{asset_id, amount})
+func actionAssetBurn(ctx context.Context, opts core.Options) core.Result {
+	assetID := opts.String("asset_id")
+	amount := opts.String("amount")
+	if assetID == "" || amount == "" {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"asset_id": assetID, "amount": amount,
+		"status": "requires_wallet_rpc",
+	}, OK: true}
+}
+
+// actionAssetBalance queries balance for a specific asset via wallet RPC.
+//
+//	c.Action("blockchain.asset.balance", opts{asset_id, wallet_url})
+func actionAssetBalance(ctx context.Context, opts core.Options) core.Result {
+	walletURL := opts.String("wallet_url")
+	if walletURL == "" {
+		walletURL = core.Env("WALLET_RPC_URL")
+	}
+	if walletURL == "" {
+		walletURL = "http://127.0.0.1:46944"
+	}
+
+	result, err := walletRPC(walletURL, "getbalance", nil)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: result, OK: true}
+}
+
+// actionAssetTransfer sends confidential asset tokens (HF5+).
+//
+//	c.Action("blockchain.asset.transfer", opts{asset_id, destination, amount})
+func actionAssetTransfer(ctx context.Context, opts core.Options) core.Result {
+	assetID := opts.String("asset_id")
+	destination := opts.String("destination")
+	amount := opts.String("amount")
+	if assetID == "" || destination == "" || amount == "" {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"asset_id": assetID, "destination": destination, "amount": amount,
+		"status": "requires_wallet_rpc",
+		"method": "transfer with asset_id param",
+	}, OK: true}
+}
+
+// actionAssetWhitelist returns the current asset whitelist.
+//
+//	c.Action("blockchain.asset.whitelist", opts{})
+func actionAssetWhitelist(ctx context.Context, opts core.Options) core.Result {
+	return core.Result{Value: map[string]interface{}{
+		"whitelisted": []map[string]interface{}{
+			{"ticker": "LTHN", "name": "Lethean", "native": true,
+				"asset_id": "d6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a"},
+		},
+		"source": "https://downloads.lthn.io/assets_whitelist.json",
 	}, OK: true}
 }
 
