@@ -1178,6 +1178,7 @@ func RegisterAllActions(c *core.Core, ch *chain.Chain, hsdURL, hsdKey string) {
 	RegisterDNSActions(c, ch, hsdURL, hsdKey)
 	RegisterEscrowActions(c, ch)
 	RegisterEstimateActions(c, ch)
+	RegisterServiceActions(c, ch)
 }
 
 // RegisterHSDActions registers sidechain query actions.
@@ -1442,6 +1443,77 @@ func makeEstHeightAtTime(ch *chain.Chain) core.ActionHandler {
 		est := elapsed / 120 // avg block time
 		return core.Result{Value: est, OK: true}
 	}
+}
+
+// RegisterServiceActions registers LetherNet service layer actions.
+// Per code/core/network/RFC.md: services are VPN, DNS, Storage, Compute, Relay.
+//
+//	blockchain.RegisterServiceActions(c, chain)
+func RegisterServiceActions(c *core.Core, ch *chain.Chain) {
+	// blockchain.service.list — all advertised services from chain aliases
+	//   result := c.Action("blockchain.service.list").Run(ctx, opts)
+	c.Action("blockchain.service.list", func(ctx context.Context, opts core.Options) core.Result {
+		aliases := ch.GetAllAliases()
+		var services []map[string]interface{}
+		for _, a := range aliases {
+			parsed := parseActionComment(a.Comment)
+			if parsed["type"] == "" && parsed["cap"] == "" {
+				continue
+			}
+			services = append(services, map[string]interface{}{
+				"name":     a.Name,
+				"address":  a.Address,
+				"type":     parsed["type"],
+				"caps":     parsed["cap"],
+				"version":  parsed["v"],
+				"dns":      a.Name + ".lthn",
+			})
+		}
+		return core.Result{Value: services, OK: true}
+	})
+
+	// blockchain.service.find — find services by capability
+	//   result := c.Action("blockchain.service.find").Run(ctx, opts{type: "gateway", cap: "vpn"})
+	c.Action("blockchain.service.find", func(ctx context.Context, opts core.Options) core.Result {
+		serviceType := opts.String("type")
+		capability := opts.String("cap")
+		aliases := ch.GetAllAliases()
+		var matches []map[string]interface{}
+		for _, a := range aliases {
+			parsed := parseActionComment(a.Comment)
+			if serviceType != "" && parsed["type"] != serviceType {
+				continue
+			}
+			if capability != "" && !core.Contains(parsed["cap"], capability) {
+				continue
+			}
+			matches = append(matches, map[string]interface{}{
+				"name":    a.Name,
+				"address": a.Address,
+				"type":    parsed["type"],
+				"caps":    parsed["cap"],
+				"dns":     a.Name + ".lthn",
+			})
+		}
+		return core.Result{Value: map[string]interface{}{
+			"count":    len(matches),
+			"services": matches,
+		}, OK: true}
+	})
+
+	// blockchain.service.types — list all service types and their counts
+	//   result := c.Action("blockchain.service.types").Run(ctx, opts)
+	c.Action("blockchain.service.types", func(ctx context.Context, opts core.Options) core.Result {
+		aliases := ch.GetAllAliases()
+		types := make(map[string]int)
+		for _, a := range aliases {
+			parsed := parseActionComment(a.Comment)
+			if t := parsed["type"]; t != "" {
+				types[t]++
+			}
+		}
+		return core.Result{Value: types, OK: true}
+	})
 }
 
 // RegisterMetricsActions registers operational metrics actions.
