@@ -62,7 +62,7 @@ func runDeployITNS(walletRPC string) error {
 	desc := rpc.AssetDescriptor{
 		Ticker:       "ITNS",
 		FullName:     "IntenseCoin",
-		TotalMax:     1000000000000000000, // 1B at 12 decimals
+		TotalMax:     AtomicUnit * 1000000, // 1B at 12 decimals
 		CurrentSup:   0,
 		DecimalPoint: 12,
 		HiddenSupply: false,

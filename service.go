@@ -66,7 +66,7 @@ func NewBlockchainService(c *core.Core, opts BlockchainOptions) *BlockchainServi
 
 func (s *BlockchainService) start() core.Result {
 	if s.opts.Testnet {
-		chain.GenesisHash = "7cf844dc3e7d8dd6af65642c68164ebe18109aa5167b5f76043f310dd6e142d0"
+		chain.GenesisHash = chain.TestnetGenesisHash
 	}
 
 	dbPath := core.JoinPath(s.opts.DataDir, "chain.db")

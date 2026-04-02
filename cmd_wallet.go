@@ -104,7 +104,7 @@ func runWalletCreate(walletFile string) error {
 	}
 
 	addr := account.Address()
-	addrStr := addr.Encode(0x1eaf7) // iTHN standard prefix
+	addrStr := addr.Encode(StandardPrefix) // iTHN standard prefix
 	seed, _ := account.ToSeed()
 
 	core.Print(nil, "Wallet created!")
@@ -132,7 +132,7 @@ func runWalletAddress(walletFile string) error {
 	}
 
 	addr := account.Address()
-	core.Print(nil, "%s", addr.Encode(0x1eaf7))
+	core.Print(nil, "%s", addr.Encode(StandardPrefix))
 	return nil
 }
 
@@ -193,7 +193,7 @@ func runWalletScan(walletFile, daemonURL string) error {
 	}
 
 	addr := account.Address()
-	core.Print(nil, "Scanning for: %s", addr.Encode(0x1eaf7))
+	core.Print(nil, "Scanning for: %s", addr.Encode(StandardPrefix))
 
 	scanner := wallet.NewV1Scanner(account)
 	client := rpc.NewClient(daemonURL)
@@ -244,7 +244,7 @@ func runWalletScan(walletFile, daemonURL string) error {
 					totalBalance += t.Amount
 					outputCount++
 					core.Print(nil, "  Found output: %d.%012d LTHN at height %d",
-						t.Amount/1000000000000, t.Amount%1000000000000, h)
+						t.Amount/AtomicUnit, t.Amount%AtomicUnit, h)
 				}
 			}
 		}
@@ -252,12 +252,12 @@ func runWalletScan(walletFile, daemonURL string) error {
 		if h > 0 && h%1000 == 0 {
 			core.Print(nil, "  Scanned %d/%d blocks... (%d outputs, %d.%012d LTHN)",
 				h, remoteHeight, outputCount,
-				totalBalance/1000000000000, totalBalance%1000000000000)
+				totalBalance/AtomicUnit, totalBalance%AtomicUnit)
 		}
 	}
 
 	core.Print(nil, "Balance: %d.%012d LTHN (%d outputs)",
-		totalBalance/1000000000000, totalBalance%1000000000000, outputCount)
+		totalBalance/AtomicUnit, totalBalance%AtomicUnit, outputCount)
 
 	return nil
 }
@@ -335,7 +335,7 @@ func runWalletRestore(walletFile, seed string) error {
 
 	addr := account.Address()
 	core.Print(nil, "Wallet restored!")
-	core.Print(nil, "  Address: %s", addr.Encode(0x1eaf7))
+	core.Print(nil, "  Address: %s", addr.Encode(StandardPrefix))
 	core.Print(nil, "  File:    %s", walletFile)
 
 	return nil
@@ -372,7 +372,7 @@ func runWalletTransfer(walletRPC, destination string, amount float64, paymentID 
 		return coreerr.E("runWalletTransfer", "destination must start with iTHN", nil)
 	}
 
-	atomicAmount := uint64(amount * 1000000000000) // 12 decimal places
+	atomicAmount := uint64(amount * AtomicUnit) // 12 decimal places
 
 	core.Print(nil, "Sending %f LTHN to %s...", amount, destination[:20]+"...")
 
@@ -464,9 +464,9 @@ func runWalletInfo(walletFile string) error {
 
 	core.Print(nil, "Wallet Information")
 	core.Print(nil, "  File:      %s", walletFile)
-	core.Print(nil, "  Address:   %s", addr.Encode(0x1eaf7))
-	core.Print(nil, "  Integrated: %s", addr.Encode(0xdeaf7))
-	core.Print(nil, "  Auditable: %s", addr.Encode(0x3ceff7))
+	core.Print(nil, "  Address:   %s", addr.Encode(StandardPrefix))
+	core.Print(nil, "  Integrated: %s", addr.Encode(IntegratedPrefix))
+	core.Print(nil, "  Auditable: %s", addr.Encode(AuditablePrefix))
 	core.Print(nil, "  Spend Key: %x", account.SpendPublicKey[:])
 	core.Print(nil, "  View Key:  %x", account.ViewPublicKey[:])
 	core.Print(nil, "  Seed:      %s", seed)
