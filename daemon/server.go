@@ -21,6 +21,7 @@ import (
 	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wallet"
+	"dappco.re/go/core/blockchain/wire"
 )
 
 // Server serves the Lethean daemon JSON-RPC API backed by a Go chain.
@@ -160,6 +161,10 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	case "get_multisig_info":
 		s.rpcGetMultisigInfo(w, req)
 	case "get_alt_blocks_details":
+	case "get_main_block_details":
+		s.rpcGetMainBlockDetails(w, req)
+	case "get_alt_block_details":
+		s.rpcGetAltBlockDetails(w, req)
 		s.rpcGetAlternateBlocksDetails(w, req)
 	case "get_votes":
 		s.rpcGetVotes(w, req)
@@ -1916,5 +1921,63 @@ func (s *Server) rpcGetVotes(w http.ResponseWriter, req jsonRPCRequest) {
 	writeResult(w, req.ID, map[string]interface{}{
 		"votes":  []interface{}{},
 		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetMainBlockDetails(w http.ResponseWriter, req jsonRPCRequest) {
+	var params struct {
+		Height uint64 `json:"height"`
+	}
+	if req.Params != nil {
+		json.Unmarshal(req.Params, &params)
+	}
+
+	blk, meta, err := s.chain.GetBlockByHeight(params.Height)
+	if err != nil {
+		writeError(w, req.ID, -1, core.Sprintf("block not found at %d", params.Height))
+		return
+	}
+
+	txHashes := make([]string, len(blk.TxHashes))
+	for i, h := range blk.TxHashes {
+		txHashes[i] = h.String()
+	}
+
+	minerTxHash := wire.TransactionHash(&blk.MinerTx).String()
+
+	// Check if block is PoS (bit 0 of flags)
+	isPoS := blk.Flags&1 != 0
+	blockType := "PoW"
+	if isPoS {
+		blockType = "PoS"
+	}
+
+	writeResult(w, req.ID, map[string]interface{}{
+		"block_details": map[string]interface{}{
+			"height":          meta.Height,
+			"hash":            meta.Hash.String(),
+			"prev_hash":       blk.PrevID.String(),
+			"timestamp":       blk.Timestamp,
+			"difficulty":      meta.Difficulty,
+			"cumulative_diff": meta.CumulativeDiff,
+			"major_version":   blk.MajorVersion,
+			"minor_version":   blk.MinorVersion,
+			"nonce":           blk.Nonce,
+			"flags":           blk.Flags,
+			"block_type":      blockType,
+			"miner_tx_hash":   minerTxHash,
+			"tx_count":        len(blk.TxHashes),
+			"tx_hashes":       txHashes,
+			"base_reward":     1000000000000, // 1 LTHN
+		},
+		"status": "OK",
+	})
+}
+
+func (s *Server) rpcGetAltBlockDetails(w http.ResponseWriter, req jsonRPCRequest) {
+	// No alt blocks in Go node (read-only, follows canonical chain)
+	writeResult(w, req.ID, map[string]interface{}{
+		"block_details": map[string]interface{}{},
+		"status":        "NOT_FOUND",
 	})
 }
