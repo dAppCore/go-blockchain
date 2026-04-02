@@ -91,6 +91,15 @@ func (s *BlockchainService) start() core.Result {
 		}
 	})
 
+	// Wire sync progress events
+	s.chain.SetSyncCallback(func(localHeight, remoteHeight uint64, blocksPerSecond float64) {
+		s.events.Emit(Event{Type: EventSyncProgress, Height: localHeight, Data: map[string]interface{}{
+			"local_height":    localHeight,
+			"remote_height":   remoteHeight,
+			"blocks_per_sec":  blocksPerSecond,
+		}})
+	})
+
 	cfg, forks := resolveConfig(s.opts.Testnet, &s.opts.Seed)
 
 	// Start background sync.

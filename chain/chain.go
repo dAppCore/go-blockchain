@@ -18,6 +18,7 @@ import (
 type Chain struct {
 	store         *store.Store
 	blockCallback BlockCallback
+	syncCallback  SyncCallback
 }
 
 // New creates a Chain backed by the given store.
@@ -69,9 +70,19 @@ func (c *Chain) Snapshot() (uint64, *types.Block, *BlockMeta) {
 // BlockCallback is called after a block is successfully stored.
 type BlockCallback func(height uint64, hash string, aliasName string)
 
+// SyncCallback is called periodically during chain sync with progress info.
+type SyncCallback func(localHeight, remoteHeight uint64, blocksPerSecond float64)
+
 // SetBlockCallback sets a function called after each block is stored.
 //
 //	c.SetBlockCallback(func(height uint64, hash string, alias string) { ... })
 func (c *Chain) SetBlockCallback(cb BlockCallback) {
 	c.blockCallback = cb
+}
+
+// SetSyncCallback sets a function called during sync progress.
+//
+//	c.SetSyncCallback(func(local, remote uint64, bps float64) { ... })
+func (c *Chain) SetSyncCallback(cb SyncCallback) {
+	c.syncCallback = cb
 }
