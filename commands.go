@@ -38,6 +38,7 @@ func AddChainCommands(root *cobra.Command) {
 		newExplorerCmd(&dataDir, &seed, &testnet),
 		newSyncCmd(&dataDir, &seed, &testnet),
 		newServeCmd(&dataDir, &seed, &testnet),
+		newStatusCmd(&dataDir, &seed, &testnet),
 	)
 
 	root.AddCommand(chainCmd)

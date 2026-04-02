@@ -43,6 +43,7 @@ func AddWalletCommands(root *cobra.Command) {
 		newWalletScanCmd(&walletFile),
 		newWalletRestoreCmd(&walletFile),
 		newWalletTransferCmd(&walletFile),
+		newWalletInfoCmd(&walletFile),
 	)
 
 	root.AddCommand(walletCmd)
@@ -428,6 +429,47 @@ func runWalletTransfer(walletRPC, destination string, amount float64, paymentID 
 	core.Print(nil, "  TX Hash: %s", rpcResp.Result.TxHash)
 	core.Print(nil, "  Amount:  %f LTHN", amount)
 	core.Print(nil, "  Fee:     0.01 LTHN")
+
+	return nil
+}
+
+func newWalletInfoCmd(walletFile *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "info",
+		Short: "Show full wallet information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWalletInfo(*walletFile)
+		},
+	}
+}
+
+func runWalletInfo(walletFile string) error {
+	if walletFile == "" {
+		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+	}
+
+	s, err := store.New(walletFile)
+	if err != nil {
+		return coreerr.E("runWalletInfo", "open wallet store", err)
+	}
+	defer s.Close()
+
+	account, err := wallet.LoadAccount(s, "")
+	if err != nil {
+		return coreerr.E("runWalletInfo", "load wallet", err)
+	}
+
+	addr := account.Address()
+	seed, _ := account.ToSeed()
+
+	core.Print(nil, "Wallet Information")
+	core.Print(nil, "  File:      %s", walletFile)
+	core.Print(nil, "  Address:   %s", addr.Encode(0x1eaf7))
+	core.Print(nil, "  Integrated: %s", addr.Encode(0xdeaf7))
+	core.Print(nil, "  Auditable: %s", addr.Encode(0x3ceff7))
+	core.Print(nil, "  Spend Key: %x", account.SpendPublicKey[:])
+	core.Print(nil, "  View Key:  %x", account.ViewPublicKey[:])
+	core.Print(nil, "  Seed:      %s", seed)
 
 	return nil
 }
