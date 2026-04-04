@@ -6,12 +6,12 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
 // GetTxDetails returns detailed information about a transaction.
+// Usage: value.GetTxDetails(...)
 func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 	params := struct {
 		TxHash string `json:"tx_hash"`
@@ -24,7 +24,7 @@ func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetTxDetails", fmt.Sprintf("get_tx_details: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetTxDetails", core.Sprintf("get_tx_details: status %q", resp.Status), nil)
 	}
 	return &resp.TxInfo, nil
 }
@@ -32,6 +32,7 @@ func (c *Client) GetTxDetails(txHash string) (*TxInfo, error) {
 // GetTransactions fetches transactions by hash.
 // Uses the legacy /gettransactions endpoint (not available via /json_rpc).
 // Returns hex-encoded transaction blobs and any missed (not found) hashes.
+// Usage: value.GetTransactions(...)
 func (c *Client) GetTransactions(hashes []string) (txsHex []string, missed []string, err error) {
 	params := struct {
 		TxsHashes []string `json:"txs_hashes"`
@@ -45,7 +46,7 @@ func (c *Client) GetTransactions(hashes []string) (txsHex []string, missed []str
 		return nil, nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, nil, coreerr.E("Client.GetTransactions", fmt.Sprintf("gettransactions: status %q", resp.Status), nil)
+		return nil, nil, coreerr.E("Client.GetTransactions", core.Sprintf("gettransactions: status %q", resp.Status), nil)
 	}
 	return resp.TxsAsHex, resp.MissedTx, nil
 }

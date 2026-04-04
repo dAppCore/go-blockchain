@@ -7,32 +7,31 @@ package rpc
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestSubmitBlock_Good(t *testing.T) {
+func TestMining_SubmitBlock_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req jsonRPCRequest
-		json.Unmarshal(body, &req)
+		mustJSONUnmarshal(t, body, &req)
 		if req.Method != "submitblock" {
 			t.Errorf("method: got %q, want %q", req.Method, "submitblock")
 		}
 		// Verify params is an array.
-		raw, _ := json.Marshal(req.Params)
+		raw := mustJSONMarshal(t, req.Params)
 		if raw[0] != '[' {
 			t.Errorf("params should be array, got: %s", raw)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"status":"OK"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"status":"OK"}`),
 		})
 	}))
 	defer srv.Close()
@@ -44,12 +43,12 @@ func TestSubmitBlock_Good(t *testing.T) {
 	}
 }
 
-func TestSubmitBlock_Bad_Rejected(t *testing.T) {
+func TestMining_SubmitBlock_Rejected_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -7, Message: "BLOCK_NOT_ACCEPTED"},
 		})
 	}))
@@ -69,25 +68,25 @@ func TestSubmitBlock_Bad_Rejected(t *testing.T) {
 	}
 }
 
-func TestGetBlockTemplate_Good(t *testing.T) {
+func TestMining_GetBlockTemplate_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req jsonRPCRequest
-		json.Unmarshal(body, &req)
+		mustJSONUnmarshal(t, body, &req)
 		if req.Method != "getblocktemplate" {
 			t.Errorf("method: got %q, want %q", req.Method, "getblocktemplate")
 		}
 		// Verify wallet_address is in params.
-		raw, _ := json.Marshal(req.Params)
+		raw := mustJSONMarshal(t, req.Params)
 		if !bytes.Contains(raw, []byte("iTHN")) {
 			t.Errorf("params should contain wallet address, got: %s", raw)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"difficulty": "42",
 				"height": 100,
 				"blocktemplate_blob": "0100000000000000000000000000",
@@ -117,13 +116,13 @@ func TestGetBlockTemplate_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlockTemplate_Bad_Status(t *testing.T) {
+func TestMining_GetBlockTemplate_Status_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"status":"BUSY"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"status":"BUSY"}`),
 		})
 	}))
 	defer srv.Close()

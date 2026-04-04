@@ -6,13 +6,15 @@
 package main
 
 import (
-	cli "dappco.re/go/core/cli/pkg/cli"
 	blockchain "dappco.re/go/core/blockchain"
+	cli "dappco.re/go/core/cli/pkg/cli"
 )
 
 func main() {
 	cli.WithAppName("core-chain")
 	cli.Main(
 		cli.WithCommands("chain", blockchain.AddChainCommands),
+		cli.WithCommands("wallet", blockchain.AddWalletCommands),
+		cli.WithCommands("asset", blockchain.AddAssetCommands),
 	)
 }

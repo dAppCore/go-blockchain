@@ -17,7 +17,7 @@ import (
 	"dappco.re/go/core/blockchain/rpc"
 )
 
-func TestConsensusIntegration(t *testing.T) {
+func TestIntegration_ConsensusIntegration_Good(t *testing.T) {
 	client := rpc.NewClient("http://localhost:46941")
 
 	s, err := store.New(":memory:")

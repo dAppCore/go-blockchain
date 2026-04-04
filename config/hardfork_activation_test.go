@@ -7,7 +7,7 @@ package config
 
 import "testing"
 
-func TestHardforkActivationHeight_Good(t *testing.T) {
+func TestHardforkActivation_HardforkActivationHeight_Good(t *testing.T) {
 	tests := []struct {
 		name    string
 		forks   []HardFork
@@ -34,14 +34,14 @@ func TestHardforkActivationHeight_Good(t *testing.T) {
 	}
 }
 
-func TestHardforkActivationHeight_Bad(t *testing.T) {
+func TestHardforkActivation_HardforkActivationHeight_Bad(t *testing.T) {
 	_, ok := HardforkActivationHeight(MainnetForks, 99)
 	if ok {
 		t.Error("HardforkActivationHeight with unknown version should return false")
 	}
 }
 
-func TestHardforkActivationHeight_Ugly(t *testing.T) {
+func TestHardforkActivation_HardforkActivationHeight_Ugly(t *testing.T) {
 	_, ok := HardforkActivationHeight(nil, HF5)
 	if ok {
 		t.Error("HardforkActivationHeight with nil forks should return false")

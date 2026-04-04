@@ -11,10 +11,10 @@ package wallet
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 	"strconv"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/chain"
@@ -29,6 +29,7 @@ const (
 )
 
 // Wallet ties together scanning, building, and sending.
+// Usage: var value wallet.Wallet
 type Wallet struct {
 	account      *Account
 	store        *store.Store
@@ -41,6 +42,7 @@ type Wallet struct {
 }
 
 // NewWallet creates a wallet with v1 defaults.
+// Usage: wallet.NewWallet(...)
 func NewWallet(account *Account, s *store.Store, c *chain.Chain,
 	client *rpc.Client) *Wallet {
 
@@ -66,6 +68,7 @@ func NewWallet(account *Account, s *store.Store, c *chain.Chain,
 }
 
 // Sync scans blocks from the last checkpoint to the chain tip.
+// Usage: value.Sync(...)
 func (w *Wallet) Sync() error {
 	lastScanned := w.loadScanHeight()
 
@@ -77,7 +80,7 @@ func (w *Wallet) Sync() error {
 	for h := lastScanned; h < chainHeight; h++ {
 		blk, _, err := w.chain.GetBlockByHeight(h)
 		if err != nil {
-			return coreerr.E("Wallet.Sync", fmt.Sprintf("wallet: get block %d", h), err)
+			return coreerr.E("Wallet.Sync", core.Sprintf("wallet: get block %d", h), err)
 		}
 
 		// Scan miner tx.
@@ -140,6 +143,7 @@ func (w *Wallet) scanTx(tx *types.Transaction, blockHeight uint64) error {
 }
 
 // Balance returns confirmed (spendable) and locked amounts.
+// Usage: value.Balance(...)
 func (w *Wallet) Balance() (confirmed, locked uint64, err error) {
 	chainHeight, err := w.chain.Height()
 	if err != nil {
@@ -166,6 +170,7 @@ func (w *Wallet) Balance() (confirmed, locked uint64, err error) {
 }
 
 // Send constructs and submits a transaction.
+// Usage: value.Send(...)
 func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transaction, error) {
 	if w.builder == nil || w.client == nil {
 		return nil, coreerr.E("Wallet.Send", "wallet: no RPC client configured", nil)
@@ -209,7 +214,7 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 		}
 	}
 	if selectedSum < needed {
-		return nil, coreerr.E("Wallet.Send", fmt.Sprintf("wallet: insufficient balance: have %d, need %d", selectedSum, needed), nil)
+		return nil, coreerr.E("Wallet.Send", core.Sprintf("wallet: insufficient balance: have %d, need %d", selectedSum, needed), nil)
 	}
 
 	req := &BuildRequest{
@@ -242,6 +247,7 @@ func (w *Wallet) Send(destinations []Destination, fee uint64) (*types.Transactio
 }
 
 // Transfers returns all tracked transfers.
+// Usage: value.Transfers(...)
 func (w *Wallet) Transfers() ([]Transfer, error) {
 	return listTransfers(w.store)
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRandomXHash_Good(t *testing.T) {
+func TestPow_RandomXHash_Good(t *testing.T) {
 	key := []byte("LetheanRandomXv1")
 	input := make([]byte, 40) // 32-byte hash + 8-byte nonce
 
@@ -26,7 +26,7 @@ func TestRandomXHash_Good(t *testing.T) {
 	assert.Equal(t, hash, hash2, "hash must be deterministic")
 }
 
-func TestRandomXHash_Bad(t *testing.T) {
+func TestPow_RandomXHash_Bad(t *testing.T) {
 	key := []byte("LetheanRandomXv1")
 	input1 := make([]byte, 40)
 	input2 := make([]byte, 40)

@@ -19,6 +19,7 @@ var maxTarget = new(big.Int).Lsh(big.NewInt(1), 256)
 // CheckDifficulty returns true if hash meets the given difficulty target.
 // The hash (interpreted as a 256-bit little-endian number) must be less
 // than maxTarget / difficulty.
+// Usage: consensus.CheckDifficulty(...)
 func CheckDifficulty(hash types.Hash, difficulty uint64) bool {
 	if difficulty == 0 {
 		return true
@@ -39,6 +40,7 @@ func CheckDifficulty(hash types.Hash, difficulty uint64) bool {
 
 // CheckPoWHash computes the RandomX hash of a block header hash + nonce
 // and checks it against the difficulty target.
+// Usage: consensus.CheckPoWHash(...)
 func CheckPoWHash(headerHash types.Hash, nonce, difficulty uint64) (bool, error) {
 	// Build input: header_hash (32 bytes) || nonce (8 bytes LE).
 	var input [40]byte

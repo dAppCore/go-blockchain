@@ -1,15 +1,24 @@
-project: core-chain
-binary: core-chain
-main: ./cmd/core-chain
+version: 1
+
+project:
+  name: go-blockchain
+  description: Lethean blockchain node
+  binary: core-chain
+
+build:
+  cgo: true
+  entry: ./cmd/core-chain
+  flags:
+    - -trimpath
+  ldflags:
+    - -s
+    - -w
+  env:
+    - GOWORK=off
 
 targets:
-  - os: darwin
-    arch: arm64
   - os: linux
     arch: amd64
 
-ldflags:
-  - -s -w
-  - -X forge.lthn.ai/core/cli/pkg/cli.AppVersion={{.Version}}
-  - -X forge.lthn.ai/core/cli/pkg/cli.BuildCommit={{.Commit}}
-  - -X forge.lthn.ai/core/cli/pkg/cli.BuildDate={{.Date}}
+archive:
+  format: tar.gz

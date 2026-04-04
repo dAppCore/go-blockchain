@@ -9,6 +9,7 @@ import "golang.org/x/crypto/sha3"
 
 // Keccak256 computes the Keccak-256 hash (pre-NIST, no domain separation)
 // used as cn_fast_hash throughout the CryptoNote protocol.
+// Usage: wire.Keccak256(...)
 func Keccak256(data []byte) [32]byte {
 	h := sha3.NewLegacyKeccak256()
 	h.Write(data)
@@ -25,6 +26,8 @@ func Keccak256(data []byte) [32]byte {
 //   - 1 hash:   returns the hash itself (identity)
 //   - 2 hashes: returns Keccak256(h0 || h1)
 //   - N hashes: pad to power-of-2 leaves, pairwise Keccak up the tree
+//
+// Usage: wire.TreeHash(...)
 func TreeHash(hashes [][32]byte) [32]byte {
 	count := len(hashes)
 	if count == 0 {

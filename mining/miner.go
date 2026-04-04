@@ -10,11 +10,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/consensus"
@@ -26,6 +26,7 @@ import (
 
 // TemplateProvider abstracts the RPC methods needed by the miner.
 // The real rpc.Client satisfies this interface.
+// Usage: var value mining.TemplateProvider
 type TemplateProvider interface {
 	GetBlockTemplate(walletAddr string) (*rpc.BlockTemplateResponse, error)
 	SubmitBlock(hexBlob string) error
@@ -33,6 +34,7 @@ type TemplateProvider interface {
 }
 
 // Config holds the miner configuration.
+// Usage: var value mining.Config
 type Config struct {
 	// DaemonURL is the JSON-RPC endpoint of the C++ daemon.
 	DaemonURL string
@@ -57,6 +59,7 @@ type Config struct {
 }
 
 // Stats holds read-only mining statistics.
+// Usage: var value mining.Stats
 type Stats struct {
 	Hashrate    float64
 	BlocksFound uint64
@@ -66,6 +69,7 @@ type Stats struct {
 }
 
 // Miner is a solo PoW miner that talks to a C++ daemon via JSON-RPC.
+// Usage: var value mining.Miner
 type Miner struct {
 	cfg       Config
 	provider  TemplateProvider
@@ -79,6 +83,7 @@ type Miner struct {
 }
 
 // NewMiner creates a new miner with the given configuration.
+// Usage: mining.NewMiner(...)
 func NewMiner(cfg Config) *Miner {
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 3 * time.Second
@@ -99,6 +104,7 @@ func NewMiner(cfg Config) *Miner {
 
 // Stats returns a snapshot of the current mining statistics.
 // Safe to call from any goroutine.
+// Usage: value.Stats(...)
 func (m *Miner) Stats() Stats {
 	var uptime time.Duration
 	if !m.startTime.IsZero() {
@@ -122,6 +128,7 @@ func (m *Miner) Stats() Stats {
 
 // Start runs the mining loop. It blocks until ctx is cancelled.
 // Returns the context error (typically context.Canceled or context.DeadlineExceeded).
+// Usage: value.Start(...)
 func (m *Miner) Start(ctx context.Context) error {
 	m.startTime = time.Now()
 
@@ -141,7 +148,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		// Parse difficulty.
 		diff, err := strconv.ParseUint(tmpl.Difficulty, 10, 64)
 		if err != nil {
-			return coreerr.E("Miner.Start", fmt.Sprintf("mining: invalid difficulty %q", tmpl.Difficulty), err)
+			return coreerr.E("Miner.Start", core.Sprintf("mining: invalid difficulty %q", tmpl.Difficulty), err)
 		}
 
 		// Decode the block template blob.

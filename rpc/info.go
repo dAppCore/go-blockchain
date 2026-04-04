@@ -6,13 +6,13 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
 // GetInfo returns the daemon status.
 // Uses flags=0 for the cheapest query (no expensive calculations).
+// Usage: value.GetInfo(...)
 func (c *Client) GetInfo() (*DaemonInfo, error) {
 	params := struct {
 		Flags uint64 `json:"flags"`
@@ -25,13 +25,14 @@ func (c *Client) GetInfo() (*DaemonInfo, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetInfo", fmt.Sprintf("getinfo: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetInfo", core.Sprintf("getinfo: status %q", resp.Status), nil)
 	}
 	return &resp.DaemonInfo, nil
 }
 
 // GetHeight returns the current blockchain height.
 // Uses the legacy /getheight endpoint (not available via /json_rpc).
+// Usage: value.GetHeight(...)
 func (c *Client) GetHeight() (uint64, error) {
 	var resp struct {
 		Height uint64 `json:"height"`
@@ -41,12 +42,13 @@ func (c *Client) GetHeight() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, coreerr.E("Client.GetHeight", fmt.Sprintf("getheight: status %q", resp.Status), nil)
+		return 0, coreerr.E("Client.GetHeight", core.Sprintf("getheight: status %q", resp.Status), nil)
 	}
 	return resp.Height, nil
 }
 
 // GetBlockCount returns the total number of blocks (height of top block + 1).
+// Usage: value.GetBlockCount(...)
 func (c *Client) GetBlockCount() (uint64, error) {
 	var resp struct {
 		Count  uint64 `json:"count"`
@@ -56,7 +58,7 @@ func (c *Client) GetBlockCount() (uint64, error) {
 		return 0, err
 	}
 	if resp.Status != "OK" {
-		return 0, coreerr.E("Client.GetBlockCount", fmt.Sprintf("getblockcount: status %q", resp.Status), nil)
+		return 0, coreerr.E("Client.GetBlockCount", core.Sprintf("getblockcount: status %q", resp.Status), nil)
 	}
 	return resp.Count, nil
 }

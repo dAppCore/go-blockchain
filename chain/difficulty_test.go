@@ -47,7 +47,7 @@ func storeBlocks(t *testing.T, c *Chain, count int, interval uint64, baseDiff ui
 	}
 }
 
-func TestNextDifficulty_Genesis(t *testing.T) {
+func TestDifficulty_NextDifficulty_Genesis_Ugly(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -58,7 +58,7 @@ func TestNextDifficulty_Genesis(t *testing.T) {
 	require.Equal(t, uint64(1), diff)
 }
 
-func TestNextDifficulty_FewBlocks(t *testing.T) {
+func TestDifficulty_NextDifficulty_FewBlocks_Ugly(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -79,7 +79,7 @@ func TestNextDifficulty_FewBlocks(t *testing.T) {
 	require.Equal(t, expected, diff)
 }
 
-func TestNextDifficulty_EmptyChain(t *testing.T) {
+func TestDifficulty_NextDifficulty_EmptyChain_Ugly(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -94,7 +94,7 @@ func TestNextDifficulty_EmptyChain(t *testing.T) {
 
 // --- HF6 boundary tests ---
 
-func TestNextDifficulty_HF6Boundary_Good(t *testing.T) {
+func TestDifficulty_NextDifficulty_HF6Boundary_Good(t *testing.T) {
 	// Verify that blocks at height <= 100 use the 120s target and blocks
 	// at height > 100 use the 240s target, given hf6ActiveForks.
 	s, err := store.New(":memory:")
@@ -119,7 +119,7 @@ func TestNextDifficulty_HF6Boundary_Good(t *testing.T) {
 		"difficulty should change across HF6 boundary (120s vs 240s target)")
 }
 
-func TestNextDifficulty_HF6Boundary_Bad(t *testing.T) {
+func TestDifficulty_NextDifficulty_HF6Boundary_Bad(t *testing.T) {
 	// HF6 at height 999,999,999 (mainnet default) -- should never activate
 	// for realistic heights, so the target stays at 120s.
 	s, err := store.New(":memory:")
@@ -141,7 +141,7 @@ func TestNextDifficulty_HF6Boundary_Bad(t *testing.T) {
 		"difficulty should be identical when HF6 is far in the future")
 }
 
-func TestNextDifficulty_HF6Boundary_Ugly(t *testing.T) {
+func TestDifficulty_NextDifficulty_HF6Boundary_Ugly(t *testing.T) {
 	// HF6 at height 0 (active from genesis) -- the 240s target should
 	// apply from the very first difficulty calculation.
 	s, err := store.New(":memory:")
@@ -163,7 +163,7 @@ func TestNextDifficulty_HF6Boundary_Ugly(t *testing.T) {
 
 // --- PoS difficulty tests ---
 
-func TestNextPoSDifficulty_Good(t *testing.T) {
+func TestDifficulty_NextPoSDifficulty_Good(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -177,7 +177,7 @@ func TestNextPoSDifficulty_Good(t *testing.T) {
 	require.Equal(t, uint64(333), diff)
 }
 
-func TestNextPoSDifficulty_HF6Boundary_Good(t *testing.T) {
+func TestDifficulty_NextPoSDifficulty_HF6Boundary_Good(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -197,7 +197,7 @@ func TestNextPoSDifficulty_HF6Boundary_Good(t *testing.T) {
 		"PoS difficulty should change across HF6 boundary")
 }
 
-func TestNextPoSDifficulty_Genesis(t *testing.T) {
+func TestDifficulty_NextPoSDifficulty_Genesis_Ugly(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()

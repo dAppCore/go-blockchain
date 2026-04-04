@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/blockchain/wire"
 )
 
-func TestParseTxExtraPublicKey(t *testing.T) {
+func TestExtra_ParseTxExtraPublicKey_Good(t *testing.T) {
 	var key types.PublicKey
 	for i := range key {
 		key[i] = byte(i + 1)
@@ -27,7 +27,7 @@ func TestParseTxExtraPublicKey(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraUnlockTime(t *testing.T) {
+func TestExtra_ParseTxExtraUnlockTime_Good(t *testing.T) {
 	var key types.PublicKey
 	key[0] = 0xAA
 	raw := buildTestExtra(key, 500, 0)
@@ -40,7 +40,7 @@ func TestParseTxExtraUnlockTime(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraDerivationHint(t *testing.T) {
+func TestExtra_ParseTxExtraDerivationHint_Good(t *testing.T) {
 	var key types.PublicKey
 	key[0] = 0xBB
 	raw := buildTestExtra(key, 0, 0x1234)
@@ -53,7 +53,7 @@ func TestParseTxExtraDerivationHint(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraAllFields(t *testing.T) {
+func TestExtra_ParseTxExtraAllFields_Good(t *testing.T) {
 	var key types.PublicKey
 	for i := range key {
 		key[i] = byte(0xFF - i)
@@ -74,7 +74,7 @@ func TestParseTxExtraAllFields(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraEmpty(t *testing.T) {
+func TestExtra_ParseTxExtraEmpty_Ugly(t *testing.T) {
 	raw := wire.EncodeVarint(0)
 	extra, err := ParseTxExtra(raw)
 	if err != nil {
@@ -91,7 +91,7 @@ func TestParseTxExtraEmpty(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraNilInput(t *testing.T) {
+func TestExtra_ParseTxExtraNilInput_Ugly(t *testing.T) {
 	extra, err := ParseTxExtra(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestParseTxExtraNilInput(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraPreservesRaw(t *testing.T) {
+func TestExtra_ParseTxExtraPreservesRaw_Good(t *testing.T) {
 	var key types.PublicKey
 	key[0] = 0xCC
 	raw := buildTestExtra(key, 100, 0x5678)
@@ -119,7 +119,7 @@ func TestParseTxExtraPreservesRaw(t *testing.T) {
 	}
 }
 
-func TestParseTxExtraTruncatedKey(t *testing.T) {
+func TestExtra_ParseTxExtraTruncatedKey_Good(t *testing.T) {
 	// Build a raw extra with a public key tag but only 16 bytes instead of 32.
 	raw := wire.EncodeVarint(1)
 	raw = append(raw, extraTagPublicKey)
@@ -130,7 +130,7 @@ func TestParseTxExtraTruncatedKey(t *testing.T) {
 	}
 }
 
-func TestBuildTxExtraRoundTrip(t *testing.T) {
+func TestExtra_BuildTxExtraRoundTrip_Good(t *testing.T) {
 	var key types.PublicKey
 	for i := range key {
 		key[i] = byte(i + 10)
@@ -145,7 +145,7 @@ func TestBuildTxExtraRoundTrip(t *testing.T) {
 	}
 }
 
-func TestBuildTxExtraLength(t *testing.T) {
+func TestExtra_BuildTxExtraLength_Good(t *testing.T) {
 	var key types.PublicKey
 	key[0] = 0x42
 	raw := BuildTxExtra(key)

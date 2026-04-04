@@ -4,7 +4,7 @@ package crypto
 
 /*
 #cgo CPPFLAGS: -I${SRCDIR}/upstream -I${SRCDIR}/compat -I${SRCDIR}/randomx
-#cgo LDFLAGS: -L${SRCDIR}/build -lcryptonote -lrandomx -lstdc++ -lssl -lcrypto -lpthread
+#cgo LDFLAGS: -L${SRCDIR}/build -lcryptonote -lrandomx -lstdc++ -lpthread
 #include "bridge.h"
 */
 import "C"
@@ -12,6 +12,7 @@ import "C"
 import "unsafe"
 
 // FastHash computes the CryptoNote fast hash (Keccak-256) of the input.
+// Usage: crypto.FastHash(...)
 func FastHash(data []byte) [32]byte {
 	var hash [32]byte
 	if len(data) == 0 {
@@ -26,6 +27,7 @@ func FastHash(data []byte) [32]byte {
 
 // ScReduce32 reduces a 32-byte value modulo the Ed25519 group order l.
 // This is required when converting a hash output to a valid secret key scalar.
+// Usage: crypto.ScReduce32(...)
 func ScReduce32(key *[32]byte) {
 	C.cn_sc_reduce32((*C.uint8_t)(unsafe.Pointer(&key[0])))
 }

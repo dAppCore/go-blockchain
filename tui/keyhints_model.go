@@ -6,8 +6,7 @@
 package tui
 
 import (
-	"strings"
-
+	"dappco.re/go/core"
 	tea "github.com/charmbracelet/bubbletea"
 
 	cli "dappco.re/go/core/cli/pkg/cli"
@@ -19,20 +18,24 @@ var _ cli.FrameModel = (*KeyHintsModel)(nil)
 var defaultHints = []string{"↑/↓ select", "enter view", "q quit"}
 
 // KeyHintsModel displays context-sensitive key hints in the footer region.
+// Usage: var value tui.KeyHintsModel
 type KeyHintsModel struct {
 	hints []string
 }
 
 // NewKeyHintsModel creates a KeyHintsModel with the default key hints.
+// Usage: tui.NewKeyHintsModel(...)
 func NewKeyHintsModel() *KeyHintsModel {
 	return &KeyHintsModel{hints: defaultHints}
 }
 
 // Init returns nil; no initialisation command is needed.
+// Usage: value.Init(...)
 func (m *KeyHintsModel) Init() tea.Cmd { return nil }
 
 // Update handles incoming messages. On ViewChangedMsg it replaces the
 // displayed hints; all other messages are ignored.
+// Usage: value.Update(...)
 func (m *KeyHintsModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ViewChangedMsg:
@@ -43,8 +46,9 @@ func (m *KeyHintsModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 
 // View renders a single-line hint bar separated by vertical bars.
 // The output is truncated to width if it would overflow.
+// Usage: value.View(...)
 func (m *KeyHintsModel) View(width, height int) string {
-	line := " " + strings.Join(m.hints, "  \u2502  ")
+	line := " " + core.Join("  \u2502  ", m.hints...)
 	if len(line) > width && width > 0 {
 		line = line[:width]
 	}

@@ -7,8 +7,7 @@ package chain
 
 import (
 	"bytes"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -18,6 +17,7 @@ import (
 
 // ValidateHeader checks a block header before storage.
 // expectedHeight is the height at which this block would be stored.
+// Usage: value.ValidateHeader(...)
 func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	currentHeight, err := c.Height()
 	if err != nil {
@@ -26,7 +26,7 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 
 	// Height sequence check.
 	if expectedHeight != currentHeight {
-		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: expected height %d but chain is at %d", expectedHeight, currentHeight), nil)
+		return coreerr.E("Chain.ValidateHeader", core.Sprintf("validate: expected height %d but chain is at %d", expectedHeight, currentHeight), nil)
 	}
 
 	// Genesis block: prev_id must be zero.
@@ -43,7 +43,7 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 		return coreerr.E("Chain.ValidateHeader", "validate: get top block", err)
 	}
 	if b.PrevID != topMeta.Hash {
-		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: prev_id %s does not match top block %s", b.PrevID, topMeta.Hash), nil)
+		return coreerr.E("Chain.ValidateHeader", core.Sprintf("validate: prev_id %s does not match top block %s", b.PrevID, topMeta.Hash), nil)
 	}
 
 	// Block size check.
@@ -51,7 +51,7 @@ func (c *Chain) ValidateHeader(b *types.Block, expectedHeight uint64) error {
 	enc := wire.NewEncoder(&buf)
 	wire.EncodeBlock(enc, b)
 	if enc.Err() == nil && uint64(buf.Len()) > config.MaxBlockSize {
-		return coreerr.E("Chain.ValidateHeader", fmt.Sprintf("validate: block size %d exceeds max %d", buf.Len(), config.MaxBlockSize), nil)
+		return coreerr.E("Chain.ValidateHeader", core.Sprintf("validate: block size %d exceeds max %d", buf.Len(), config.MaxBlockSize), nil)
 	}
 
 	return nil

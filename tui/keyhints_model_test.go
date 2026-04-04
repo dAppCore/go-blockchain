@@ -6,20 +6,21 @@
 package tui
 
 import (
-	"strings"
 	"testing"
+
+	"dappco.re/go/core"
 )
 
-func TestKeyHintsModel_View_Good_Default(t *testing.T) {
+func TestKeyhintsModel_KeyHintsModel_View_Default_Good(t *testing.T) {
 	m := NewKeyHintsModel()
 
 	got := m.View(80, 1)
-	if !strings.Contains(got, "quit") {
+	if !core.Contains(got, "quit") {
 		t.Errorf("default View should contain \"quit\", got %q", got)
 	}
 }
 
-func TestKeyHintsModel_Update_Good_ViewChanged(t *testing.T) {
+func TestKeyhintsModel_KeyHintsModel_Update_ViewChanged_Good(t *testing.T) {
 	m := NewKeyHintsModel()
 
 	updated, cmd := m.Update(ViewChangedMsg{Hints: []string{"esc back", "enter view"}})
@@ -33,15 +34,15 @@ func TestKeyHintsModel_Update_Good_ViewChanged(t *testing.T) {
 	}
 
 	got := km.View(80, 1)
-	if !strings.Contains(got, "esc back") {
+	if !core.Contains(got, "esc back") {
 		t.Errorf("View after ViewChangedMsg should contain \"esc back\", got %q", got)
 	}
-	if !strings.Contains(got, "enter view") {
+	if !core.Contains(got, "enter view") {
 		t.Errorf("View after ViewChangedMsg should contain \"enter view\", got %q", got)
 	}
 }
 
-func TestKeyHintsModel_Init_Good(t *testing.T) {
+func TestKeyhintsModel_KeyHintsModel_Init_Good(t *testing.T) {
 	m := NewKeyHintsModel()
 
 	cmd := m.Init()

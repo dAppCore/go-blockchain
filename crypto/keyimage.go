@@ -15,6 +15,7 @@ import (
 
 // GenerateKeyImage computes the key image for a public/secret key pair.
 // The key image is used for double-spend detection in ring signatures.
+// Usage: crypto.GenerateKeyImage(...)
 func GenerateKeyImage(pub [32]byte, sec [32]byte) ([32]byte, error) {
 	var ki [32]byte
 	rc := C.cn_generate_key_image(
@@ -29,6 +30,7 @@ func GenerateKeyImage(pub [32]byte, sec [32]byte) ([32]byte, error) {
 }
 
 // ValidateKeyImage checks that a key image is a valid curve point of the correct order.
+// Usage: crypto.ValidateKeyImage(...)
 func ValidateKeyImage(ki [32]byte) bool {
 	return C.cn_validate_key_image((*C.uint8_t)(unsafe.Pointer(&ki[0]))) == 0
 }

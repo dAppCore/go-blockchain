@@ -6,12 +6,12 @@
 package rpc
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
 // GetLastBlockHeader returns the header of the most recent block.
+// Usage: value.GetLastBlockHeader(...)
 func (c *Client) GetLastBlockHeader() (*BlockHeader, error) {
 	var resp struct {
 		BlockHeader BlockHeader `json:"block_header"`
@@ -21,12 +21,13 @@ func (c *Client) GetLastBlockHeader() (*BlockHeader, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetLastBlockHeader", fmt.Sprintf("getlastblockheader: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetLastBlockHeader", core.Sprintf("getlastblockheader: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
 
 // GetBlockHeaderByHeight returns the block header at the given height.
+// Usage: value.GetBlockHeaderByHeight(...)
 func (c *Client) GetBlockHeaderByHeight(height uint64) (*BlockHeader, error) {
 	params := struct {
 		Height uint64 `json:"height"`
@@ -39,12 +40,13 @@ func (c *Client) GetBlockHeaderByHeight(height uint64) (*BlockHeader, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetBlockHeaderByHeight", fmt.Sprintf("getblockheaderbyheight: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetBlockHeaderByHeight", core.Sprintf("getblockheaderbyheight: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
 
 // GetBlockHeaderByHash returns the block header with the given hash.
+// Usage: value.GetBlockHeaderByHash(...)
 func (c *Client) GetBlockHeaderByHash(hash string) (*BlockHeader, error) {
 	params := struct {
 		Hash string `json:"hash"`
@@ -57,12 +59,13 @@ func (c *Client) GetBlockHeaderByHash(hash string) (*BlockHeader, error) {
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetBlockHeaderByHash", fmt.Sprintf("getblockheaderbyhash: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetBlockHeaderByHash", core.Sprintf("getblockheaderbyhash: status %q", resp.Status), nil)
 	}
 	return &resp.BlockHeader, nil
 }
 
 // GetBlocksDetails returns full block details starting at the given height.
+// Usage: value.GetBlocksDetails(...)
 func (c *Client) GetBlocksDetails(heightStart, count uint64) ([]BlockDetails, error) {
 	params := struct {
 		HeightStart        uint64 `json:"height_start"`
@@ -77,7 +80,7 @@ func (c *Client) GetBlocksDetails(heightStart, count uint64) ([]BlockDetails, er
 		return nil, err
 	}
 	if resp.Status != "OK" {
-		return nil, coreerr.E("Client.GetBlocksDetails", fmt.Sprintf("get_blocks_details: status %q", resp.Status), nil)
+		return nil, coreerr.E("Client.GetBlocksDetails", core.Sprintf("get_blocks_details: status %q", resp.Status), nil)
 	}
 	return resp.Blocks, nil
 }

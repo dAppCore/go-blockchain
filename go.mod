@@ -3,6 +3,7 @@ module dappco.re/go/core/blockchain
 go 1.26.0
 
 require (
+	dappco.re/go/core v0.8.0-alpha.1
 	dappco.re/go/core/cli v0.3.1
 	dappco.re/go/core/io v0.2.0
 	dappco.re/go/core/log v0.1.0
@@ -16,13 +17,13 @@ require (
 )
 
 require (
-	forge.lthn.ai/core/go v0.3.1 // indirect
-	forge.lthn.ai/core/go-crypt v0.1.6 // indirect
-	forge.lthn.ai/core/go-i18n v0.1.4 // indirect
-	forge.lthn.ai/core/go-inference v0.1.4 // indirect
-	forge.lthn.ai/core/go-io v0.1.2 // indirect
-	forge.lthn.ai/core/go-log v0.0.4 // indirect
-	forge.lthn.ai/core/go-process v0.2.2 // indirect
+	dappco.re/go/core v0.3.1 // indirect
+	dappco.re/go/core/crypt v0.1.6 // indirect
+	dappco.re/go/core/i18n v0.1.4 // indirect
+	dappco.re/go/core/inference v0.1.4 // indirect
+	dappco.re/go/core/io v0.1.2 // indirect
+	dappco.re/go/core/log v0.0.4 // indirect
+	dappco.re/go/core/process v0.2.2 // indirect
 	github.com/ProtonMail/go-crypto v1.4.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -60,17 +61,4 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.47.0 // indirect
-)
-
-replace (
-	dappco.re/go/core => forge.lthn.ai/core/go v0.5.0
-	dappco.re/go/core/cli => forge.lthn.ai/core/cli v0.3.1
-	dappco.re/go/core/crypt => forge.lthn.ai/core/go-crypt v0.1.7
-	dappco.re/go/core/i18n => forge.lthn.ai/core/go-i18n v0.1.4
-	dappco.re/go/core/inference => forge.lthn.ai/core/go-inference v0.1.4
-	dappco.re/go/core/io => forge.lthn.ai/core/go-io v0.2.0
-	dappco.re/go/core/log => forge.lthn.ai/core/go-log v0.1.0
-	dappco.re/go/core/p2p => forge.lthn.ai/core/go-p2p v0.1.3
-	dappco.re/go/core/process => forge.lthn.ai/core/go-process v0.2.3
-	dappco.re/go/core/store => forge.lthn.ai/core/go-store v0.1.6
 )

@@ -10,13 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBaseReward_Good(t *testing.T) {
+func TestReward_BaseReward_Good(t *testing.T) {
 	assert.Equal(t, config.Premine, BaseReward(0), "genesis returns premine")
 	assert.Equal(t, config.BlockReward, BaseReward(1), "block 1 returns standard reward")
 	assert.Equal(t, config.BlockReward, BaseReward(10000), "arbitrary height")
 }
 
-func TestBlockReward_Good(t *testing.T) {
+func TestReward_BlockReward_Good(t *testing.T) {
 	base := config.BlockReward
 
 	// Small block: full reward.
@@ -30,7 +30,7 @@ func TestBlockReward_Good(t *testing.T) {
 	assert.Equal(t, base, reward)
 }
 
-func TestBlockReward_Bad(t *testing.T) {
+func TestReward_BlockReward_Bad(t *testing.T) {
 	base := config.BlockReward
 	median := config.BlockGrantedFullRewardZone
 
@@ -40,7 +40,7 @@ func TestBlockReward_Bad(t *testing.T) {
 	assert.Contains(t, err.Error(), "too large")
 }
 
-func TestBlockReward_Ugly(t *testing.T) {
+func TestReward_BlockReward_Ugly(t *testing.T) {
 	base := config.BlockReward
 	median := config.BlockGrantedFullRewardZone
 
@@ -51,7 +51,7 @@ func TestBlockReward_Ugly(t *testing.T) {
 	assert.Greater(t, reward, uint64(0), "reward should be positive")
 }
 
-func TestMinerReward_Good(t *testing.T) {
+func TestReward_MinerReward_Good(t *testing.T) {
 	base := config.BlockReward
 	fees := uint64(50_000_000_000) // 0.05 LTHN
 

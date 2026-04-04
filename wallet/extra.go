@@ -10,10 +10,9 @@
 package wallet
 
 import (
-	"encoding/binary"
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
+	"encoding/binary"
 
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wire"
@@ -28,6 +27,7 @@ const (
 
 // TxExtra holds wallet-critical fields parsed from a transaction's raw extra
 // bytes. The Raw field preserves the original bytes for round-tripping.
+// Usage: var value wallet.TxExtra
 type TxExtra struct {
 	TxPublicKey    types.PublicKey
 	UnlockTime     uint64
@@ -38,6 +38,7 @@ type TxExtra struct {
 // ParseTxExtra decodes a CryptoNote variant vector (raw tx extra bytes) and
 // extracts the wallet-critical fields: tx public key (tag 22), unlock time
 // (tag 14), and derivation hint (tag 11). Unknown tags are skipped.
+// Usage: wallet.ParseTxExtra(...)
 func ParseTxExtra(raw []byte) (*TxExtra, error) {
 	extra := &TxExtra{Raw: make([]byte, len(raw))}
 	copy(extra.Raw, raw)
@@ -59,7 +60,7 @@ func ParseTxExtra(raw []byte) (*TxExtra, error) {
 		switch tag {
 		case extraTagPublicKey:
 			if pos+32 > len(raw) {
-				return extra, coreerr.E("ParseTxExtra", fmt.Sprintf("wallet: extra: truncated public key at offset %d", pos), nil)
+				return extra, coreerr.E("ParseTxExtra", core.Sprintf("wallet: extra: truncated public key at offset %d", pos), nil)
 			}
 			copy(extra.TxPublicKey[:], raw[pos:pos+32])
 			pos += 32
@@ -98,6 +99,7 @@ func ParseTxExtra(raw []byte) (*TxExtra, error) {
 
 // BuildTxExtra constructs a minimal raw extra containing only the tx public
 // key (tag 22). This is the minimum required for a valid transaction.
+// Usage: wallet.BuildTxExtra(...)
 func BuildTxExtra(txPubKey types.PublicKey) []byte {
 	raw := wire.EncodeVarint(1)
 	raw = append(raw, extraTagPublicKey)
@@ -112,11 +114,11 @@ func skipExtraElement(data []byte, tag uint8) (int, error) {
 	// String types: varint(length) + length bytes.
 	case 7, 9, 11, 19:
 		if len(data) == 0 {
-			return 0, coreerr.E("skipExtraElement", fmt.Sprintf("wallet: extra: no data for string tag %d", tag), nil)
+			return 0, coreerr.E("skipExtraElement", core.Sprintf("wallet: extra: no data for string tag %d", tag), nil)
 		}
 		length, n, err := wire.DecodeVarint(data)
 		if err != nil {
-			return 0, coreerr.E("skipExtraElement", fmt.Sprintf("wallet: extra: invalid string length for tag %d", tag), err)
+			return 0, coreerr.E("skipExtraElement", core.Sprintf("wallet: extra: invalid string length for tag %d", tag), err)
 		}
 		return n + int(length), nil
 
@@ -124,7 +126,7 @@ func skipExtraElement(data []byte, tag uint8) (int, error) {
 	case 14, 15, 16, 26, 27:
 		_, n, err := wire.DecodeVarint(data)
 		if err != nil {
-			return 0, coreerr.E("skipExtraElement", fmt.Sprintf("wallet: extra: invalid varint for tag %d", tag), err)
+			return 0, coreerr.E("skipExtraElement", core.Sprintf("wallet: extra: invalid varint for tag %d", tag), err)
 		}
 		return n, nil
 
@@ -141,6 +143,6 @@ func skipExtraElement(data []byte, tag uint8) (int, error) {
 		return 64, nil // signature
 
 	default:
-		return 0, coreerr.E("skipExtraElement", fmt.Sprintf("wallet: extra: unknown tag %d", tag), nil)
+		return 0, coreerr.E("skipExtraElement", core.Sprintf("wallet: extra: unknown tag %d", tag), nil)
 	}
 }

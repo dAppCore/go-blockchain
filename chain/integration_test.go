@@ -28,7 +28,7 @@ import (
 
 const testnetRPCAddr = "http://localhost:46941"
 
-func TestIntegration_SyncFirst10Blocks(t *testing.T) {
+func TestIntegration_SyncFirst10Blocks_Good(t *testing.T) {
 	client := rpc.NewClientWithHTTP(testnetRPCAddr, &http.Client{Timeout: 30 * time.Second})
 
 	// Check daemon is reachable.
@@ -99,7 +99,7 @@ func TestIntegration_SyncFirst10Blocks(t *testing.T) {
 	}
 }
 
-func TestIntegration_SyncToTip(t *testing.T) {
+func TestIntegration_SyncToTip_Good(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping long sync test in short mode")
 	}
@@ -137,7 +137,7 @@ func TestIntegration_SyncToTip(t *testing.T) {
 	require.Equal(t, expectedHash, genMeta.Hash)
 }
 
-func TestIntegration_SyncWithSignatures(t *testing.T) {
+func TestIntegration_SyncWithSignatures_Good(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping long sync test in short mode")
 	}
@@ -168,7 +168,7 @@ func TestIntegration_SyncWithSignatures(t *testing.T) {
 	require.Equal(t, remoteHeight, finalHeight)
 }
 
-func TestIntegration_DifficultyMatchesRPC(t *testing.T) {
+func TestIntegration_DifficultyMatchesRPC_Good(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping difficulty comparison test in short mode")
 	}
@@ -223,7 +223,7 @@ func TestIntegration_DifficultyMatchesRPC(t *testing.T) {
 	}
 }
 
-func TestIntegration_P2PSync(t *testing.T) {
+func TestIntegration_P2PSync_Good(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping P2P sync test in short mode")
 	}

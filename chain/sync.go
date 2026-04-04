@@ -9,12 +9,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"log"
 	"regexp"
 	"strconv"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -27,9 +26,11 @@ import (
 const syncBatchSize = 10
 
 // GenesisHash is the expected genesis block hash.
+// Usage: value := chain.GenesisHash
 var GenesisHash = "cb9d5455ccb79451931003672c405f5e2ac51bff54021aa30bc4499b1ffc4963"
 
 // SyncOptions controls sync behaviour.
+// Usage: var value chain.SyncOptions
 type SyncOptions struct {
 	// VerifySignatures enables cryptographic signature verification
 	// during sync. Default false for fast sync.
@@ -40,6 +41,7 @@ type SyncOptions struct {
 }
 
 // DefaultSyncOptions returns sync options for fast sync (no signature verification).
+// Usage: chain.DefaultSyncOptions(...)
 func DefaultSyncOptions() SyncOptions {
 	return SyncOptions{
 		VerifySignatures: false,
@@ -49,6 +51,7 @@ func DefaultSyncOptions() SyncOptions {
 
 // Sync fetches blocks from the daemon and stores them locally.
 // It is a blocking function — the caller controls retry and scheduling.
+// Usage: value.Sync(...)
 func (c *Chain) Sync(ctx context.Context, client *rpc.Client, opts SyncOptions) error {
 	localHeight, err := c.Height()
 	if err != nil {
@@ -72,16 +75,16 @@ func (c *Chain) Sync(ctx context.Context, client *rpc.Client, opts SyncOptions) 
 
 		blocks, err := client.GetBlocksDetails(localHeight, batch)
 		if err != nil {
-			return coreerr.E("Chain.Sync", fmt.Sprintf("sync: fetch blocks at %d", localHeight), err)
+			return coreerr.E("Chain.Sync", core.Sprintf("sync: fetch blocks at %d", localHeight), err)
 		}
 
 		if err := resolveBlockBlobs(blocks, client); err != nil {
-			return coreerr.E("Chain.Sync", fmt.Sprintf("sync: resolve blobs at %d", localHeight), err)
+			return coreerr.E("Chain.Sync", core.Sprintf("sync: resolve blobs at %d", localHeight), err)
 		}
 
 		for _, bd := range blocks {
 			if err := c.processBlock(bd, opts); err != nil {
-				return coreerr.E("Chain.Sync", fmt.Sprintf("sync: process block %d", bd.Height), err)
+				return coreerr.E("Chain.Sync", core.Sprintf("sync: process block %d", bd.Height), err)
 			}
 		}
 
@@ -126,7 +129,7 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 		}
 		txBlobBytes, err := hex.DecodeString(txInfo.Blob)
 		if err != nil {
-			return coreerr.E("Chain.processBlock", fmt.Sprintf("decode tx hex %s", txInfo.ID), err)
+			return coreerr.E("Chain.processBlock", core.Sprintf("decode tx hex %s", txInfo.ID), err)
 		}
 		txBlobs = append(txBlobs, txBlobBytes)
 	}
@@ -140,7 +143,7 @@ func (c *Chain) processBlock(bd rpc.BlockDetails, opts SyncOptions) error {
 		return coreerr.E("Chain.processBlock", "parse daemon block hash", err)
 	}
 	if computedHash != daemonHash {
-		return coreerr.E("Chain.processBlock", fmt.Sprintf("block hash mismatch: computed %s, daemon says %s", computedHash, daemonHash), nil)
+		return coreerr.E("Chain.processBlock", core.Sprintf("block hash mismatch: computed %s, daemon says %s", computedHash, daemonHash), nil)
 	}
 
 	return c.processBlockBlobs(blockBlob, txBlobs, bd.Height, diff, opts)
@@ -168,7 +171,7 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 			return coreerr.E("Chain.processBlockBlobs", "parse genesis hash", err)
 		}
 		if blockHash != genesisHash {
-			return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("genesis hash %s does not match expected %s", blockHash, GenesisHash), nil)
+			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("genesis hash %s does not match expected %s", blockHash, GenesisHash), nil)
 		}
 	}
 
@@ -207,32 +210,42 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 		return coreerr.E("Chain.processBlockBlobs", "store miner tx", err)
 	}
 
+	// Extract alias registrations from miner tx extra.
+	if alias := ExtractAliasFromExtra(blk.MinerTx.Extra); alias != nil {
+		c.PutAlias(*alias)
+	}
+
 	// Process regular transactions from txBlobs.
 	for i, txBlobData := range txBlobs {
 		txDec := wire.NewDecoder(bytes.NewReader(txBlobData))
 		tx := wire.DecodeTransaction(txDec)
 		if err := txDec.Err(); err != nil {
-			return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("decode tx wire [%d]", i), err)
+			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("decode tx wire [%d]", i), err)
 		}
 
 		txHash := wire.TransactionHash(&tx)
 
 		// Validate transaction semantics.
 		if err := consensus.ValidateTransaction(&tx, txBlobData, opts.Forks, height); err != nil {
-			return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("validate tx %s", txHash), err)
+			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("validate tx %s", txHash), err)
+		}
+
+		// Extract alias registrations from regular tx extra.
+		if alias := ExtractAliasFromExtra(tx.Extra); alias != nil {
+			c.PutAlias(*alias)
 		}
 
 		// Optionally verify signatures using the chain's output index.
 		if opts.VerifySignatures {
 			if err := consensus.VerifyTransactionSignatures(&tx, opts.Forks, height, c.GetRingOutputs, c.GetZCRingOutputs); err != nil {
-				return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("verify tx signatures %s", txHash), err)
+				return coreerr.E("Chain.processBlockBlobs", core.Sprintf("verify tx signatures %s", txHash), err)
 			}
 		}
 
 		// Index outputs.
 		gindexes, err := c.indexOutputs(txHash, &tx)
 		if err != nil {
-			return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("index tx outputs %s", txHash), err)
+			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("index tx outputs %s", txHash), err)
 		}
 
 		// Mark key images as spent.
@@ -240,11 +253,11 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 			switch inp := vin.(type) {
 			case types.TxInputToKey:
 				if err := c.MarkSpent(inp.KeyImage, height); err != nil {
-					return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("mark spent %s", inp.KeyImage), err)
+					return coreerr.E("Chain.processBlockBlobs", core.Sprintf("mark spent %s", inp.KeyImage), err)
 				}
 			case types.TxInputZC:
 				if err := c.MarkSpent(inp.KeyImage, height); err != nil {
-					return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("mark spent %s", inp.KeyImage), err)
+					return coreerr.E("Chain.processBlockBlobs", core.Sprintf("mark spent %s", inp.KeyImage), err)
 				}
 			}
 		}
@@ -254,7 +267,7 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 			KeeperBlock:         height,
 			GlobalOutputIndexes: gindexes,
 		}); err != nil {
-			return coreerr.E("Chain.processBlockBlobs", fmt.Sprintf("store tx %s", txHash), err)
+			return coreerr.E("Chain.processBlockBlobs", core.Sprintf("store tx %s", txHash), err)
 		}
 	}
 
@@ -267,7 +280,20 @@ func (c *Chain) processBlockBlobs(blockBlob []byte, txBlobs [][]byte,
 		CumulativeDiff: cumulDiff,
 		GeneratedCoins: 0, // not available from wire; RPC path passes via bd.BaseReward
 	}
-	return c.PutBlock(&blk, meta)
+	if err := c.PutBlock(&blk, meta); err != nil {
+		return err
+	}
+
+	// Fire block callback if registered.
+	if c.blockCallback != nil {
+		aliasName := ""
+		if alias := ExtractAliasFromExtra(blk.MinerTx.Extra); alias != nil {
+			aliasName = alias.Name
+		}
+		c.blockCallback(height, blockHash.String(), aliasName)
+	}
+
+	return nil
 }
 
 // indexOutputs adds each output of a transaction to the global output index.
@@ -332,10 +358,10 @@ func resolveBlockBlobs(blocks []rpc.BlockDetails, client *rpc.Client) error {
 		return coreerr.E("resolveBlockBlobs", "fetch tx blobs", err)
 	}
 	if len(missed) > 0 {
-		return coreerr.E("resolveBlockBlobs", fmt.Sprintf("daemon missed %d tx(es): %v", len(missed), missed), nil)
+		return coreerr.E("resolveBlockBlobs", core.Sprintf("daemon missed %d tx(es): %v", len(missed), missed), nil)
 	}
 	if len(txHexes) != len(allHashes) {
-		return coreerr.E("resolveBlockBlobs", fmt.Sprintf("expected %d tx blobs, got %d", len(allHashes), len(txHexes)), nil)
+		return coreerr.E("resolveBlockBlobs", core.Sprintf("expected %d tx blobs, got %d", len(allHashes), len(txHexes)), nil)
 	}
 
 	// Index fetched blobs by hash.
@@ -363,16 +389,16 @@ func resolveBlockBlobs(blocks []rpc.BlockDetails, client *rpc.Client) error {
 		// Parse header from object_in_json.
 		hdr, err := parseBlockHeader(bd.ObjectInJSON)
 		if err != nil {
-			return coreerr.E("resolveBlockBlobs", fmt.Sprintf("block %d: parse header", bd.Height), err)
+			return coreerr.E("resolveBlockBlobs", core.Sprintf("block %d: parse header", bd.Height), err)
 		}
 
 		// Miner tx blob is transactions_details[0].
 		if len(bd.Transactions) == 0 {
-			return coreerr.E("resolveBlockBlobs", fmt.Sprintf("block %d has no transactions_details", bd.Height), nil)
+			return coreerr.E("resolveBlockBlobs", core.Sprintf("block %d has no transactions_details", bd.Height), nil)
 		}
 		minerTxBlob, err := hex.DecodeString(bd.Transactions[0].Blob)
 		if err != nil {
-			return coreerr.E("resolveBlockBlobs", fmt.Sprintf("block %d: decode miner tx hex", bd.Height), err)
+			return coreerr.E("resolveBlockBlobs", core.Sprintf("block %d: decode miner tx hex", bd.Height), err)
 		}
 
 		// Collect regular tx hashes.
@@ -380,7 +406,7 @@ func resolveBlockBlobs(blocks []rpc.BlockDetails, client *rpc.Client) error {
 		for _, txInfo := range bd.Transactions[1:] {
 			h, err := types.HashFromHex(txInfo.ID)
 			if err != nil {
-				return coreerr.E("resolveBlockBlobs", fmt.Sprintf("block %d: parse tx hash %s", bd.Height, txInfo.ID), err)
+				return coreerr.E("resolveBlockBlobs", core.Sprintf("block %d: parse tx hash %s", bd.Height, txInfo.ID), err)
 			}
 			txHashes = append(txHashes, h)
 		}
@@ -414,8 +440,8 @@ func parseBlockHeader(objectInJSON string) (*types.BlockHeader, error) {
 	}
 
 	var hj blockHeaderJSON
-	if err := json.Unmarshal([]byte("{"+m[1]+"}"), &hj); err != nil {
-		return nil, coreerr.E("parseBlockHeader", "unmarshal AGGREGATED", err)
+	if r := core.JSONUnmarshalString(core.Concat("{", m[1], "}"), &hj); !r.OK {
+		return nil, coreerr.E("parseBlockHeader", "unmarshal AGGREGATED", r.Value.(error))
 	}
 
 	prevID, err := types.HashFromHex(hj.PrevID)

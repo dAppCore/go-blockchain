@@ -1,0 +1,158 @@
+// Copyright (c) 2017-2026 Lethean (https://lt.hn)
+//
+// Licensed under the European Union Public Licence (EUPL) version 1.2.
+// SPDX-License-Identifier: EUPL-1.2
+package blockchain
+
+import (
+	"context"
+	"net/http"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
+	"dappco.re/go/core"
+	coreerr "dappco.re/go/core/log"
+
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/config"
+	"dappco.re/go/core/blockchain/daemon"
+	"dappco.re/go/core/blockchain/rpc"
+	store "dappco.re/go/core/store"
+	"github.com/spf13/cobra"
+)
+
+func newServeCmd(dataDir, seed *string, testnet *bool) *cobra.Command {
+	var (
+		rpcPort   string
+		rpcBind   string
+		walletRPC string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Sync chain and serve JSON-RPC",
+		Long:  "Sync the blockchain from a seed node via RPC and serve a JSON-RPC API.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runServe(*dataDir, *seed, *testnet, rpcBind, rpcPort, walletRPC)
+		},
+	}
+
+	cmd.Flags().StringVar(&rpcPort, "rpc-port", "47941", "JSON-RPC port")
+	cmd.Flags().StringVar(&rpcBind, "rpc-bind", "127.0.0.1", "JSON-RPC bind address")
+	cmd.Flags().StringVar(&walletRPC, "wallet-rpc", "", "wallet RPC URL for proxy (e.g. http://127.0.0.1:46944)")
+
+	return cmd
+}
+
+func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC string) error {
+	if err := ensureDataDir(dataDir); err != nil {
+		return err
+	}
+
+	dbPath := core.JoinPath(dataDir, "chain.db")
+	s, err := store.New(dbPath)
+	if err != nil {
+		return coreerr.E("runServe", "open store", err)
+	}
+	defer s.Close()
+
+	c := chain.New(s)
+	cfg, forks := resolveChainConfig(testnet, &seed)
+
+	// Set genesis hash for testnet.
+	if testnet {
+		chain.GenesisHash = chain.TestnetGenesisHash
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	// Start RPC sync in background.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rpcSyncLoop(ctx, c, &cfg, forks, seed)
+	}()
+
+	// Start hardfork monitor.
+	monitor := NewHardforkMonitor(c, forks)
+	monitor.OnActivation = func(version int, height uint64) {
+		core.Print(nil, "HARDFORK %d ACTIVATED at height %d", version, height)
+		if version == 5 && walletRPC != "" {
+			core.Print(nil, "HF5 ACTIVE — run: core-chain asset deploy-itns --wallet-rpc %s", walletRPC)
+		}
+	}
+	go monitor.Start(ctx)
+
+	// Start JSON-RPC server.
+	srv := daemon.NewServer(c, &cfg)
+	if walletRPC != "" {
+		srv.SetWalletProxy(walletRPC)
+		core.Print(nil, "Wallet proxy: %s", walletRPC)
+	}
+	addr := rpcBind + ":" + rpcPort
+	core.Print(nil, "Go daemon RPC on %s (syncing from %s)", addr, seed)
+
+	httpSrv := &http.Server{
+		Addr:         addr,
+		Handler:      srv,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 120 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	go func() {
+		<-ctx.Done()
+		httpSrv.Close()
+	}()
+
+	err = httpSrv.ListenAndServe()
+	if err == http.ErrServerClosed {
+		err = nil
+	}
+	cancel()
+	wg.Wait()
+	return err
+}
+
+// rpcSyncLoop syncs from a remote daemon via JSON-RPC (not P2P).
+func rpcSyncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, forks []config.HardFork, seed string) {
+	opts := chain.SyncOptions{
+		VerifySignatures: false,
+		Forks:            forks,
+	}
+
+	// Derive the RPC URL from the seed address.
+	rpcURL := core.Sprintf("http://%s", seed)
+	// Swap the peer port for the RPC port when the seed uses a default network address.
+	if core.Contains(seed, ":46942") {
+		rpcURL = "http://127.0.0.1:46941"
+	} else if core.Contains(seed, ":36942") {
+		rpcURL = "http://127.0.0.1:36941"
+	}
+
+	client := rpc.NewClient(rpcURL)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		if err := c.Sync(ctx, client, opts); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			core.Print(nil, "rpc sync: %v (retrying in 10s)", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Second):
+		}
+	}
+}

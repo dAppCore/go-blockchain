@@ -6,19 +6,18 @@
 package rpc
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestGetTxDetails_Good(t *testing.T) {
+func TestTransactions_GetTxDetails_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"status": "OK",
 				"tx_info": {
 					"id": "a6e8da986858e6825fce7a192097e6afae4e889cabe853a9c29b964985b23da8",
@@ -50,12 +49,12 @@ func TestGetTxDetails_Good(t *testing.T) {
 	}
 }
 
-func TestGetTxDetails_Bad_NotFound(t *testing.T) {
+func TestTransactions_GetTxDetails_NotFound_Bad(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
+			ID:      rawJSON(`"0"`),
 			Error:   &jsonRPCError{Code: -14, Message: "NOT_FOUND"},
 		})
 	}))
@@ -68,7 +67,7 @@ func TestGetTxDetails_Bad_NotFound(t *testing.T) {
 	}
 }
 
-func TestGetTransactions_Good(t *testing.T) {
+func TestTransactions_GetTransactions_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/gettransactions" {
 			t.Errorf("path: got %s, want /gettransactions", r.URL.Path)
@@ -101,7 +100,7 @@ func TestGetTransactions_Good(t *testing.T) {
 	}
 }
 
-func TestGetTransactions_Good_AllFound(t *testing.T) {
+func TestTransactions_GetTransactions_AllFound_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"txs_as_hex":["aa","bb"],"missed_tx":[],"status":"OK"}`))

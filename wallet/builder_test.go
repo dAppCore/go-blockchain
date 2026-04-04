@@ -48,7 +48,7 @@ func makeTestSource(amount uint64, globalIndex uint64) Transfer {
 	}
 }
 
-func TestV1BuilderBasic(t *testing.T) {
+func TestBuilder_V1BuilderBasic_Good(t *testing.T) {
 	signer := &NLSAGSigner{}
 	selector := &mockRingSelector{}
 	builder := NewV1Builder(signer, selector)
@@ -173,7 +173,7 @@ func TestV1BuilderBasic(t *testing.T) {
 	}
 }
 
-func TestV1BuilderInsufficientFunds(t *testing.T) {
+func TestBuilder_V1BuilderInsufficientFunds_Bad(t *testing.T) {
 	signer := &NLSAGSigner{}
 	selector := &mockRingSelector{}
 	builder := NewV1Builder(signer, selector)
@@ -195,7 +195,7 @@ func TestV1BuilderInsufficientFunds(t *testing.T) {
 	}
 }
 
-func TestV1BuilderExactAmount(t *testing.T) {
+func TestBuilder_V1BuilderExactAmount_Ugly(t *testing.T) {
 	signer := &NLSAGSigner{}
 	selector := &mockRingSelector{}
 	builder := NewV1Builder(signer, selector)

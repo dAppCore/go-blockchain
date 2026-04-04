@@ -23,7 +23,7 @@ func newTestStore(t *testing.T) *store.Store {
 	return s
 }
 
-func TestTransferPutGet(t *testing.T) {
+func TestTransfer_TransferPutGet_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage
@@ -55,7 +55,7 @@ func TestTransferPutGet(t *testing.T) {
 	}
 }
 
-func TestTransferGetNotFound(t *testing.T) {
+func TestTransfer_TransferGetNotFound_Bad(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage
@@ -66,7 +66,7 @@ func TestTransferGetNotFound(t *testing.T) {
 	}
 }
 
-func TestTransferOverwrite(t *testing.T) {
+func TestTransfer_TransferOverwrite_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage
@@ -90,7 +90,7 @@ func TestTransferOverwrite(t *testing.T) {
 	}
 }
 
-func TestTransferMarkSpent(t *testing.T) {
+func TestTransfer_TransferMarkSpent_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage
@@ -116,7 +116,7 @@ func TestTransferMarkSpent(t *testing.T) {
 	}
 }
 
-func TestTransferMarkSpentNotFound(t *testing.T) {
+func TestTransfer_TransferMarkSpentNotFound_Bad(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage
@@ -126,7 +126,7 @@ func TestTransferMarkSpentNotFound(t *testing.T) {
 	}
 }
 
-func TestTransferList(t *testing.T) {
+func TestTransfer_TransferList_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	for i := byte(0); i < 3; i++ {
@@ -168,7 +168,7 @@ func TestTransferList(t *testing.T) {
 	}
 }
 
-func TestTransferListEmpty(t *testing.T) {
+func TestTransfer_TransferListEmpty_Ugly(t *testing.T) {
 	s := newTestStore(t)
 
 	transfers, err := listTransfers(s)
@@ -180,21 +180,21 @@ func TestTransferListEmpty(t *testing.T) {
 	}
 }
 
-func TestTransferSpendableBasic(t *testing.T) {
+func TestTransfer_TransferSpendableBasic_Good(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5}
 	if !tr.IsSpendable(20, false) {
 		t.Fatal("unspent transfer should be spendable")
 	}
 }
 
-func TestTransferSpendableSpent(t *testing.T) {
+func TestTransfer_TransferSpendableSpent_Good(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, Spent: true}
 	if tr.IsSpendable(20, false) {
 		t.Fatal("spent transfer should not be spendable")
 	}
 }
 
-func TestTransferSpendableCoinbaseImmature(t *testing.T) {
+func TestTransfer_TransferSpendableCoinbaseImmature_Good(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, Coinbase: true}
 	// MinedMoneyUnlockWindow is 10, so block 5 + 10 = 15 > 10.
 	if tr.IsSpendable(10, false) {
@@ -202,7 +202,7 @@ func TestTransferSpendableCoinbaseImmature(t *testing.T) {
 	}
 }
 
-func TestTransferSpendableCoinbaseMature(t *testing.T) {
+func TestTransfer_TransferSpendableCoinbaseMature_Good(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, Coinbase: true}
 	// MinedMoneyUnlockWindow is 10, so block 5 + 10 = 15 <= 20.
 	if !tr.IsSpendable(20, false) {
@@ -210,7 +210,7 @@ func TestTransferSpendableCoinbaseMature(t *testing.T) {
 	}
 }
 
-func TestTransferSpendableCoinbaseBoundary(t *testing.T) {
+func TestTransfer_TransferSpendableCoinbaseBoundary_Ugly(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, Coinbase: true}
 	// Exact boundary: 5 + 10 = 15 == 15, not greater, so spendable.
 	if !tr.IsSpendable(15, false) {
@@ -218,7 +218,7 @@ func TestTransferSpendableCoinbaseBoundary(t *testing.T) {
 	}
 }
 
-func TestTransferSpendableUnlockTime(t *testing.T) {
+func TestTransfer_TransferSpendableUnlockTime_Good(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, UnlockTime: 50}
 	if tr.IsSpendable(30, false) {
 		t.Fatal("transfer with future unlock time should not be spendable")
@@ -231,14 +231,14 @@ func TestTransferSpendableUnlockTime(t *testing.T) {
 	}
 }
 
-func TestTransferSpendableUnlockTimeZero(t *testing.T) {
+func TestTransfer_TransferSpendableUnlockTimeZero_Ugly(t *testing.T) {
 	tr := Transfer{Amount: 1000, BlockHeight: 5, UnlockTime: 0}
 	if !tr.IsSpendable(1, false) {
 		t.Fatal("transfer with zero unlock time should be spendable")
 	}
 }
 
-func TestTransferKeyPairFields(t *testing.T) {
+func TestTransfer_TransferKeyPairFields_Good(t *testing.T) {
 	s := newTestStore(t)
 
 	var ki types.KeyImage

@@ -11,6 +11,7 @@ import (
 )
 
 // CoreSyncData is the blockchain state exchanged during handshake and timed sync.
+// Usage: var value p2p.CoreSyncData
 type CoreSyncData struct {
 	CurrentHeight        uint64
 	TopID                types.Hash
@@ -21,6 +22,7 @@ type CoreSyncData struct {
 }
 
 // MarshalSection encodes CoreSyncData into a portable storage Section.
+// Usage: value.MarshalSection(...)
 func (d *CoreSyncData) MarshalSection() levin.Section {
 	return levin.Section{
 		"current_height":           levin.Uint64Val(d.CurrentHeight),
@@ -33,6 +35,7 @@ func (d *CoreSyncData) MarshalSection() levin.Section {
 }
 
 // UnmarshalSection decodes CoreSyncData from a portable storage Section.
+// Usage: value.UnmarshalSection(...)
 func (d *CoreSyncData) UnmarshalSection(s levin.Section) error {
 	if v, ok := s["current_height"]; ok {
 		val, err := v.AsUint64()

@@ -6,19 +6,18 @@
 package rpc
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestGetInfo_Good(t *testing.T) {
+func TestInfo_GetInfo_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result: json.RawMessage(`{
+			ID:      rawJSON(`"0"`),
+			Result: rawJSON(`{
 				"height": 6300,
 				"tx_count": 12345,
 				"tx_pool_size": 3,
@@ -58,7 +57,7 @@ func TestGetInfo_Good(t *testing.T) {
 	}
 }
 
-func TestGetHeight_Good(t *testing.T) {
+func TestInfo_GetHeight_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/getheight" {
 			t.Errorf("path: got %s, want /getheight", r.URL.Path)
@@ -78,13 +77,13 @@ func TestGetHeight_Good(t *testing.T) {
 	}
 }
 
-func TestGetBlockCount_Good(t *testing.T) {
+func TestInfo_GetBlockCount_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(jsonRPCResponse{
+		writeJSON(t, w, jsonRPCResponse{
 			JSONRPC: "2.0",
-			ID:      json.RawMessage(`"0"`),
-			Result:  json.RawMessage(`{"count":6301,"status":"OK"}`),
+			ID:      rawJSON(`"0"`),
+			Result:  rawJSON(`{"count":6301,"status":"OK"}`),
 		})
 	}))
 	defer srv.Close()

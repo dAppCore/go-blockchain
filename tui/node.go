@@ -16,6 +16,7 @@ import (
 // Node wraps a [chain.Chain] and provides bubbletea commands for periodic
 // status polling. It does NOT own the sync goroutine — that is managed by
 // cmd/chain/main.go.
+// Usage: var value tui.Node
 type Node struct {
 	chain    *chain.Chain
 	interval time.Duration
@@ -23,14 +24,17 @@ type Node struct {
 
 // NewNode creates a Node backed by the given chain with a default polling
 // interval of 2 seconds.
+// Usage: tui.NewNode(...)
 func NewNode(c *chain.Chain) *Node {
 	return &Node{chain: c, interval: 2 * time.Second}
 }
 
 // Chain returns the underlying chain instance.
+// Usage: value.Chain(...)
 func (n *Node) Chain() *chain.Chain { return n.chain }
 
 // Status reads the current chain state and returns a snapshot.
+// Usage: value.Status(...)
 func (n *Node) Status() (NodeStatusMsg, error) {
 	height, err := n.chain.Height()
 	if err != nil {
@@ -53,6 +57,7 @@ func (n *Node) Status() (NodeStatusMsg, error) {
 
 // WaitForStatus returns a tea.Cmd that reads the current chain status
 // immediately (no sleep). Use this for Init().
+// Usage: value.WaitForStatus(...)
 func (n *Node) WaitForStatus() tea.Cmd {
 	return func() tea.Msg {
 		status, _ := n.Status()
@@ -62,6 +67,7 @@ func (n *Node) WaitForStatus() tea.Cmd {
 
 // Tick returns a tea.Cmd that sleeps for the polling interval, then
 // reads the current chain status.
+// Usage: value.Tick(...)
 func (n *Node) Tick() tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(n.interval)

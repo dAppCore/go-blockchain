@@ -54,7 +54,7 @@ func buildAssetDescriptorOpBlob() []byte {
 	return buf.Bytes()
 }
 
-func TestReadAssetDescriptorOperation_Good(t *testing.T) {
+func TestTransactionV3_ReadAssetDescriptorOperation_Good(t *testing.T) {
 	blob := buildAssetDescriptorOpBlob()
 	dec := NewDecoder(bytes.NewReader(blob))
 	got := readAssetDescriptorOperation(dec)
@@ -66,7 +66,7 @@ func TestReadAssetDescriptorOperation_Good(t *testing.T) {
 	}
 }
 
-func TestReadAssetDescriptorOperation_Bad(t *testing.T) {
+func TestTransactionV3_ReadAssetDescriptorOperation_Bad(t *testing.T) {
 	// Truncated blob — should error.
 	dec := NewDecoder(bytes.NewReader([]byte{1, 0}))
 	_ = readAssetDescriptorOperation(dec)
@@ -100,7 +100,7 @@ func buildAssetDescriptorOpEmitBlob() []byte {
 	return buf.Bytes()
 }
 
-func TestReadAssetDescriptorOperationEmit_Good(t *testing.T) {
+func TestTransactionV3_ReadAssetDescriptorOperationEmit_Good(t *testing.T) {
 	blob := buildAssetDescriptorOpEmitBlob()
 	dec := NewDecoder(bytes.NewReader(blob))
 	got := readAssetDescriptorOperation(dec)
@@ -112,7 +112,7 @@ func TestReadAssetDescriptorOperationEmit_Good(t *testing.T) {
 	}
 }
 
-func TestVariantVectorWithTag40_Good(t *testing.T) {
+func TestTransactionV3_VariantVectorWithTag40_Good(t *testing.T) {
 	// Build a variant vector containing one element: tag 40 (asset_descriptor_operation).
 	innerBlob := buildAssetDescriptorOpEmitBlob()
 
@@ -154,7 +154,7 @@ func buildAssetOperationProofBlob() []byte {
 	return buf.Bytes()
 }
 
-func TestReadAssetOperationProof_Good(t *testing.T) {
+func TestTransactionV3_ReadAssetOperationProof_Good(t *testing.T) {
 	blob := buildAssetOperationProofBlob()
 	dec := NewDecoder(bytes.NewReader(blob))
 	got := readAssetOperationProof(dec)
@@ -166,7 +166,7 @@ func TestReadAssetOperationProof_Good(t *testing.T) {
 	}
 }
 
-func TestReadAssetOperationProof_Bad(t *testing.T) {
+func TestTransactionV3_ReadAssetOperationProof_Bad(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader([]byte{1}))
 	_ = readAssetOperationProof(dec)
 	if dec.Err() == nil {
@@ -188,7 +188,7 @@ func buildAssetOperationOwnershipProofBlob() []byte {
 	return buf.Bytes()
 }
 
-func TestReadAssetOperationOwnershipProof_Good(t *testing.T) {
+func TestTransactionV3_ReadAssetOperationOwnershipProof_Good(t *testing.T) {
 	blob := buildAssetOperationOwnershipProofBlob()
 	dec := NewDecoder(bytes.NewReader(blob))
 	got := readAssetOperationOwnershipProof(dec)
@@ -214,7 +214,7 @@ func buildAssetOperationOwnershipProofETHBlob() []byte {
 	return buf.Bytes()
 }
 
-func TestReadAssetOperationOwnershipProofETH_Good(t *testing.T) {
+func TestTransactionV3_ReadAssetOperationOwnershipProofETH_Good(t *testing.T) {
 	blob := buildAssetOperationOwnershipProofETHBlob()
 	dec := NewDecoder(bytes.NewReader(blob))
 	got := readAssetOperationOwnershipProofETH(dec)
@@ -226,7 +226,7 @@ func TestReadAssetOperationOwnershipProofETH_Good(t *testing.T) {
 	}
 }
 
-func TestVariantVectorWithProofTags_Good(t *testing.T) {
+func TestTransactionV3_VariantVectorWithProofTags_Good(t *testing.T) {
 	// Build a variant vector with 3 elements: tags 49, 50, 51.
 	proofBlob := buildAssetOperationProofBlob()
 	ownershipBlob := buildAssetOperationOwnershipProofBlob()
@@ -258,7 +258,7 @@ func TestVariantVectorWithProofTags_Good(t *testing.T) {
 	}
 }
 
-func TestV3TransactionRoundTrip_Good(t *testing.T) {
+func TestTransactionV3_V3TransactionRoundTrip_Good(t *testing.T) {
 	// Build a v3 transaction with:
 	// - 1 coinbase input (TxInputGenesis at height 201)
 	// - 2 Zarcanum outputs
@@ -273,9 +273,9 @@ func TestV3TransactionRoundTrip_Good(t *testing.T) {
 	// version = 3
 	enc.WriteVarint(3)
 	// vin: 1 coinbase input
-	enc.WriteVarint(1) // input count
+	enc.WriteVarint(1)     // input count
 	enc.WriteVariantTag(0) // txin_gen tag
-	enc.WriteVarint(201) // height
+	enc.WriteVarint(201)   // height
 
 	// extra: variant vector with 2 elements (public_key + zarcanum_tx_data_v1)
 	enc.WriteVarint(2)
@@ -289,13 +289,13 @@ func TestV3TransactionRoundTrip_Good(t *testing.T) {
 	// vout: 2 Zarcanum outputs
 	enc.WriteVarint(2)
 	for range 2 {
-		enc.WriteVariantTag(38) // OutputTypeZarcanum
+		enc.WriteVariantTag(38)          // OutputTypeZarcanum
 		enc.WriteBytes(make([]byte, 32)) // stealth_address
 		enc.WriteBytes(make([]byte, 32)) // concealing_point
 		enc.WriteBytes(make([]byte, 32)) // amount_commitment
 		enc.WriteBytes(make([]byte, 32)) // blinded_asset_id
-		enc.WriteUint64LE(0) // encrypted_amount
-		enc.WriteUint8(0) // mix_attr
+		enc.WriteUint64LE(0)             // encrypted_amount
+		enc.WriteUint8(0)                // mix_attr
 	}
 
 	// hardfork_id = 5
@@ -349,7 +349,7 @@ func TestV3TransactionRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestV3TransactionWithAssetOps_Good(t *testing.T) {
+func TestTransactionV3_V3TransactionWithAssetOps_Good(t *testing.T) {
 	// Build a v3 transaction whose extra includes an asset_descriptor_operation (tag 40)
 	// and whose proofs include an asset_operation_proof (tag 49).
 	assetOpBlob := buildAssetDescriptorOpEmitBlob()
@@ -427,7 +427,7 @@ func TestV3TransactionWithAssetOps_Good(t *testing.T) {
 	}
 }
 
-func TestV3TransactionDecode_Bad(t *testing.T) {
+func TestTransactionV3_V3TransactionDecode_Bad(t *testing.T) {
 	// Truncated v3 transaction — version varint only.
 	dec := NewDecoder(bytes.NewReader([]byte{0x03}))
 	_ = DecodeTransaction(dec)

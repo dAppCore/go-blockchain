@@ -10,13 +10,22 @@ import "dappco.re/go/core/p2p/node/levin"
 
 // Re-export command IDs from the levin package for convenience.
 const (
-	CommandHandshake       = levin.CommandHandshake
-	CommandTimedSync       = levin.CommandTimedSync
-	CommandPing            = levin.CommandPing
-	CommandNewBlock        = levin.CommandNewBlock
+	// Usage: value := p2p.CommandHandshake
+	CommandHandshake = levin.CommandHandshake
+	// Usage: value := p2p.CommandTimedSync
+	CommandTimedSync = levin.CommandTimedSync
+	// Usage: value := p2p.CommandPing
+	CommandPing = levin.CommandPing
+	// Usage: value := p2p.CommandNewBlock
+	CommandNewBlock = levin.CommandNewBlock
+	// Usage: value := p2p.CommandNewTransactions
 	CommandNewTransactions = levin.CommandNewTransactions
-	CommandRequestObjects  = levin.CommandRequestObjects
+	// Usage: value := p2p.CommandRequestObjects
+	CommandRequestObjects = levin.CommandRequestObjects
+	// Usage: value := p2p.CommandResponseObjects
 	CommandResponseObjects = levin.CommandResponseObjects
-	CommandRequestChain    = levin.CommandRequestChain
-	CommandResponseChain   = levin.CommandResponseChain
+	// Usage: value := p2p.CommandRequestChain
+	CommandRequestChain = levin.CommandRequestChain
+	// Usage: value := p2p.CommandResponseChain
+	CommandResponseChain = levin.CommandResponseChain
 )

@@ -54,7 +54,7 @@ func makeTestTransaction(t *testing.T, destAddr *Account) (*types.Transaction, t
 	return tx, txHash, txSec
 }
 
-func TestV1ScannerDetectsOwnedOutput(t *testing.T) {
+func TestScanner_V1ScannerDetectsOwnedOutput_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestV1ScannerDetectsOwnedOutput(t *testing.T) {
 	}
 }
 
-func TestV1ScannerRejectsNonOwned(t *testing.T) {
+func TestScanner_V1ScannerRejectsNonOwned_Bad(t *testing.T) {
 	acc1, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -129,7 +129,7 @@ func TestV1ScannerRejectsNonOwned(t *testing.T) {
 	}
 }
 
-func TestV1ScannerNoTxPubKey(t *testing.T) {
+func TestScanner_V1ScannerNoTxPubKey_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -159,7 +159,7 @@ func TestV1ScannerNoTxPubKey(t *testing.T) {
 	}
 }
 
-func TestV1ScannerCoinbaseFlag(t *testing.T) {
+func TestScanner_V1ScannerCoinbaseFlag_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +184,7 @@ func TestV1ScannerCoinbaseFlag(t *testing.T) {
 	}
 }
 
-func TestV1ScannerUnlockTime(t *testing.T) {
+func TestScanner_V1ScannerUnlockTime_Good(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -242,7 +242,7 @@ func TestV1ScannerUnlockTime(t *testing.T) {
 	}
 }
 
-func TestV1ScannerMultipleOutputs(t *testing.T) {
+func TestScanner_V1ScannerMultipleOutputs_Ugly(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)
@@ -315,7 +315,7 @@ func TestV1ScannerMultipleOutputs(t *testing.T) {
 	}
 }
 
-func TestV1ScannerImplementsInterface(t *testing.T) {
+func TestScanner_V1ScannerImplementsInterface_Ugly(t *testing.T) {
 	acc, err := GenerateAccount()
 	if err != nil {
 		t.Fatal(err)

@@ -15,6 +15,7 @@ import (
 )
 
 // LevinP2PConn adapts a Levin connection to the P2PConnection interface.
+// Usage: var value chain.LevinP2PConn
 type LevinP2PConn struct {
 	conn       *levinpkg.Connection
 	peerHeight uint64
@@ -24,10 +25,12 @@ type LevinP2PConn struct {
 // NewLevinP2PConn wraps a Levin connection for P2P sync.
 // peerHeight is obtained from the handshake CoreSyncData.
 // localSync is our local sync state sent in timed_sync responses.
+// Usage: chain.NewLevinP2PConn(...)
 func NewLevinP2PConn(conn *levinpkg.Connection, peerHeight uint64, localSync p2p.CoreSyncData) *LevinP2PConn {
 	return &LevinP2PConn{conn: conn, peerHeight: peerHeight, localSync: localSync}
 }
 
+// Usage: value.PeerHeight(...)
 func (c *LevinP2PConn) PeerHeight() uint64 { return c.peerHeight }
 
 // handleMessage processes non-target messages received while waiting for
@@ -52,6 +55,7 @@ func (c *LevinP2PConn) handleMessage(hdr levinpkg.Header, data []byte) error {
 	return nil
 }
 
+// Usage: value.RequestChain(...)
 func (c *LevinP2PConn) RequestChain(blockIDs [][]byte) (uint64, [][]byte, error) {
 	req := p2p.RequestChain{BlockIDs: blockIDs}
 	payload, err := req.Encode()
@@ -83,6 +87,7 @@ func (c *LevinP2PConn) RequestChain(blockIDs [][]byte) (uint64, [][]byte, error)
 	}
 }
 
+// Usage: value.RequestObjects(...)
 func (c *LevinP2PConn) RequestObjects(blockHashes [][]byte) ([]BlockBlobEntry, error) {
 	req := p2p.RequestGetObjects{Blocks: blockHashes}
 	payload, err := req.Encode()

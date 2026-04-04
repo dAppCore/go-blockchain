@@ -6,10 +6,9 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
+	"dappco.re/go/core"
 	cli "dappco.re/go/core/cli/pkg/cli"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -39,6 +38,7 @@ type blockRow struct {
 
 // ExplorerModel provides block list, block detail, and tx detail views.
 // It implements [cli.FrameModel] for the content region of the TUI dashboard.
+// Usage: var value tui.ExplorerModel
 type ExplorerModel struct {
 	chain  *chain.Chain
 	view   explorerView
@@ -59,6 +59,7 @@ type ExplorerModel struct {
 }
 
 // NewExplorerModel creates an ExplorerModel backed by the given chain.
+// Usage: tui.NewExplorerModel(...)
 func NewExplorerModel(c *chain.Chain) *ExplorerModel {
 	m := &ExplorerModel{chain: c}
 	m.loadBlocks()
@@ -66,12 +67,14 @@ func NewExplorerModel(c *chain.Chain) *ExplorerModel {
 }
 
 // Init returns nil — block list is loaded synchronously in the constructor.
+// Usage: value.Init(...)
 func (m *ExplorerModel) Init() tea.Cmd {
 	return nil
 }
 
 // Update handles incoming messages. KeyMsg drives navigation, NodeStatusMsg
 // triggers a block list refresh, and WindowSizeMsg stores the terminal size.
+// Usage: value.Update(...)
 func (m *ExplorerModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -195,6 +198,7 @@ func (m *ExplorerModel) viewChangedCmd() tea.Cmd {
 }
 
 // View renders the current view, delegating to the appropriate sub-view.
+// Usage: value.View(...)
 func (m *ExplorerModel) View(width, height int) string {
 	m.width = width
 	m.height = height
@@ -215,10 +219,10 @@ func (m *ExplorerModel) viewBlockList() string {
 		return " no blocks \u2014 chain is empty"
 	}
 
-	var b strings.Builder
+	b := core.NewBuilder()
 
 	// Header row.
-	header := fmt.Sprintf("  %-8s %-18s %5s %12s %12s",
+	header := core.Sprintf("  %-8s %-18s %5s %12s %12s",
 		"Height", "Hash", "Txs", "Difficulty", "Age")
 	b.WriteString(header)
 	b.WriteByte('\n')
@@ -240,10 +244,10 @@ func (m *ExplorerModel) viewBlockList() string {
 			prefix = "> "
 		}
 
-		hashShort := fmt.Sprintf("%x", row.Hash[:4]) + "..."
+		hashShort := core.Concat(core.Sprintf("%x", row.Hash[:4]), "...")
 		age := formatAge(time.Unix(int64(row.Timestamp), 0))
 
-		line := fmt.Sprintf("%s%-8d %-18s %5d %12s %12s",
+		line := core.Sprintf("%s%-8d %-18s %5d %12s %12s",
 			prefix, row.Height, hashShort, row.TxCount,
 			formatDifficulty(row.Difficulty), age)
 
@@ -264,17 +268,17 @@ func (m *ExplorerModel) viewBlockDetail() string {
 		return " no block selected"
 	}
 
-	var b strings.Builder
+	b := core.NewBuilder()
 	meta := m.blockMeta
 	blk := m.block
 
-	b.WriteString(fmt.Sprintf(" Block %d\n", meta.Height))
-	b.WriteString(fmt.Sprintf(" Hash:       %x\n", meta.Hash))
-	b.WriteString(fmt.Sprintf(" Timestamp:  %s\n", time.Unix(int64(meta.Timestamp), 0).UTC().Format(time.RFC3339)))
-	b.WriteString(fmt.Sprintf(" Difficulty: %s\n", formatDifficulty(meta.Difficulty)))
-	b.WriteString(fmt.Sprintf(" Version:    %d.%d\n", blk.MajorVersion, blk.MinorVersion))
-	b.WriteString(fmt.Sprintf(" Nonce:      %d\n", blk.Nonce))
-	b.WriteString(fmt.Sprintf(" Txs:        %d\n\n", len(blk.TxHashes)))
+	b.WriteString(core.Sprintf(" Block %d\n", meta.Height))
+	b.WriteString(core.Sprintf(" Hash:       %x\n", meta.Hash))
+	b.WriteString(core.Sprintf(" Timestamp:  %s\n", time.Unix(int64(meta.Timestamp), 0).UTC().Format(time.RFC3339)))
+	b.WriteString(core.Sprintf(" Difficulty: %s\n", formatDifficulty(meta.Difficulty)))
+	b.WriteString(core.Sprintf(" Version:    %d.%d\n", blk.MajorVersion, blk.MinorVersion))
+	b.WriteString(core.Sprintf(" Nonce:      %d\n", blk.Nonce))
+	b.WriteString(core.Sprintf(" Txs:        %d\n\n", len(blk.TxHashes)))
 
 	if len(blk.TxHashes) == 0 {
 		b.WriteString(" (coinbase only)")
@@ -285,7 +289,7 @@ func (m *ExplorerModel) viewBlockDetail() string {
 			if i == m.txCursor {
 				prefix = "> "
 			}
-			b.WriteString(fmt.Sprintf(" %s%x\n", prefix, txHash[:8]))
+			b.WriteString(core.Sprintf(" %s%x\n", prefix, txHash[:8]))
 		}
 	}
 
@@ -297,25 +301,25 @@ func (m *ExplorerModel) viewTxDetail() string {
 		return " no transaction selected"
 	}
 
-	var b strings.Builder
+	b := core.NewBuilder()
 	tx := m.tx
 
 	b.WriteString(" Transaction\n")
-	b.WriteString(fmt.Sprintf(" Hash:    %x\n", m.txHash))
-	b.WriteString(fmt.Sprintf(" Version: %d\n", tx.Version))
-	b.WriteString(fmt.Sprintf(" Inputs:  %d\n", len(tx.Vin)))
-	b.WriteString(fmt.Sprintf(" Outputs: %d\n\n", len(tx.Vout)))
+	b.WriteString(core.Sprintf(" Hash:    %x\n", m.txHash))
+	b.WriteString(core.Sprintf(" Version: %d\n", tx.Version))
+	b.WriteString(core.Sprintf(" Inputs:  %d\n", len(tx.Vin)))
+	b.WriteString(core.Sprintf(" Outputs: %d\n\n", len(tx.Vout)))
 
 	if len(tx.Vin) > 0 {
 		b.WriteString(" Inputs:\n")
 		for i, in := range tx.Vin {
 			switch v := in.(type) {
 			case types.TxInputGenesis:
-				b.WriteString(fmt.Sprintf("  [%d] coinbase height=%d\n", i, v.Height))
+				b.WriteString(core.Sprintf("  [%d] coinbase height=%d\n", i, v.Height))
 			case types.TxInputToKey:
-				b.WriteString(fmt.Sprintf("  [%d] to_key amount=%d key_image=%x\n", i, v.Amount, v.KeyImage[:4]))
+				b.WriteString(core.Sprintf("  [%d] to_key amount=%d key_image=%x\n", i, v.Amount, v.KeyImage[:4]))
 			default:
-				b.WriteString(fmt.Sprintf("  [%d] %T\n", i, v))
+				b.WriteString(core.Sprintf("  [%d] %T\n", i, v))
 			}
 		}
 	}
@@ -326,14 +330,14 @@ func (m *ExplorerModel) viewTxDetail() string {
 			switch v := out.(type) {
 			case types.TxOutputBare:
 				if toKey, ok := v.Target.(types.TxOutToKey); ok {
-					b.WriteString(fmt.Sprintf("  [%d] bare amount=%d key=%x\n", i, v.Amount, toKey.Key[:4]))
+					b.WriteString(core.Sprintf("  [%d] bare amount=%d key=%x\n", i, v.Amount, toKey.Key[:4]))
 				} else {
-					b.WriteString(fmt.Sprintf("  [%d] bare amount=%d target=%T\n", i, v.Amount, v.Target))
+					b.WriteString(core.Sprintf("  [%d] bare amount=%d target=%T\n", i, v.Amount, v.Target))
 				}
 			case types.TxOutputZarcanum:
-				b.WriteString(fmt.Sprintf("  [%d] zarcanum stealth=%x\n", i, v.StealthAddress[:4]))
+				b.WriteString(core.Sprintf("  [%d] zarcanum stealth=%x\n", i, v.StealthAddress[:4]))
 			default:
-				b.WriteString(fmt.Sprintf("  [%d] %T\n", i, v))
+				b.WriteString(core.Sprintf("  [%d] %T\n", i, v))
 			}
 		}
 	}

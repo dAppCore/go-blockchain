@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestDecoderUint8_Good(t *testing.T) {
+func TestDecoder_DecoderUint8_Good(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader([]byte{0x42}))
 	got := dec.ReadUint8()
 	if dec.Err() != nil {
@@ -22,7 +22,7 @@ func TestDecoderUint8_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderUint64LE_Good(t *testing.T) {
+func TestDecoder_DecoderUint64LE_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		hex  string
@@ -47,7 +47,7 @@ func TestDecoderUint64LE_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderVarint_Good(t *testing.T) {
+func TestDecoder_DecoderVarint_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		hex  string
@@ -74,7 +74,7 @@ func TestDecoderVarint_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderBlob32_Good(t *testing.T) {
+func TestDecoder_DecoderBlob32_Good(t *testing.T) {
 	var want [32]byte
 	want[0] = 0xAB
 	want[31] = 0xCD
@@ -90,7 +90,7 @@ func TestDecoderBlob32_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderBlob64_Good(t *testing.T) {
+func TestDecoder_DecoderBlob64_Good(t *testing.T) {
 	var want [64]byte
 	want[0] = 0x11
 	want[63] = 0x99
@@ -106,7 +106,7 @@ func TestDecoderBlob64_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderStickyError_Bad(t *testing.T) {
+func TestDecoder_DecoderStickyError_Bad(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(nil))
 
 	got := dec.ReadUint8()
@@ -127,7 +127,7 @@ func TestDecoderStickyError_Bad(t *testing.T) {
 	}
 }
 
-func TestDecoderReadBytes_Good(t *testing.T) {
+func TestDecoder_DecoderReadBytes_Good(t *testing.T) {
 	data := []byte{0x01, 0x02, 0x03, 0x04}
 	dec := NewDecoder(bytes.NewReader(data))
 	got := dec.ReadBytes(4)
@@ -139,7 +139,7 @@ func TestDecoderReadBytes_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderReadBytesZero_Good(t *testing.T) {
+func TestDecoder_DecoderReadBytesZero_Good(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(nil))
 	got := dec.ReadBytes(0)
 	if dec.Err() != nil {
@@ -150,7 +150,7 @@ func TestDecoderReadBytesZero_Good(t *testing.T) {
 	}
 }
 
-func TestDecoderReadBytesOversize_Bad(t *testing.T) {
+func TestDecoder_DecoderReadBytesOversize_Bad(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(nil))
 	_ = dec.ReadBytes(MaxBlobSize + 1)
 	if dec.Err() == nil {
@@ -158,7 +158,7 @@ func TestDecoderReadBytesOversize_Bad(t *testing.T) {
 	}
 }
 
-func TestDecoderVarintOverflow_Ugly(t *testing.T) {
+func TestDecoder_DecoderVarintOverflow_Ugly(t *testing.T) {
 	data := make([]byte, 11)
 	for i := range data {
 		data[i] = 0x80
@@ -170,7 +170,7 @@ func TestDecoderVarintOverflow_Ugly(t *testing.T) {
 	}
 }
 
-func TestEncoderDecoderRoundTrip_Good(t *testing.T) {
+func TestDecoder_EncoderDecoderRoundTrip_Good(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 	enc.WriteUint8(0x01)

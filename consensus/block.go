@@ -6,9 +6,9 @@
 package consensus
 
 import (
-	"fmt"
 	"slices"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -17,12 +17,14 @@ import (
 
 // IsPoS returns true if the block flags indicate a Proof-of-Stake block.
 // Bit 0 of the flags byte is the PoS indicator.
+// Usage: consensus.IsPoS(...)
 func IsPoS(flags uint8) bool {
 	return flags&1 != 0
 }
 
 // CheckTimestamp validates a block's timestamp against future limits and
 // the median of recent timestamps.
+// Usage: consensus.CheckTimestamp(...)
 func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, recentTimestamps []uint64) error {
 	// Future time limit.
 	limit := config.BlockFutureTimeLimit
@@ -30,7 +32,7 @@ func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, rec
 		limit = config.PosBlockFutureTimeLimit
 	}
 	if blockTimestamp > adjustedTime+limit {
-		return coreerr.E("CheckTimestamp", fmt.Sprintf("%d > %d + %d",
+		return coreerr.E("CheckTimestamp", core.Sprintf("%d > %d + %d",
 			blockTimestamp, adjustedTime, limit), ErrTimestampFuture)
 	}
 
@@ -41,7 +43,7 @@ func CheckTimestamp(blockTimestamp uint64, flags uint8, adjustedTime uint64, rec
 
 	median := medianTimestamp(recentTimestamps)
 	if blockTimestamp < median {
-		return coreerr.E("CheckTimestamp", fmt.Sprintf("%d < median %d",
+		return coreerr.E("CheckTimestamp", core.Sprintf("%d < median %d",
 			blockTimestamp, median), ErrTimestampOld)
 	}
 
@@ -64,6 +66,7 @@ func medianTimestamp(timestamps []uint64) uint64 {
 // ValidateMinerTx checks the structure of a coinbase (miner) transaction.
 // For PoW blocks: exactly 1 input (TxInputGenesis). For PoS blocks: exactly
 // 2 inputs (TxInputGenesis + stake input).
+// Usage: consensus.ValidateMinerTx(...)
 func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFork) error {
 	if len(tx.Vin) == 0 {
 		return coreerr.E("ValidateMinerTx", "no inputs", ErrMinerTxInputs)
@@ -75,7 +78,7 @@ func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFo
 		return coreerr.E("ValidateMinerTx", "first input is not txin_gen", ErrMinerTxInputs)
 	}
 	if gen.Height != height {
-		return coreerr.E("ValidateMinerTx", fmt.Sprintf("got %d, expected %d", gen.Height, height), ErrMinerTxHeight)
+		return coreerr.E("ValidateMinerTx", core.Sprintf("got %d, expected %d", gen.Height, height), ErrMinerTxHeight)
 	}
 
 	// PoW blocks: exactly 1 input. PoS: exactly 2.
@@ -94,7 +97,7 @@ func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFo
 			// Post-HF4: accept ZC inputs.
 		}
 	} else {
-		return coreerr.E("ValidateMinerTx", fmt.Sprintf("%d inputs (expected 1 or 2)", len(tx.Vin)), ErrMinerTxInputs)
+		return coreerr.E("ValidateMinerTx", core.Sprintf("%d inputs (expected 1 or 2)", len(tx.Vin)), ErrMinerTxInputs)
 	}
 
 	return nil
@@ -102,6 +105,7 @@ func ValidateMinerTx(tx *types.Transaction, height uint64, forks []config.HardFo
 
 // ValidateBlockReward checks that the miner transaction outputs do not
 // exceed the expected reward (base reward + fees for pre-HF4).
+// Usage: consensus.ValidateBlockReward(...)
 func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSize, totalFees uint64, forks []config.HardFork) error {
 	base := BaseReward(height)
 	reward, err := BlockReward(base, blockSize, medianSize)
@@ -121,7 +125,7 @@ func ValidateBlockReward(minerTx *types.Transaction, height, blockSize, medianSi
 	}
 
 	if outputSum > expected {
-		return coreerr.E("ValidateBlockReward", fmt.Sprintf("outputs %d > expected %d", outputSum, expected), ErrRewardMismatch)
+		return coreerr.E("ValidateBlockReward", core.Sprintf("outputs %d > expected %d", outputSum, expected), ErrRewardMismatch)
 	}
 
 	return nil
@@ -152,7 +156,7 @@ func expectedBlockMajorVersion(forks []config.HardFork, height uint64) uint8 {
 func checkBlockVersion(blk *types.Block, forks []config.HardFork, height uint64) error {
 	expected := expectedBlockMajorVersion(forks, height)
 	if blk.MajorVersion != expected {
-		return coreerr.E("checkBlockVersion", fmt.Sprintf("got %d, want %d at height %d",
+		return coreerr.E("checkBlockVersion", core.Sprintf("got %d, want %d at height %d",
 			blk.MajorVersion, expected, height), ErrBlockMajorVersion)
 	}
 	return nil
@@ -162,6 +166,7 @@ func checkBlockVersion(blk *types.Block, forks []config.HardFork, height uint64)
 // the block version, timestamp, miner transaction structure, and reward.
 // Transaction semantic validation for regular transactions should be done
 // separately via ValidateTransaction for each tx in the block.
+// Usage: consensus.ValidateBlock(...)
 func ValidateBlock(blk *types.Block, height, blockSize, medianSize, totalFees, adjustedTime uint64,
 	recentTimestamps []uint64, forks []config.HardFork) error {
 
@@ -199,6 +204,7 @@ func ValidateBlock(blk *types.Block, height, blockSize, medianSize, totalFees, a
 //
 // Returns false if the fork version is not found or if the activation height
 // is too low for a meaningful freeze window.
+// Usage: consensus.IsPreHardforkFreeze(...)
 func IsPreHardforkFreeze(forks []config.HardFork, version uint8, height uint64) bool {
 	activationHeight, ok := config.HardforkActivationHeight(forks, version)
 	if !ok {
@@ -223,10 +229,11 @@ func IsPreHardforkFreeze(forks []config.HardFork, version uint8, height uint64) 
 // pre-hardfork freeze check. This wraps ValidateTransaction with an
 // additional check: during the freeze window before HF5, non-coinbase
 // transactions are rejected.
+// Usage: consensus.ValidateTransactionInBlock(...)
 func ValidateTransactionInBlock(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
 	// Pre-hardfork freeze: reject non-coinbase transactions in the freeze window.
 	if !isCoinbase(tx) && IsPreHardforkFreeze(forks, config.HF5, height) {
-		return coreerr.E("ValidateTransactionInBlock", fmt.Sprintf("height %d is within HF5 freeze window", height), ErrPreHardforkFreeze)
+		return coreerr.E("ValidateTransactionInBlock", core.Sprintf("height %d is within HF5 freeze window", height), ErrPreHardforkFreeze)
 	}
 
 	return ValidateTransaction(tx, txBlob, forks, height)

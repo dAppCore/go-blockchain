@@ -6,11 +6,9 @@
 package chain
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"strconv"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -18,21 +16,23 @@ import (
 )
 
 // MarkSpent records a key image as spent at the given block height.
+// Usage: value.MarkSpent(...)
 func (c *Chain) MarkSpent(ki types.KeyImage, height uint64) error {
 	if err := c.store.Set(groupSpentKeys, ki.String(), strconv.FormatUint(height, 10)); err != nil {
-		return coreerr.E("Chain.MarkSpent", fmt.Sprintf("chain: mark spent %s", ki), err)
+		return coreerr.E("Chain.MarkSpent", core.Sprintf("chain: mark spent %s", ki), err)
 	}
 	return nil
 }
 
 // IsSpent checks whether a key image has been spent.
+// Usage: value.IsSpent(...)
 func (c *Chain) IsSpent(ki types.KeyImage) (bool, error) {
 	_, err := c.store.Get(groupSpentKeys, ki.String())
-	if errors.Is(err, store.ErrNotFound) {
+	if core.Is(err, store.ErrNotFound) {
 		return false, nil
 	}
 	if err != nil {
-		return false, coreerr.E("Chain.IsSpent", fmt.Sprintf("chain: check spent %s", ki), err)
+		return false, coreerr.E("Chain.IsSpent", core.Sprintf("chain: check spent %s", ki), err)
 	}
 	return true, nil
 }
@@ -44,6 +44,7 @@ func outputGroup(amount uint64) string {
 
 // PutOutput appends an output to the global index for the given amount.
 // Returns the assigned global index.
+// Usage: value.PutOutput(...)
 func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64, error) {
 	grp := outputGroup(amount)
 	count, err := c.store.Count(grp)
@@ -56,33 +57,31 @@ func (c *Chain) PutOutput(amount uint64, txID types.Hash, outNo uint32) (uint64,
 		TxID:  txID.String(),
 		OutNo: outNo,
 	}
-	val, err := json.Marshal(entry)
-	if err != nil {
-		return 0, coreerr.E("Chain.PutOutput", "chain: marshal output", err)
-	}
+	val := core.JSONMarshalString(entry)
 
 	key := strconv.FormatUint(gindex, 10)
-	if err := c.store.Set(grp, key, string(val)); err != nil {
+	if err := c.store.Set(grp, key, val); err != nil {
 		return 0, coreerr.E("Chain.PutOutput", "chain: store output", err)
 	}
 	return gindex, nil
 }
 
 // GetOutput retrieves an output by amount and global index.
+// Usage: value.GetOutput(...)
 func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, error) {
 	grp := outputGroup(amount)
 	key := strconv.FormatUint(gindex, 10)
 	val, err := c.store.Get(grp, key)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return types.Hash{}, 0, coreerr.E("Chain.GetOutput", fmt.Sprintf("chain: output %d:%d not found", amount, gindex), nil)
+		if core.Is(err, store.ErrNotFound) {
+			return types.Hash{}, 0, coreerr.E("Chain.GetOutput", core.Sprintf("chain: output %d:%d not found", amount, gindex), nil)
 		}
 		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: get output", err)
 	}
 
 	var entry outputEntry
-	if err := json.Unmarshal([]byte(val), &entry); err != nil {
-		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: unmarshal output", err)
+	if r := core.JSONUnmarshalString(val, &entry); !r.OK {
+		return types.Hash{}, 0, coreerr.E("Chain.GetOutput", "chain: unmarshal output", r.Value.(error))
 	}
 	hash, err := types.HashFromHex(entry.TxID)
 	if err != nil {
@@ -92,6 +91,7 @@ func (c *Chain) GetOutput(amount uint64, gindex uint64) (types.Hash, uint32, err
 }
 
 // OutputCount returns the number of outputs indexed for the given amount.
+// Usage: value.OutputCount(...)
 func (c *Chain) OutputCount(amount uint64) (uint64, error) {
 	n, err := c.store.Count(outputGroup(amount))
 	if err != nil {

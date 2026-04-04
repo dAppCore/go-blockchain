@@ -6,8 +6,7 @@
 package chain
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/consensus"
@@ -17,32 +16,33 @@ import (
 // GetRingOutputs fetches the public keys for the given global output indices
 // at the specified amount. This implements the consensus.RingOutputsFn
 // signature for use during signature verification.
+// Usage: value.GetRingOutputs(...)
 func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicKey, error) {
 	pubs := make([]types.PublicKey, len(offsets))
 	for i, gidx := range offsets {
 		txHash, outNo, err := c.GetOutput(amount, gidx)
 		if err != nil {
-			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d (amount=%d, gidx=%d)", i, amount, gidx), err)
+			return nil, coreerr.E("Chain.GetRingOutputs", core.Sprintf("ring output %d (amount=%d, gidx=%d)", i, amount, gidx), err)
 		}
 
 		tx, _, err := c.GetTransaction(txHash)
 		if err != nil {
-			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: tx %s", i, txHash), err)
+			return nil, coreerr.E("Chain.GetRingOutputs", core.Sprintf("ring output %d: tx %s", i, txHash), err)
 		}
 
 		if int(outNo) >= len(tx.Vout) {
-			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
+			return nil, coreerr.E("Chain.GetRingOutputs", core.Sprintf("ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
 		}
 
 		switch out := tx.Vout[outNo].(type) {
 		case types.TxOutputBare:
 			toKey, ok := out.Target.(types.TxOutToKey)
 			if !ok {
-				return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: unsupported target type %T", i, out.Target), nil)
+				return nil, coreerr.E("Chain.GetRingOutputs", core.Sprintf("ring output %d: unsupported target type %T", i, out.Target), nil)
 			}
 			pubs[i] = toKey.Key
 		default:
-			return nil, coreerr.E("Chain.GetRingOutputs", fmt.Sprintf("ring output %d: unsupported output type %T", i, out), nil)
+			return nil, coreerr.E("Chain.GetRingOutputs", core.Sprintf("ring output %d: unsupported output type %T", i, out), nil)
 		}
 	}
 	return pubs, nil
@@ -53,21 +53,22 @@ func (c *Chain) GetRingOutputs(amount uint64, offsets []uint64) ([]types.PublicK
 // consensus.ZCRingOutputsFn signature for post-HF4 CLSAG GGX verification.
 //
 // ZC outputs are indexed at amount=0 (confidential amounts).
+// Usage: value.GetZCRingOutputs(...)
 func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, error) {
 	members := make([]consensus.ZCRingMember, len(offsets))
 	for i, gidx := range offsets {
 		txHash, outNo, err := c.GetOutput(0, gidx)
 		if err != nil {
-			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d (gidx=%d)", i, gidx), err)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", core.Sprintf("ZC ring output %d (gidx=%d)", i, gidx), err)
 		}
 
 		tx, _, err := c.GetTransaction(txHash)
 		if err != nil {
-			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: tx %s", i, txHash), err)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", core.Sprintf("ZC ring output %d: tx %s", i, txHash), err)
 		}
 
 		if int(outNo) >= len(tx.Vout) {
-			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", core.Sprintf("ZC ring output %d: tx %s has %d outputs, want index %d", i, txHash, len(tx.Vout), outNo), nil)
 		}
 
 		switch out := tx.Vout[outNo].(type) {
@@ -78,7 +79,7 @@ func (c *Chain) GetZCRingOutputs(offsets []uint64) ([]consensus.ZCRingMember, er
 				BlindedAssetID:   [32]byte(out.BlindedAssetID),
 			}
 		default:
-			return nil, coreerr.E("Chain.GetZCRingOutputs", fmt.Sprintf("ZC ring output %d: expected TxOutputZarcanum, got %T", i, out), nil)
+			return nil, coreerr.E("Chain.GetZCRingOutputs", core.Sprintf("ZC ring output %d: expected TxOutputZarcanum, got %T", i, out), nil)
 		}
 	}
 	return members, nil

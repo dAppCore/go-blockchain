@@ -14,6 +14,7 @@ import (
 )
 
 // PointMul8 multiplies a curve point by the cofactor 8.
+// Usage: crypto.PointMul8(...)
 func PointMul8(pk [32]byte) ([32]byte, error) {
 	var result [32]byte
 	rc := C.cn_point_mul8(
@@ -28,6 +29,7 @@ func PointMul8(pk [32]byte) ([32]byte, error) {
 
 // PointDiv8 premultiplies a curve point by 1/8 (cofactor inverse).
 // This is the on-chain storage form for commitments and key images.
+// Usage: crypto.PointDiv8(...)
 func PointDiv8(pk [32]byte) ([32]byte, error) {
 	var result [32]byte
 	rc := C.cn_point_div8(
@@ -41,6 +43,7 @@ func PointDiv8(pk [32]byte) ([32]byte, error) {
 }
 
 // PointSub computes a - b on the Ed25519 curve.
+// Usage: crypto.PointSub(...)
 func PointSub(a, b [32]byte) ([32]byte, error) {
 	var result [32]byte
 	rc := C.cn_point_sub(
@@ -55,6 +58,7 @@ func PointSub(a, b [32]byte) ([32]byte, error) {
 }
 
 // CLSAGGGSigSize returns the byte size of a CLSAG_GG signature for a given ring size.
+// Usage: crypto.CLSAGGGSigSize(...)
 func CLSAGGGSigSize(ringSize int) int {
 	return int(C.cn_clsag_gg_sig_size(C.size_t(ringSize)))
 }
@@ -63,6 +67,7 @@ func CLSAGGGSigSize(ringSize int) int {
 // ring is a flat slice of [stealth_addr(32) | amount_commitment(32)] per entry.
 // pseudoOut is the pseudo output commitment (not premultiplied by 1/8).
 // secretX and secretF are the secret scalars for the signer.
+// Usage: crypto.GenerateCLSAGGG(...)
 func GenerateCLSAGGG(hash [32]byte, ring []byte, ringSize int,
 	pseudoOut [32]byte, ki [32]byte,
 	secretX [32]byte, secretF [32]byte, secretIndex int) ([]byte, error) {
@@ -90,6 +95,7 @@ func GenerateCLSAGGG(hash [32]byte, ring []byte, ringSize int,
 // VerifyCLSAGGG verifies a CLSAG_GG ring signature.
 // ring is a flat slice of [stealth_addr(32) | amount_commitment(32)] per entry.
 // pseudoOut is the pseudo output commitment (premultiplied by 1/8).
+// Usage: crypto.VerifyCLSAGGG(...)
 func VerifyCLSAGGG(hash [32]byte, ring []byte, ringSize int,
 	pseudoOut [32]byte, ki [32]byte, sig []byte) bool {
 
@@ -104,12 +110,14 @@ func VerifyCLSAGGG(hash [32]byte, ring []byte, ringSize int,
 }
 
 // CLSAGGGXSigSize returns the byte size of a CLSAG_GGX signature for a given ring size.
+// Usage: crypto.CLSAGGGXSigSize(...)
 func CLSAGGGXSigSize(ringSize int) int {
 	return int(C.cn_clsag_ggx_sig_size(C.size_t(ringSize)))
 }
 
 // VerifyCLSAGGGX verifies a CLSAG_GGX ring signature.
 // ring is a flat slice of [stealth(32) | commitment(32) | blinded_asset_id(32)] per entry.
+// Usage: crypto.VerifyCLSAGGGX(...)
 func VerifyCLSAGGGX(hash [32]byte, ring []byte, ringSize int,
 	pseudoOutCommitment [32]byte, pseudoOutAssetID [32]byte,
 	ki [32]byte, sig []byte) bool {
@@ -126,12 +134,14 @@ func VerifyCLSAGGGX(hash [32]byte, ring []byte, ringSize int,
 }
 
 // CLSAGGGXXGSigSize returns the byte size of a CLSAG_GGXXG signature for a given ring size.
+// Usage: crypto.CLSAGGGXXGSigSize(...)
 func CLSAGGGXXGSigSize(ringSize int) int {
 	return int(C.cn_clsag_ggxxg_sig_size(C.size_t(ringSize)))
 }
 
 // VerifyCLSAGGGXXG verifies a CLSAG_GGXXG ring signature.
 // ring is a flat slice of [stealth(32) | commitment(32) | blinded_asset_id(32) | concealing(32)] per entry.
+// Usage: crypto.VerifyCLSAGGGXXG(...)
 func VerifyCLSAGGGXXG(hash [32]byte, ring []byte, ringSize int,
 	pseudoOutCommitment [32]byte, pseudoOutAssetID [32]byte,
 	extendedCommitment [32]byte, ki [32]byte, sig []byte) bool {

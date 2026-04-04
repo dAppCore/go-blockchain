@@ -11,7 +11,7 @@ import (
 	"dappco.re/go/core/p2p/node/levin"
 )
 
-func TestEncodePingRequest_Good_EmptySection(t *testing.T) {
+func TestPing_EncodePingRequest_EmptySection_Good(t *testing.T) {
 	data, err := EncodePingRequest()
 	if err != nil {
 		t.Fatalf("encode: %v", err)
@@ -25,7 +25,7 @@ func TestEncodePingRequest_Good_EmptySection(t *testing.T) {
 	}
 }
 
-func TestDecodePingResponse_Good(t *testing.T) {
+func TestPing_DecodePingResponse_Good(t *testing.T) {
 	s := levin.Section{
 		"status":  levin.StringVal([]byte("OK")),
 		"peer_id": levin.Uint64Val(12345),

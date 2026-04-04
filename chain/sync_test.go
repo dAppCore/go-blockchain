@@ -9,11 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"dappco.re/go/core"
 	"github.com/stretchr/testify/assert"
 
 	"dappco.re/go/core/blockchain/config"
@@ -23,6 +24,39 @@ import (
 
 	store "dappco.re/go/core/store"
 )
+
+func mustJSONMarshalSync(t *testing.T, v any) []byte {
+	t.Helper()
+
+	result := core.JSONMarshal(v)
+	if !result.OK {
+		t.Fatalf("marshal json: %#v", result.Value)
+	}
+
+	data, ok := result.Value.([]byte)
+	if !ok {
+		t.Fatalf("marshal json returned %T, want []byte", result.Value)
+	}
+	return data
+}
+
+func mustJSONUnmarshalSync(t *testing.T, data []byte, target any) {
+	t.Helper()
+
+	result := core.JSONUnmarshal(data, target)
+	if !result.OK {
+		t.Fatalf("unmarshal json: %#v", result.Value)
+	}
+}
+
+func writeJSONSync(t *testing.T, w http.ResponseWriter, v any) {
+	t.Helper()
+
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(mustJSONMarshalSync(t, v)); err != nil {
+		t.Fatalf("write json: %v", err)
+	}
+}
 
 // makeGenesisBlockBlob creates a minimal genesis block and returns its hex blob and hash.
 func makeGenesisBlockBlob() (hexBlob string, hash types.Hash) {
@@ -53,13 +87,13 @@ func makeGenesisBlockBlob() (hexBlob string, hash types.Hash) {
 	return
 }
 
-func TestSyncOptions_Default(t *testing.T) {
+func TestSync_SyncOptionsDefault_Good(t *testing.T) {
 	opts := DefaultSyncOptions()
 	assert.False(t, opts.VerifySignatures)
 	assert.Equal(t, config.MainnetForks, opts.Forks)
 }
 
-func TestSync_Good_SingleBlock(t *testing.T) {
+func TestSync_SingleBlock_Good(t *testing.T) {
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
 	// Override genesis hash for this test.
@@ -72,7 +106,7 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 1,
 				"status": "OK",
 			})
@@ -81,10 +115,13 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 
 		// JSON-RPC dispatcher.
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -101,11 +138,10 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 				}},
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -139,7 +175,7 @@ func TestSync_Good_SingleBlock(t *testing.T) {
 	}
 }
 
-func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
+func TestSync_TwoBlocksWithRegularTx_Good(t *testing.T) {
 	// --- Build genesis block (block 0) ---
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
@@ -206,7 +242,7 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 2,
 				"status": "OK",
 			})
@@ -215,23 +251,24 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 
 		// JSON-RPC dispatcher.
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
+			Params struct {
+				HeightStart uint64 `json:"height_start"`
+				Count       uint64 `json:"count"`
+			} `json:"params"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
-			var params struct {
-				HeightStart uint64 `json:"height_start"`
-				Count       uint64 `json:"count"`
-			}
-			json.Unmarshal(req.Params, &params)
-
 			var blocks []map[string]any
 
 			// Return blocks based on the requested start height.
-			if params.HeightStart == 0 {
+			if req.Params.HeightStart == 0 {
 				callCount++
 				blocks = []map[string]any{
 					{
@@ -267,11 +304,10 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 				"blocks": blocks,
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -373,10 +409,9 @@ func TestSync_Good_TwoBlocks_WithRegularTx(t *testing.T) {
 	}
 }
 
-func TestSync_Good_AlreadySynced(t *testing.T) {
+func TestSync_AlreadySynced_Good(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONSync(t, w, map[string]any{
 			"height": 0,
 			"status": "OK",
 		})
@@ -399,7 +434,7 @@ func TestSync_Good_AlreadySynced(t *testing.T) {
 	}
 }
 
-func TestSync_Bad_GetHeightError(t *testing.T) {
+func TestSync_GetHeightError_Bad(t *testing.T) {
 	// Server that returns HTTP 500 on /getheight.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -417,13 +452,13 @@ func TestSync_Bad_GetHeightError(t *testing.T) {
 	}
 }
 
-func TestSync_Bad_FetchBlocksError(t *testing.T) {
+func TestSync_FetchBlocksError_Bad(t *testing.T) {
 	// Server that succeeds on /getheight but fails on JSON-RPC.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 1,
 				"status": "OK",
 			})
@@ -431,7 +466,7 @@ func TestSync_Bad_FetchBlocksError(t *testing.T) {
 		}
 
 		// Return a JSON-RPC error for get_blocks_details.
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONSync(t, w, map[string]any{
 			"jsonrpc": "2.0",
 			"id":      "0",
 			"error": map[string]any{
@@ -453,7 +488,7 @@ func TestSync_Bad_FetchBlocksError(t *testing.T) {
 	}
 }
 
-func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
+func TestSync_GenesisHashMismatch_Bad(t *testing.T) {
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
 	// Deliberately do NOT override GenesisHash, so it mismatches.
@@ -463,7 +498,7 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 1,
 				"status": "OK",
 			})
@@ -471,10 +506,13 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 		}
 
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -491,11 +529,10 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 				}},
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -512,7 +549,7 @@ func TestSync_Bad_GenesisHashMismatch(t *testing.T) {
 	}
 }
 
-func TestSync_Bad_BlockHashMismatch(t *testing.T) {
+func TestSync_BlockHashMismatch_Bad(t *testing.T) {
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
 	// Set genesis hash to a value that differs from the actual computed hash.
@@ -525,7 +562,7 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 1,
 				"status": "OK",
 			})
@@ -533,10 +570,13 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 		}
 
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -553,11 +593,10 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 				}},
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -577,7 +616,7 @@ func TestSync_Bad_BlockHashMismatch(t *testing.T) {
 	_ = genesisHash
 }
 
-func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
+func TestSync_InvalidRegularTxBlob_Bad(t *testing.T) {
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
 	// Build block 1 with a tx hash but the RPC will return a bad tx blob.
@@ -608,7 +647,7 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 2,
 				"status": "OK",
 			})
@@ -616,10 +655,13 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 		}
 
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -654,11 +696,10 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 				},
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -675,7 +716,7 @@ func TestSync_Bad_InvalidRegularTxBlob(t *testing.T) {
 	}
 }
 
-func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
+func TestSync_InvalidBlockBlob_Bad(t *testing.T) {
 	// Override genesis hash to a value that matches a fake block ID.
 	fakeHash := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 	orig := GenesisHash
@@ -686,7 +727,7 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 1,
 				"status": "OK",
 			})
@@ -694,10 +735,13 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 		}
 
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -714,11 +758,10 @@ func TestSync_Bad_InvalidBlockBlob(t *testing.T) {
 				}},
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))
@@ -765,7 +808,7 @@ func testCoinbaseTxV2(height uint64) types.Transaction {
 	}
 }
 
-func TestSync_Good_ZCInputKeyImageMarkedSpent(t *testing.T) {
+func TestSync_ZCInputKeyImageMarkedSpent_Good(t *testing.T) {
 	// --- Build genesis block (block 0) ---
 	genesisBlob, genesisHash := makeGenesisBlockBlob()
 
@@ -842,7 +885,7 @@ func TestSync_Good_ZCInputKeyImageMarkedSpent(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.URL.Path == "/getheight" {
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"height": 2,
 				"status": "OK",
 			})
@@ -850,10 +893,13 @@ func TestSync_Good_ZCInputKeyImageMarkedSpent(t *testing.T) {
 		}
 
 		var req struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
+			Method string `json:"method"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request: %v", err)
+		}
+		mustJSONUnmarshalSync(t, body, &req)
 
 		switch req.Method {
 		case "get_blocks_details":
@@ -890,11 +936,10 @@ func TestSync_Good_ZCInputKeyImageMarkedSpent(t *testing.T) {
 				"blocks": blocks,
 				"status": "OK",
 			}
-			resultBytes, _ := json.Marshal(result)
-			json.NewEncoder(w).Encode(map[string]any{
+			writeJSONSync(t, w, map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "0",
-				"result":  json.RawMessage(resultBytes),
+				"result":  result,
 			})
 		}
 	}))

@@ -6,9 +6,9 @@
 package tui
 
 import (
-	"fmt"
 	"time"
 
+	"dappco.re/go/core"
 	tea "github.com/charmbracelet/bubbletea"
 
 	cli "dappco.re/go/core/cli/pkg/cli"
@@ -18,23 +18,27 @@ import (
 var _ cli.FrameModel = (*StatusModel)(nil)
 
 // StatusModel displays chain sync status in the header region.
+// Usage: var value tui.StatusModel
 type StatusModel struct {
 	node   *Node
 	status NodeStatusMsg
 }
 
 // NewStatusModel creates a StatusModel backed by the given Node.
+// Usage: tui.NewStatusModel(...)
 func NewStatusModel(n *Node) *StatusModel {
 	return &StatusModel{node: n}
 }
 
 // Init returns a command that reads the current chain status immediately.
+// Usage: value.Init(...)
 func (m *StatusModel) Init() tea.Cmd {
 	return m.node.WaitForStatus()
 }
 
 // Update handles incoming messages. On NodeStatusMsg it stores the snapshot
 // and schedules the next tick; all other messages are ignored.
+// Usage: value.Update(...)
 func (m *StatusModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case NodeStatusMsg:
@@ -47,13 +51,14 @@ func (m *StatusModel) Update(msg tea.Msg) (cli.FrameModel, tea.Cmd) {
 
 // View renders a single-line status bar. When height is zero the model has
 // not yet received a status snapshot, so it shows a placeholder.
+// Usage: value.View(...)
 func (m *StatusModel) View(width, height int) string {
 	var line string
 	if height == 0 {
 		line = " height 0 | syncing..."
 	} else {
 		s := m.status
-		line = fmt.Sprintf(" height %d | sync %.1f%% | diff %s | %d peers | tip %s",
+		line = core.Sprintf(" height %d | sync %.1f%% | diff %s | %d peers | tip %s",
 			s.Height, s.SyncPct, formatDifficulty(s.Difficulty), s.PeerCount, formatAge(s.TipTime))
 	}
 	if len(line) > width && width > 0 {
@@ -70,13 +75,13 @@ func formatAge(t time.Time) string {
 	d := time.Since(t)
 	switch {
 	case d < time.Minute:
-		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+		return core.Sprintf("%ds ago", int(d.Seconds()))
 	case d < time.Hour:
-		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+		return core.Sprintf("%dm ago", int(d.Minutes()))
 	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh ago", int(d.Hours()))
+		return core.Sprintf("%dh ago", int(d.Hours()))
 	default:
-		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+		return core.Sprintf("%dd ago", int(d.Hours()/24))
 	}
 }
 
@@ -84,12 +89,12 @@ func formatAge(t time.Time) string {
 func formatDifficulty(d uint64) string {
 	switch {
 	case d >= 1_000_000_000:
-		return fmt.Sprintf("%.1fG", float64(d)/1_000_000_000)
+		return core.Sprintf("%.1fG", float64(d)/1_000_000_000)
 	case d >= 1_000_000:
-		return fmt.Sprintf("%.1fM", float64(d)/1_000_000)
+		return core.Sprintf("%.1fM", float64(d)/1_000_000)
 	case d >= 1_000:
-		return fmt.Sprintf("%.1fK", float64(d)/1_000)
+		return core.Sprintf("%.1fK", float64(d)/1_000)
 	default:
-		return fmt.Sprintf("%d", d)
+		return core.Sprintf("%d", d)
 	}
 }

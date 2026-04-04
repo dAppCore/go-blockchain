@@ -2,19 +2,19 @@ package wallet
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash/crc32"
-	"strings"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
 const numWords = 1626
 
 // MnemonicEncode converts a 32-byte secret key to a 25-word mnemonic phrase.
+// Usage: wallet.MnemonicEncode(...)
 func MnemonicEncode(key []byte) (string, error) {
 	if len(key) != 32 {
-		return "", coreerr.E("MnemonicEncode", fmt.Sprintf("wallet: mnemonic encode requires 32 bytes, got %d", len(key)), nil)
+		return "", coreerr.E("MnemonicEncode", core.Sprintf("wallet: mnemonic encode requires 32 bytes, got %d", len(key)), nil)
 	}
 
 	words := make([]string, 0, 25)
@@ -31,16 +31,17 @@ func MnemonicEncode(key []byte) (string, error) {
 	checkIdx := checksumIndex(words)
 	words = append(words, words[checkIdx])
 
-	return strings.Join(words, " "), nil
+	return core.Join(" ", words...), nil
 }
 
 // MnemonicDecode converts a 25-word mnemonic phrase to a 32-byte secret key.
+// Usage: wallet.MnemonicDecode(...)
 func MnemonicDecode(phrase string) ([32]byte, error) {
 	var key [32]byte
 
-	words := strings.Fields(phrase)
+	words := mnemonicWords(phrase)
 	if len(words) != 25 {
-		return key, coreerr.E("MnemonicDecode", fmt.Sprintf("wallet: mnemonic requires 25 words, got %d", len(words)), nil)
+		return key, coreerr.E("MnemonicDecode", core.Sprintf("wallet: mnemonic requires 25 words, got %d", len(words)), nil)
 	}
 
 	expected := checksumIndex(words[:24])
@@ -62,7 +63,7 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 			if !ok3 {
 				word = words[i*3+2]
 			}
-			return key, coreerr.E("MnemonicDecode", fmt.Sprintf("wallet: unknown mnemonic word %q", word), nil)
+			return key, coreerr.E("MnemonicDecode", core.Sprintf("wallet: unknown mnemonic word %q", word), nil)
 		}
 
 		val := uint32(w1) +
@@ -72,6 +73,21 @@ func MnemonicDecode(phrase string) ([32]byte, error) {
 	}
 
 	return key, nil
+}
+
+func mnemonicWords(phrase string) []string {
+	normalised := core.Trim(phrase)
+	for _, ws := range []string{"\n", "\r", "\t"} {
+		normalised = core.Replace(normalised, ws, " ")
+	}
+	parts := core.Split(normalised, " ")
+	words := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			words = append(words, part)
+		}
+	}
+	return words
 }
 
 func checksumIndex(words []string) int {

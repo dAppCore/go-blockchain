@@ -7,11 +7,11 @@ package chain
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	store "dappco.re/go/core/store"
+	"dappco.re/go/core"
 	"dappco.re/go/core/blockchain/config"
+	store "dappco.re/go/core/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,7 +57,7 @@ func (m *mockP2PConn) RequestObjects(blockHashes [][]byte) ([]BlockBlobEntry, er
 	return entries, nil
 }
 
-func TestP2PSync_EmptyChain(t *testing.T) {
+func TestP2psync_P2PSync_EmptyChain_Ugly(t *testing.T) {
 	// Test that P2PSync with a mock that has no blocks is a no-op.
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestP2PSync_EmptyChain(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestP2PSync_ContextCancellation(t *testing.T) {
+func TestP2psync_P2PSync_ContextCancellation_Bad(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -87,7 +87,7 @@ func TestP2PSync_ContextCancellation(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 }
 
-func TestP2PSync_NoBlockIDs(t *testing.T) {
+func TestP2psync_P2PSync_NoBlockIDs_Good(t *testing.T) {
 	// Peer claims a height but returns no block IDs from RequestChain.
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestP2PSync_NoBlockIDs(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestP2PSync_RequestChainError(t *testing.T) {
+func TestP2psync_P2PSync_RequestChainError_Bad(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -112,7 +112,7 @@ func TestP2PSync_RequestChainError(t *testing.T) {
 	c := New(s)
 	mock := &mockP2PConn{
 		peerHeight:      10,
-		requestChainErr: fmt.Errorf("connection reset"),
+		requestChainErr: core.E("", "connection reset", nil),
 	}
 
 	opts := SyncOptions{Forks: config.TestnetForks}
@@ -121,7 +121,7 @@ func TestP2PSync_RequestChainError(t *testing.T) {
 	require.Contains(t, err.Error(), "request chain")
 }
 
-func TestP2PSync_RequestObjectsError(t *testing.T) {
+func TestP2psync_P2PSync_RequestObjectsError_Bad(t *testing.T) {
 	s, err := store.New(":memory:")
 	require.NoError(t, err)
 	defer s.Close()
@@ -130,7 +130,7 @@ func TestP2PSync_RequestObjectsError(t *testing.T) {
 	mock := &mockP2PConn{
 		peerHeight:        10,
 		chainHashes:       [][]byte{{0x01}},
-		requestObjectsErr: fmt.Errorf("timeout"),
+		requestObjectsErr: core.E("", "timeout", nil),
 	}
 
 	opts := SyncOptions{Forks: config.TestnetForks}

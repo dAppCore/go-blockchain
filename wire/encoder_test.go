@@ -8,11 +8,12 @@ package wire
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"testing"
+
+	"dappco.re/go/core"
 )
 
-func TestEncoderUint8_Good(t *testing.T) {
+func TestEncoder_EncoderUint8_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		val  uint8
@@ -39,7 +40,7 @@ func TestEncoderUint8_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderUint64LE_Good(t *testing.T) {
+func TestEncoder_EncoderUint64LE_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		val  uint64
@@ -66,7 +67,7 @@ func TestEncoderUint64LE_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderVarint_Good(t *testing.T) {
+func TestEncoder_EncoderVarint_Good(t *testing.T) {
 	tests := []struct {
 		name string
 		val  uint64
@@ -94,7 +95,7 @@ func TestEncoderVarint_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderBlob32_Good(t *testing.T) {
+func TestEncoder_EncoderBlob32_Good(t *testing.T) {
 	var h [32]byte
 	h[0] = 0xAB
 	h[31] = 0xCD
@@ -113,7 +114,7 @@ func TestEncoderBlob32_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderBlob64_Good(t *testing.T) {
+func TestEncoder_EncoderBlob64_Good(t *testing.T) {
 	var s [64]byte
 	s[0] = 0x11
 	s[63] = 0x99
@@ -129,7 +130,7 @@ func TestEncoderBlob64_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderStickyError_Bad(t *testing.T) {
+func TestEncoder_EncoderStickyError_Bad(t *testing.T) {
 	w := &failWriter{failAfter: 1}
 	enc := NewEncoder(w)
 
@@ -142,7 +143,7 @@ func TestEncoderStickyError_Bad(t *testing.T) {
 	}
 }
 
-func TestEncoderEmptyBytes_Good(t *testing.T) {
+func TestEncoder_EncoderEmptyBytes_Good(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 	enc.WriteBytes(nil)
@@ -155,7 +156,7 @@ func TestEncoderEmptyBytes_Good(t *testing.T) {
 	}
 }
 
-func TestEncoderSequence_Good(t *testing.T) {
+func TestEncoder_EncoderSequence_Good(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 	enc.WriteUint8(0x01)
@@ -178,7 +179,7 @@ type failWriter struct {
 
 func (fw *failWriter) Write(p []byte) (int, error) {
 	if fw.written+len(p) > fw.failAfter {
-		return 0, errors.New("write failed")
+		return 0, core.E("", "write failed", nil)
 	}
 	fw.written += len(p)
 	return len(p), nil

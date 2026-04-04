@@ -9,11 +9,11 @@ import (
 	"testing"
 )
 
-func TestVersionAtHeight_Good(t *testing.T) {
+func TestHardfork_VersionAtHeight_Good(t *testing.T) {
 	tests := []struct {
-		name    string
-		height  uint64
-		want    uint8
+		name   string
+		height uint64
+		want   uint8
 	}{
 		// Genesis block should return HF0 (the initial version).
 		{"genesis", 0, HF0Initial},
@@ -46,7 +46,7 @@ func TestVersionAtHeight_Good(t *testing.T) {
 	}
 }
 
-func TestVersionAtHeightTestnet_Good(t *testing.T) {
+func TestHardfork_VersionAtHeightTestnet_Good(t *testing.T) {
 	tests := []struct {
 		name   string
 		height uint64
@@ -83,7 +83,7 @@ func TestVersionAtHeightTestnet_Good(t *testing.T) {
 	}
 }
 
-func TestIsHardForkActive_Good(t *testing.T) {
+func TestHardfork_IsHardForkActive_Good(t *testing.T) {
 	tests := []struct {
 		name    string
 		version uint8
@@ -114,7 +114,7 @@ func TestIsHardForkActive_Good(t *testing.T) {
 	}
 }
 
-func TestIsHardForkActive_Bad(t *testing.T) {
+func TestHardfork_IsHardForkActive_Bad(t *testing.T) {
 	// Querying a version that does not exist should return false.
 	got := IsHardForkActive(MainnetForks, 99, 1000000000)
 	if got {
@@ -122,7 +122,7 @@ func TestIsHardForkActive_Bad(t *testing.T) {
 	}
 }
 
-func TestVersionAtHeight_Ugly(t *testing.T) {
+func TestHardfork_VersionAtHeight_Ugly(t *testing.T) {
 	// Empty fork list should return version 0.
 	got := VersionAtHeight(nil, 100)
 	if got != 0 {
@@ -137,7 +137,7 @@ func TestVersionAtHeight_Ugly(t *testing.T) {
 	}
 }
 
-func TestMainnetForkSchedule_Good(t *testing.T) {
+func TestHardfork_MainnetForkSchedule_Good(t *testing.T) {
 	// Verify the fork schedule matches the C++ ZANO_HARDFORK_* constants.
 	expectedMainnet := []struct {
 		version uint8
@@ -167,7 +167,7 @@ func TestMainnetForkSchedule_Good(t *testing.T) {
 	}
 }
 
-func TestTestnetForkSchedule_Good(t *testing.T) {
+func TestHardfork_TestnetForkSchedule_Good(t *testing.T) {
 	expectedTestnet := []struct {
 		version uint8
 		height  uint64

@@ -6,8 +6,7 @@
 package wire
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/types"
@@ -20,6 +19,8 @@ import (
 //
 //	v0/v1: version, vin, vout, extra
 //	v2+:   version, vin, extra, vout, [hardfork_id]
+//
+// Usage: wire.EncodeTransactionPrefix(...)
 func EncodeTransactionPrefix(enc *Encoder, tx *types.Transaction) {
 	enc.WriteVarint(tx.Version)
 	if tx.Version <= types.VersionPreHF4 {
@@ -30,6 +31,7 @@ func EncodeTransactionPrefix(enc *Encoder, tx *types.Transaction) {
 }
 
 // EncodeTransaction serialises a full transaction including suffix fields.
+// Usage: wire.EncodeTransaction(...)
 func EncodeTransaction(enc *Encoder, tx *types.Transaction) {
 	EncodeTransactionPrefix(enc, tx)
 	if tx.Version <= types.VersionPreHF4 {
@@ -40,6 +42,7 @@ func EncodeTransaction(enc *Encoder, tx *types.Transaction) {
 }
 
 // DecodeTransactionPrefix deserialises a transaction prefix.
+// Usage: wire.DecodeTransactionPrefix(...)
 func DecodeTransactionPrefix(dec *Decoder) types.Transaction {
 	var tx types.Transaction
 	tx.Version = dec.ReadVarint()
@@ -55,6 +58,7 @@ func DecodeTransactionPrefix(dec *Decoder) types.Transaction {
 }
 
 // DecodeTransaction deserialises a full transaction.
+// Usage: wire.DecodeTransaction(...)
 func DecodeTransaction(dec *Decoder) types.Transaction {
 	tx := DecodeTransactionPrefix(dec)
 	if dec.Err() != nil {
@@ -223,7 +227,7 @@ func decodeInputs(dec *Decoder) []types.TxInput {
 			in.EtcDetails = decodeRawVariantVector(dec)
 			vin = append(vin, in)
 		default:
-			dec.err = coreerr.E("decodeInputs", fmt.Sprintf("wire: unsupported input tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeInputs", core.Sprintf("wire: unsupported input tag 0x%02x", tag), nil)
 			return vin
 		}
 	}
@@ -261,7 +265,7 @@ func decodeKeyOffsets(dec *Decoder) []types.TxOutRef {
 			dec.ReadBlob32((*[32]byte)(&refs[i].TxID))
 			refs[i].N = dec.ReadVarint()
 		default:
-			dec.err = coreerr.E("decodeKeyOffsets", fmt.Sprintf("wire: unsupported ref tag 0x%02x", refs[i].Tag), nil)
+			dec.err = coreerr.E("decodeKeyOffsets", core.Sprintf("wire: unsupported ref tag 0x%02x", refs[i].Tag), nil)
 			return refs
 		}
 	}
@@ -340,7 +344,7 @@ func decodeOutputsV1(dec *Decoder) []types.TxOutput {
 			dec.ReadBlob32((*[32]byte)(&t.PKRefund))
 			out.Target = t
 		default:
-			dec.err = coreerr.E("decodeOutputsV1", fmt.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeOutputsV1", core.Sprintf("wire: unsupported target tag 0x%02x", tag), nil)
 			return vout
 		}
 		vout = append(vout, out)
@@ -427,7 +431,7 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 				dec.ReadBlob32((*[32]byte)(&t.PKRefund))
 				out.Target = t
 			default:
-				dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
+				dec.err = coreerr.E("decodeOutputsV2", core.Sprintf("wire: unsupported target tag 0x%02x", targetTag), nil)
 				return vout
 			}
 			vout = append(vout, out)
@@ -441,7 +445,7 @@ func decodeOutputsV2(dec *Decoder) []types.TxOutput {
 			out.MixAttr = dec.ReadUint8()
 			vout = append(vout, out)
 		default:
-			dec.err = coreerr.E("decodeOutputsV2", fmt.Sprintf("wire: unsupported output tag 0x%02x", tag), nil)
+			dec.err = coreerr.E("decodeOutputsV2", core.Sprintf("wire: unsupported output tag 0x%02x", tag), nil)
 			return vout
 		}
 	}
@@ -593,6 +597,10 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return readUnlockTime2(dec)
 	case tagTxServiceAttachment:
 		return readTxServiceAttachment(dec)
+	case tagExtraAliasEntry:
+		return readExtraAliasEntry(dec)
+	case tagExtraAliasEntryOld:
+		return readExtraAliasEntryOld(dec)
 
 	// Zarcanum extra variant
 	case tagZarcanumTxDataV1: // fee — FIELD(fee) → serialize_int → 8-byte LE
@@ -627,7 +635,7 @@ func readVariantElementData(dec *Decoder, tag uint8) []byte {
 		return dec.ReadBytes(96)
 
 	default:
-		dec.err = coreerr.E("readVariantElementData", fmt.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
+		dec.err = coreerr.E("readVariantElementData", core.Sprintf("wire: unsupported variant tag 0x%02x (%d)", tag, tag), nil)
 		return nil
 	}
 }
@@ -791,6 +799,93 @@ func readTxServiceAttachment(dec *Decoder) []byte {
 		return nil
 	}
 	raw = append(raw, b)
+	return raw
+}
+
+// readAccountPublicAddress reads account_public_address (65 bytes):
+// spend_public_key (32) + view_public_key (32) + flags (1).
+func readAccountPublicAddress(dec *Decoder) []byte {
+	return dec.ReadBytes(65) // 32 + 32 + 1
+}
+
+// readAccountPublicAddressOld reads account_public_address_old (64 bytes):
+// spend_public_key (32) + view_public_key (32), no flags.
+func readAccountPublicAddressOld(dec *Decoder) []byte {
+	return dec.ReadBytes(64)
+}
+
+// readExtraAliasEntry reads extra_alias_entry (tag 33).
+// Structure: m_alias (string) + m_address (65 bytes) + m_text_comment (string)
+// + m_view_key (vector<secret_key>) + m_sign (vector<signature>).
+func readExtraAliasEntry(dec *Decoder) []byte {
+	var raw []byte
+	// m_alias — string
+	alias := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, alias...)
+	// m_address — account_public_address (65 bytes)
+	addr := readAccountPublicAddress(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, addr...)
+	// m_text_comment — string
+	comment := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, comment...)
+	// m_view_key — vector<secret_key> (varint count + 32 bytes each)
+	vk := readVariantVectorFixed(dec, 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, vk...)
+	// m_sign — vector<signature> (varint count + 64 bytes each)
+	sig := readVariantVectorFixed(dec, 64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, sig...)
+	return raw
+}
+
+// readExtraAliasEntryOld reads extra_alias_entry_old (tag 20).
+// Same as extra_alias_entry but uses old address format (64 bytes, no flags).
+func readExtraAliasEntryOld(dec *Decoder) []byte {
+	var raw []byte
+	// m_alias — string
+	alias := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, alias...)
+	// m_address — account_public_address_old (64 bytes)
+	addr := readAccountPublicAddressOld(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, addr...)
+	// m_text_comment — string
+	comment := readStringBlob(dec)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, comment...)
+	// m_view_key — vector<secret_key>
+	vk := readVariantVectorFixed(dec, 32)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, vk...)
+	// m_sign — vector<signature>
+	sig := readVariantVectorFixed(dec, 64)
+	if dec.err != nil {
+		return nil
+	}
+	raw = append(raw, sig...)
 	return raw
 }
 

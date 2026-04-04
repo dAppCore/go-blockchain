@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/p2p/node/levin"
 )
 
-func TestNewBlockNotification_Good_Roundtrip(t *testing.T) {
+func TestRelay_NewBlockNotification_Roundtrip_Good(t *testing.T) {
 	original := NewBlockNotification{
 		BlockBlob: []byte{0x01, 0x02, 0x03},
 		TxBlobs:   [][]byte{{0xAA}, {0xBB, 0xCC}},
@@ -40,7 +40,7 @@ func TestNewBlockNotification_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestNewTransactionsNotification_Good_Roundtrip(t *testing.T) {
+func TestRelay_NewTransactionsNotification_Roundtrip_Good(t *testing.T) {
 	original := NewTransactionsNotification{
 		TxBlobs: [][]byte{{0x01}, {0x02}, {0x03}},
 	}
@@ -57,7 +57,7 @@ func TestNewTransactionsNotification_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestRequestChain_Good_Roundtrip(t *testing.T) {
+func TestRelay_RequestChain_Roundtrip_Good(t *testing.T) {
 	hash := make([]byte, 32)
 	hash[0] = 0xFF
 	original := RequestChain{BlockIDs: [][]byte{hash}}
@@ -85,7 +85,7 @@ func TestRequestChain_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestResponseChainEntry_Good_Decode(t *testing.T) {
+func TestRelay_ResponseChainEntry_Decode_Good(t *testing.T) {
 	hash := make([]byte, 32)
 	hash[31] = 0xAB
 	// m_block_ids is an object array of block_context_info,
@@ -128,7 +128,7 @@ func TestResponseChainEntry_Good_Decode(t *testing.T) {
 	}
 }
 
-func TestRequestGetObjects_RoundTrip(t *testing.T) {
+func TestRelay_RequestGetObjects_RoundTrip_Good(t *testing.T) {
 	req := RequestGetObjects{
 		Blocks: [][]byte{
 			make([]byte, 32), // zero hash
@@ -156,7 +156,7 @@ func TestRequestGetObjects_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestRequestGetObjects_WithTxs(t *testing.T) {
+func TestRelay_RequestGetObjects_WithTxs_Good(t *testing.T) {
 	txHash := make([]byte, 32)
 	txHash[0] = 0xAA
 	txHash[1] = 0xBB
@@ -182,7 +182,7 @@ func TestRequestGetObjects_WithTxs(t *testing.T) {
 	}
 }
 
-func TestRequestGetObjects_Empty(t *testing.T) {
+func TestRelay_RequestGetObjects_Empty_Ugly(t *testing.T) {
 	req := RequestGetObjects{}
 	data, err := req.Encode()
 	if err != nil {
@@ -201,7 +201,7 @@ func TestRequestGetObjects_Empty(t *testing.T) {
 	}
 }
 
-func TestResponseGetObjects_Decode(t *testing.T) {
+func TestRelay_ResponseGetObjects_Decode_Good(t *testing.T) {
 	// Build a ResponseGetObjects via portable storage sections, simulating
 	// what a peer would send.
 	blockEntry1 := levin.Section{
@@ -216,8 +216,8 @@ func TestResponseGetObjects_Decode(t *testing.T) {
 	missedHash[0] = 0xFF
 	// missed_ids uses KV_SERIALIZE_CONTAINER_POD_AS_BLOB in C++.
 	s := levin.Section{
-		"blocks":                   levin.ObjectArrayVal([]levin.Section{blockEntry1, blockEntry2}),
-		"missed_ids":               levin.StringVal(missedHash),
+		"blocks":                    levin.ObjectArrayVal([]levin.Section{blockEntry1, blockEntry2}),
+		"missed_ids":                levin.StringVal(missedHash),
 		"current_blockchain_height": levin.Uint64Val(6300),
 	}
 	data, err := levin.EncodeStorage(s)
@@ -258,9 +258,9 @@ func TestResponseGetObjects_Decode(t *testing.T) {
 	}
 }
 
-func TestResponseGetObjects_Empty(t *testing.T) {
+func TestRelay_ResponseGetObjects_Empty_Ugly(t *testing.T) {
 	s := levin.Section{
-		"blocks":                   levin.ObjectArrayVal([]levin.Section{}),
+		"blocks":                    levin.ObjectArrayVal([]levin.Section{}),
 		"current_blockchain_height": levin.Uint64Val(0),
 	}
 	data, err := levin.EncodeStorage(s)
@@ -280,7 +280,7 @@ func TestResponseGetObjects_Empty(t *testing.T) {
 	}
 }
 
-func TestResponseGetObjects_Encode_RoundTrip(t *testing.T) {
+func TestRelay_ResponseGetObjects_Encode_RoundTrip_Good(t *testing.T) {
 	resp := ResponseGetObjects{
 		Blocks: []BlockCompleteEntry{
 			{
@@ -324,7 +324,7 @@ func TestResponseGetObjects_Encode_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestTimedSyncRequest_Good_Encode(t *testing.T) {
+func TestRelay_TimedSyncRequest_Encode_Good(t *testing.T) {
 	req := TimedSyncRequest{
 		PayloadData: CoreSyncData{CurrentHeight: 42},
 	}
@@ -354,7 +354,7 @@ func TestTimedSyncRequest_Good_Encode(t *testing.T) {
 	}
 }
 
-func TestTimedSyncResponse_Good_Decode(t *testing.T) {
+func TestRelay_TimedSyncResponse_Decode_Good(t *testing.T) {
 	sync := CoreSyncData{CurrentHeight: 500}
 	s := levin.Section{
 		"local_time":   levin.Int64Val(1708444800),

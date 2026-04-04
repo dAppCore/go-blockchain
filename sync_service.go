@@ -9,11 +9,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
-	"log"
 	"net"
 	"time"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/chain"
@@ -36,7 +35,7 @@ func syncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, fork
 		}
 
 		if err := syncOnce(ctx, c, cfg, opts, seed); err != nil {
-			log.Printf("sync: %v (retrying in 10s)", err)
+			core.Print(nil, "sync: %v (retrying in 10s)", err)
 			select {
 			case <-ctx.Done():
 				return
@@ -56,7 +55,7 @@ func syncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, fork
 func syncOnce(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, opts chain.SyncOptions, seed string) error {
 	conn, err := net.DialTimeout("tcp", seed, 10*time.Second)
 	if err != nil {
-		return coreerr.E("syncOnce", fmt.Sprintf("dial %s", seed), err)
+		return coreerr.E("syncOnce", core.Sprintf("dial %s", seed), err)
 	}
 	defer conn.Close()
 
@@ -94,7 +93,7 @@ func syncOnce(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, opts
 		return coreerr.E("syncOnce", "read handshake", err)
 	}
 	if hdr.Command != uint32(p2p.CommandHandshake) {
-		return coreerr.E("syncOnce", fmt.Sprintf("unexpected command %d", hdr.Command), nil)
+		return coreerr.E("syncOnce", core.Sprintf("unexpected command %d", hdr.Command), nil)
 	}
 
 	var resp p2p.HandshakeResponse

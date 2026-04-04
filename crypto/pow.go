@@ -8,15 +8,16 @@ package crypto
 // #include "bridge.h"
 import "C"
 import (
-	"fmt"
 	"unsafe"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 )
 
 // RandomXHash computes the RandomX PoW hash. The key is the cache
 // initialisation key (e.g. "LetheanRandomXv1"). Input is typically
 // the block header hash (32 bytes) concatenated with the nonce (8 bytes LE).
+// Usage: crypto.RandomXHash(...)
 func RandomXHash(key, input []byte) ([32]byte, error) {
 	var output [32]byte
 	ret := C.bridge_randomx_hash(
@@ -25,7 +26,7 @@ func RandomXHash(key, input []byte) ([32]byte, error) {
 		(*C.uint8_t)(unsafe.Pointer(&output[0])),
 	)
 	if ret != 0 {
-		return output, coreerr.E("RandomXHash", fmt.Sprintf("RandomX hash failed with code %d", ret), nil)
+		return output, coreerr.E("RandomXHash", core.Sprintf("RandomX hash failed with code %d", ret), nil)
 	}
 	return output, nil
 }

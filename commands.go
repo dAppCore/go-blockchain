@@ -6,9 +6,7 @@
 package blockchain
 
 import (
-	"os"
-	"path/filepath"
-
+	"dappco.re/go/core"
 	coreio "dappco.re/go/core/io"
 	coreerr "dappco.re/go/core/log"
 
@@ -18,6 +16,7 @@ import (
 
 // AddChainCommands registers the "chain" command group with explorer
 // and sync subcommands.
+// Usage: blockchain.AddChainCommands(...)
 func AddChainCommands(root *cobra.Command) {
 	var (
 		dataDir string
@@ -31,19 +30,21 @@ func AddChainCommands(root *cobra.Command) {
 		Long:  "Manage the Lethean blockchain — sync, explore, and mine.",
 	}
 
-	chainCmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultDataDir(), "blockchain data directory")
+	chainCmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultChainDataDir(), "blockchain data directory")
 	chainCmd.PersistentFlags().StringVar(&seed, "seed", "seeds.lthn.io:36942", "seed peer address (host:port)")
 	chainCmd.PersistentFlags().BoolVar(&testnet, "testnet", false, "use testnet")
 
 	chainCmd.AddCommand(
 		newExplorerCmd(&dataDir, &seed, &testnet),
 		newSyncCmd(&dataDir, &seed, &testnet),
+		newServeCmd(&dataDir, &seed, &testnet),
+		newStatusCmd(&seed),
 	)
 
 	root.AddCommand(chainCmd)
 }
 
-func resolveConfig(testnet bool, seed *string) (config.ChainConfig, []config.HardFork) {
+func resolveChainConfig(testnet bool, seed *string) (config.ChainConfig, []config.HardFork) {
 	if testnet {
 		if *seed == "seeds.lthn.io:36942" {
 			*seed = "localhost:46942"
@@ -53,12 +54,12 @@ func resolveConfig(testnet bool, seed *string) (config.ChainConfig, []config.Har
 	return config.Mainnet, config.MainnetForks
 }
 
-func defaultDataDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+func defaultChainDataDir() string {
+	home := core.Env("DIR_HOME")
+	if home == "" {
 		return ".lethean"
 	}
-	return filepath.Join(home, ".lethean", "chain")
+	return core.JoinPath(home, ".lethean", "chain")
 }
 
 func ensureDataDir(dataDir string) error {

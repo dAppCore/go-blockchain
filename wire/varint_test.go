@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestEncodeVarint_Good(t *testing.T) {
+func TestVarint_EncodeVarint_Good(t *testing.T) {
 	tests := []struct {
 		name  string
 		value uint64
@@ -43,12 +43,12 @@ func TestEncodeVarint_Good(t *testing.T) {
 	}
 }
 
-func TestDecodeVarint_Good(t *testing.T) {
+func TestVarint_DecodeVarint_Good(t *testing.T) {
 	tests := []struct {
-		name     string
-		data     []byte
-		wantVal  uint64
-		wantLen  int
+		name    string
+		data    []byte
+		wantVal uint64
+		wantLen int
 	}{
 		{"zero", []byte{0x00}, 0, 1},
 		{"one", []byte{0x01}, 1, 1},
@@ -75,7 +75,7 @@ func TestDecodeVarint_Good(t *testing.T) {
 	}
 }
 
-func TestVarintRoundTrip_Good(t *testing.T) {
+func TestVarint_VarintRoundTrip_Good(t *testing.T) {
 	values := []uint64{
 		0, 1, 127, 128, 255, 256, 1000, 65535, 65536,
 		1<<14 - 1, 1 << 14, 1<<21 - 1, 1 << 21,
@@ -100,7 +100,7 @@ func TestVarintRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestDecodeVarint_Bad(t *testing.T) {
+func TestVarint_DecodeVarint_Bad(t *testing.T) {
 	// Empty input.
 	_, _, err := DecodeVarint(nil)
 	if err != ErrVarintEmpty {
@@ -113,7 +113,7 @@ func TestDecodeVarint_Bad(t *testing.T) {
 	}
 }
 
-func TestDecodeVarint_Ugly(t *testing.T) {
+func TestVarint_DecodeVarint_Ugly(t *testing.T) {
 	// A varint with all continuation bits set for 11 bytes (overflow).
 	overflow := make([]byte, 11)
 	for i := range overflow {

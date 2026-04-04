@@ -17,7 +17,7 @@ const testnetRPCAddr = "http://localhost:46941"
 
 // TestIntegration_RPC connects to the C++ testnet daemon and queries
 // all Tier 1 endpoints.
-func TestIntegration_RPC(t *testing.T) {
+func TestIntegration_RPC_Good(t *testing.T) {
 	c := NewClientWithHTTP(testnetRPCAddr, &http.Client{Timeout: 10 * time.Second})
 
 	// --- GetHeight ---

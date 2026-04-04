@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/blockchain/wire"
 )
 
-func TestGetRingOutputs_Good(t *testing.T) {
+func TestRing_GetRingOutputs_Good(t *testing.T) {
 	c := newTestChain(t)
 
 	pubKey := types.PublicKey{1, 2, 3}
@@ -55,7 +55,7 @@ func TestGetRingOutputs_Good(t *testing.T) {
 	}
 }
 
-func TestGetRingOutputs_Good_MultipleOutputs(t *testing.T) {
+func TestRing_GetRingOutputs_MultipleOutputs_Good(t *testing.T) {
 	c := newTestChain(t)
 
 	key1 := types.PublicKey{0x11}
@@ -112,7 +112,7 @@ func TestGetRingOutputs_Good_MultipleOutputs(t *testing.T) {
 	}
 }
 
-func TestGetRingOutputs_Bad_OutputNotFound(t *testing.T) {
+func TestRing_GetRingOutputs_OutputNotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	_, err := c.GetRingOutputs(1000, []uint64{99})
@@ -121,7 +121,7 @@ func TestGetRingOutputs_Bad_OutputNotFound(t *testing.T) {
 	}
 }
 
-func TestGetRingOutputs_Bad_TxNotFound(t *testing.T) {
+func TestRing_GetRingOutputs_TxNotFound_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	// Index an output pointing to a transaction that does not exist in the store.
@@ -136,7 +136,7 @@ func TestGetRingOutputs_Bad_TxNotFound(t *testing.T) {
 	}
 }
 
-func TestGetRingOutputs_Bad_OutputIndexOutOfRange(t *testing.T) {
+func TestRing_GetRingOutputs_OutputIndexOutOfRange_Bad(t *testing.T) {
 	c := newTestChain(t)
 
 	tx := types.Transaction{
@@ -165,7 +165,7 @@ func TestGetRingOutputs_Bad_OutputIndexOutOfRange(t *testing.T) {
 	}
 }
 
-func TestGetRingOutputs_Good_EmptyOffsets(t *testing.T) {
+func TestRing_GetRingOutputs_EmptyOffsets_Good(t *testing.T) {
 	c := newTestChain(t)
 
 	pubs, err := c.GetRingOutputs(1000, []uint64{})

@@ -7,14 +7,11 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/chain"
@@ -55,7 +52,7 @@ func runSyncForeground(dataDir, seed string, testnet bool) error {
 		return err
 	}
 
-	dbPath := filepath.Join(dataDir, "chain.db")
+	dbPath := core.JoinPath(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
 		return coreerr.E("runSyncForeground", "open store", err)
@@ -63,14 +60,14 @@ func runSyncForeground(dataDir, seed string, testnet bool) error {
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	log.Println("Starting headless P2P sync...")
+	core.Print(nil, "Starting headless P2P sync...")
 	syncLoop(ctx, c, &cfg, forks, seed)
-	log.Println("Sync stopped.")
+	core.Print(nil, "Sync stopped.")
 	return nil
 }
 
@@ -79,7 +76,7 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 		return err
 	}
 
-	pidFile := filepath.Join(dataDir, "sync.pid")
+	pidFile := core.JoinPath(dataDir, "sync.pid")
 
 	d := process.NewDaemon(process.DaemonOptions{
 		PIDFile:  pidFile,
@@ -94,7 +91,7 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 		return coreerr.E("runSyncDaemon", "daemon start", err)
 	}
 
-	dbPath := filepath.Join(dataDir, "chain.db")
+	dbPath := core.JoinPath(dataDir, "chain.db")
 	s, err := store.New(dbPath)
 	if err != nil {
 		_ = d.Stop()
@@ -103,13 +100,13 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	d.SetReady(true)
-	log.Println("Sync daemon started.")
+	core.Print(nil, "Sync daemon started.")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -124,21 +121,16 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 }
 
 func stopSyncDaemon(dataDir string) error {
-	pidFile := filepath.Join(dataDir, "sync.pid")
+	pidFile := core.JoinPath(dataDir, "sync.pid")
 	pid, running := process.ReadPID(pidFile)
 	if pid == 0 || !running {
 		return coreerr.E("stopSyncDaemon", "no running sync daemon found", nil)
 	}
 
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return coreerr.E("stopSyncDaemon", fmt.Sprintf("find process %d", pid), err)
+	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
+		return coreerr.E("stopSyncDaemon", core.Sprintf("signal process %d", pid), err)
 	}
 
-	if err := proc.Signal(syscall.SIGTERM); err != nil {
-		return coreerr.E("stopSyncDaemon", fmt.Sprintf("signal process %d", pid), err)
-	}
-
-	log.Printf("Sent SIGTERM to sync daemon (PID %d)", pid)
+	core.Print(nil, "Sent SIGTERM to sync daemon (PID %d)", pid)
 	return nil
 }

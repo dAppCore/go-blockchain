@@ -8,11 +8,13 @@ package p2p
 import "dappco.re/go/core/p2p/node/levin"
 
 // EncodePingRequest returns an encoded empty ping request payload.
+// Usage: p2p.EncodePingRequest(...)
 func EncodePingRequest() ([]byte, error) {
 	return levin.EncodeStorage(levin.Section{})
 }
 
 // DecodePingResponse parses a ping response payload.
+// Usage: p2p.DecodePingResponse(...)
 func DecodePingResponse(data []byte) (status string, peerID uint64, err error) {
 	s, err := levin.DecodeStorage(data)
 	if err != nil {

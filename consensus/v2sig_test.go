@@ -8,12 +8,13 @@ package consensus
 import (
 	"bytes"
 	"encoding/hex"
-	"os"
 	"testing"
 
+	"dappco.re/go/core"
 	"dappco.re/go/core/blockchain/config"
 	"dappco.re/go/core/blockchain/types"
 	"dappco.re/go/core/blockchain/wire"
+	coreio "dappco.re/go/core/io"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +22,10 @@ import (
 // loadTestTx loads and decodes a hex-encoded transaction from testdata.
 func loadTestTx(t *testing.T, filename string) *types.Transaction {
 	t.Helper()
-	hexData, err := os.ReadFile(filename)
+	hexData, err := coreio.Local.Read(filename)
 	require.NoError(t, err, "read %s", filename)
 
-	blob, err := hex.DecodeString(string(bytes.TrimSpace(hexData)))
+	blob, err := hex.DecodeString(core.Trim(hexData))
 	require.NoError(t, err, "decode hex")
 
 	dec := wire.NewDecoder(bytes.NewReader(blob))
@@ -33,7 +34,7 @@ func loadTestTx(t *testing.T, filename string) *types.Transaction {
 	return &tx
 }
 
-func TestParseV2Signatures_Mixin0(t *testing.T) {
+func TestV2sig_ParseV2Signatures_Mixin0_Good(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin0.hex")
 	require.Equal(t, uint64(3), tx.Version, "expected v3 transaction")
 
@@ -65,7 +66,7 @@ func TestParseV2Signatures_Mixin0(t *testing.T) {
 	assert.NotEqual(t, [32]byte{}, zc.pseudoOutAssetID)
 }
 
-func TestParseV2Signatures_Mixin10(t *testing.T) {
+func TestV2sig_ParseV2Signatures_Mixin10_Good(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin10.hex")
 	require.Equal(t, uint64(3), tx.Version)
 
@@ -91,7 +92,7 @@ func TestParseV2Signatures_Mixin10(t *testing.T) {
 	}
 }
 
-func TestParseV2Proofs_Mixin0(t *testing.T) {
+func TestV2sig_ParseV2Proofs_Mixin0_Good(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin0.hex")
 
 	proofs, err := parseV2Proofs(tx.Proofs)
@@ -116,7 +117,7 @@ func TestParseV2Proofs_Mixin0(t *testing.T) {
 	assert.Len(t, proofs.balanceProof, 96, "balance proof should be 96 bytes")
 }
 
-func TestParseV2Proofs_Mixin10(t *testing.T) {
+func TestV2sig_ParseV2Proofs_Mixin10_Good(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin10.hex")
 
 	proofs, err := parseV2Proofs(tx.Proofs)
@@ -128,7 +129,7 @@ func TestParseV2Proofs_Mixin10(t *testing.T) {
 	assert.Len(t, proofs.balanceProof, 96)
 }
 
-func TestVerifyV2Signatures_StructuralOnly(t *testing.T) {
+func TestV2sig_VerifyV2Signatures_StructuralOnly_Good(t *testing.T) {
 	// Test structural validation (no ring output function).
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin0.hex")
 
@@ -137,7 +138,7 @@ func TestVerifyV2Signatures_StructuralOnly(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifyV2Signatures_BadSigCount(t *testing.T) {
+func TestV2sig_VerifyV2Signatures_BadSigCount_Bad(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin0.hex")
 
 	// Corrupt SignaturesRaw to have wrong count.
@@ -147,7 +148,7 @@ func TestVerifyV2Signatures_BadSigCount(t *testing.T) {
 	assert.Error(t, err, "should fail with mismatched sig count")
 }
 
-func TestVerifyV2Signatures_TxHash(t *testing.T) {
+func TestV2sig_VerifyV2Signatures_TxHash_Good(t *testing.T) {
 	// Verify the known tx hash matches.
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin0.hex")
 	txHash := wire.TransactionHash(tx)
@@ -156,7 +157,7 @@ func TestVerifyV2Signatures_TxHash(t *testing.T) {
 	assert.Equal(t, expectedHash, hex.EncodeToString(txHash[:]))
 }
 
-func TestVerifyV2Signatures_TxHashMixin10(t *testing.T) {
+func TestV2sig_VerifyV2Signatures_TxHashMixin10_Good(t *testing.T) {
 	tx := loadTestTx(t, "../testdata/v2_spending_tx_mixin10.hex")
 	txHash := wire.TransactionHash(tx)
 

@@ -14,6 +14,7 @@ import (
 // It uses a sticky error pattern: after the first write error, all
 // subsequent writes become no-ops. Call Err() after a complete
 // encoding sequence to check for failures.
+// Usage: var value wire.Encoder
 type Encoder struct {
 	w   io.Writer
 	err error
@@ -21,14 +22,17 @@ type Encoder struct {
 }
 
 // NewEncoder creates a new Encoder writing to w.
+// Usage: wire.NewEncoder(...)
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w}
 }
 
 // Err returns the first error encountered during encoding.
+// Usage: value.Err(...)
 func (e *Encoder) Err() error { return e.err }
 
 // WriteUint8 writes a single byte.
+// Usage: value.WriteUint8(...)
 func (e *Encoder) WriteUint8(v uint8) {
 	if e.err != nil {
 		return
@@ -38,6 +42,7 @@ func (e *Encoder) WriteUint8(v uint8) {
 }
 
 // WriteUint64LE writes a uint64 in little-endian byte order.
+// Usage: value.WriteUint64LE(...)
 func (e *Encoder) WriteUint64LE(v uint64) {
 	if e.err != nil {
 		return
@@ -47,6 +52,7 @@ func (e *Encoder) WriteUint64LE(v uint64) {
 }
 
 // WriteVarint writes a uint64 as a CryptoNote varint (LEB128).
+// Usage: value.WriteVarint(...)
 func (e *Encoder) WriteVarint(v uint64) {
 	if e.err != nil {
 		return
@@ -56,6 +62,7 @@ func (e *Encoder) WriteVarint(v uint64) {
 }
 
 // WriteBytes writes raw bytes with no length prefix.
+// Usage: value.WriteBytes(...)
 func (e *Encoder) WriteBytes(b []byte) {
 	if e.err != nil {
 		return
@@ -67,6 +74,7 @@ func (e *Encoder) WriteBytes(b []byte) {
 }
 
 // WriteBlob32 writes a 32-byte fixed-size blob (hash, public key, key image).
+// Usage: value.WriteBlob32(...)
 func (e *Encoder) WriteBlob32(b *[32]byte) {
 	if e.err != nil {
 		return
@@ -75,6 +83,7 @@ func (e *Encoder) WriteBlob32(b *[32]byte) {
 }
 
 // WriteBlob64 writes a 64-byte fixed-size blob (signature).
+// Usage: value.WriteBlob64(...)
 func (e *Encoder) WriteBlob64(b *[64]byte) {
 	if e.err != nil {
 		return
@@ -83,6 +92,7 @@ func (e *Encoder) WriteBlob64(b *[64]byte) {
 }
 
 // WriteVariantTag writes a single-byte variant discriminator.
+// Usage: value.WriteVariantTag(...)
 func (e *Encoder) WriteVariantTag(tag uint8) {
 	e.WriteUint8(tag)
 }

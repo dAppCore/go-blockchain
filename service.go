@@ -1,0 +1,242 @@
+// Copyright (c) 2017-2026 Lethean (https://lt.hn)
+//
+// Licensed under the European Union Public Licence (EUPL) version 1.2.
+// SPDX-License-Identifier: EUPL-1.2
+package blockchain
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"dappco.re/go/core"
+
+	"dappco.re/go/core/blockchain/chain"
+	"dappco.re/go/core/blockchain/daemon"
+	"dappco.re/go/core/blockchain/rpc"
+	store "dappco.re/go/core/store"
+)
+
+// BlockchainOptions configures the blockchain service.
+//
+// Usage: opts := blockchain.BlockchainOptions{DataDir: "/var/lib/core", Testnet: true}
+type BlockchainOptions struct {
+	// DataDir is the persistent chain data directory.
+	// Usage: opts := blockchain.BlockchainOptions{DataDir: "/var/lib/core"}
+	DataDir string
+	// Seed is the bootstrap peer address used for RPC sync.
+	// Usage: opts := blockchain.BlockchainOptions{Seed: "127.0.0.1:46942"}
+	Seed string
+	// Testnet switches the service onto the testnet genesis and forks.
+	// Usage: opts := blockchain.BlockchainOptions{Testnet: true}
+	Testnet bool
+	// RPCPort is the JSON-RPC port exposed by the embedded daemon.
+	// Usage: opts := blockchain.BlockchainOptions{RPCPort: "47941"}
+	RPCPort string
+	// RPCBind is the bind address for the embedded daemon.
+	// Usage: opts := blockchain.BlockchainOptions{RPCBind: "127.0.0.1"}
+	RPCBind string
+}
+
+// BlockchainService is a Core-managed blockchain node.
+//
+// Usage: svc := blockchain.NewBlockchainService(c, opts)
+type BlockchainService struct {
+	core    *core.Core
+	opts    BlockchainOptions
+	chain   *chain.Chain
+	store   *store.Store
+	daemon  *daemon.Server
+	events  *EventBus
+	metrics *Metrics
+	cancel  context.CancelFunc
+}
+
+// NewBlockchainService creates and registers the blockchain as a Core service.
+//
+// Usage: svc := blockchain.NewBlockchainService(c, opts)
+func NewBlockchainService(c *core.Core, opts BlockchainOptions) *BlockchainService {
+	svc := &BlockchainService{core: c, opts: opts}
+
+	// Register as Core service with lifecycle.
+	c.Service("blockchain", core.Service{
+		Name:     "blockchain",
+		Instance: svc,
+		OnStart:  svc.start,
+		OnStop:   svc.stop,
+	})
+
+	// Register blockchain actions.
+	c.Action("blockchain.chain.height", svc.actionChainHeight)
+	c.Action("blockchain.chain.info", svc.actionChainInfo)
+	c.Action("blockchain.chain.block", svc.actionChainBlock)
+	c.Action("blockchain.alias.list", svc.actionAliasList)
+	c.Action("blockchain.alias.get", svc.actionAliasGet)
+	c.Action("blockchain.wallet.create", svc.actionWalletCreate)
+
+	return svc
+}
+
+func (s *BlockchainService) start() core.Result {
+	if s.opts.Testnet {
+		chain.GenesisHash = chain.TestnetGenesisHash
+	}
+
+	dbPath := core.JoinPath(s.opts.DataDir, "chain.db")
+	st, err := store.New(dbPath)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	s.store = st
+	s.chain = chain.New(st)
+	s.events = NewEventBus()
+	s.metrics = NewMetrics(s.chain)
+
+	// Wire block events + metrics
+	s.chain.SetBlockCallback(func(height uint64, hash string, aliasName string) {
+		s.metrics.RecordBlock()
+		s.events.Emit(Event{Type: EventBlockNew, Height: height, Data: hash})
+		if aliasName != "" {
+			s.metrics.RecordAlias()
+			s.events.Emit(Event{Type: EventAlias, Height: height, Data: aliasName})
+		}
+	})
+
+	// Wire sync progress events
+	s.chain.SetSyncCallback(func(localHeight, remoteHeight uint64, blocksPerSecond float64) {
+		s.events.Emit(Event{Type: EventSyncProgress, Height: localHeight, Data: map[string]interface{}{
+			"local_height":   localHeight,
+			"remote_height":  remoteHeight,
+			"blocks_per_sec": blocksPerSecond,
+		}})
+	})
+
+	cfg, forks := resolveChainConfig(s.opts.Testnet, &s.opts.Seed)
+
+	// Start background sync.
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
+
+	go func() {
+		client := rpc.NewClient(seedToRPC(s.opts.Seed))
+		opts := chain.SyncOptions{Forks: forks}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			if err := s.chain.Sync(ctx, client, opts); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				core.Print(nil, "blockchain sync: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
+			}
+		}
+	}()
+
+	// Start RPC daemon.
+	s.daemon = daemon.NewServer(s.chain, &cfg)
+	addr := s.opts.RPCBind + ":" + s.opts.RPCPort
+	go func() {
+		core.Print(nil, "blockchain RPC on %s", addr)
+		(&http.Server{Addr: addr, Handler: s.daemon, ReadTimeout: 30 * time.Second, WriteTimeout: 120 * time.Second}).ListenAndServe()
+	}()
+
+	core.Print(nil, "blockchain service started (testnet=%v, seed=%s)", s.opts.Testnet, s.opts.Seed)
+	return core.Result{OK: true}
+}
+
+func (s *BlockchainService) stop() core.Result {
+	if s.cancel != nil {
+		s.cancel()
+	}
+	if s.store != nil {
+		s.store.Close()
+	}
+	core.Print(nil, "blockchain service stopped")
+	return core.Result{OK: true}
+}
+
+// --- Actions ---
+
+func (s *BlockchainService) actionChainHeight(ctx context.Context, opts core.Options) core.Result {
+	h, _ := s.chain.Height()
+	return core.Result{Value: h, OK: true}
+}
+
+func (s *BlockchainService) actionChainInfo(ctx context.Context, opts core.Options) core.Result {
+	h, _ := s.chain.Height()
+	_, meta, _ := s.chain.TopBlock()
+	aliases := s.chain.GetAllAliases()
+	return core.Result{Value: map[string]interface{}{
+		"height":      h,
+		"difficulty":  meta.Difficulty,
+		"alias_count": len(aliases),
+		"synced":      true,
+	}, OK: true}
+}
+
+func (s *BlockchainService) actionChainBlock(ctx context.Context, opts core.Options) core.Result {
+	height := uint64(opts.Int("height"))
+	blk, meta, err := s.chain.GetBlockByHeight(height)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: map[string]interface{}{
+		"hash":      meta.Hash.String(),
+		"height":    meta.Height,
+		"timestamp": blk.Timestamp,
+	}, OK: true}
+}
+
+func (s *BlockchainService) actionAliasList(ctx context.Context, opts core.Options) core.Result {
+	return core.Result{Value: s.chain.GetAllAliases(), OK: true}
+}
+
+func (s *BlockchainService) actionAliasGet(ctx context.Context, opts core.Options) core.Result {
+	name := opts.String("name")
+	alias, err := s.chain.GetAlias(name)
+	if err != nil {
+		return core.Result{OK: false}
+	}
+	return core.Result{Value: alias, OK: true}
+}
+
+func (s *BlockchainService) actionWalletCreate(ctx context.Context, opts core.Options) core.Result {
+	// Delegate to wallet package
+	return core.Result{OK: false} // TODO: wire up wallet.GenerateAccount
+}
+
+// --- Helpers ---
+
+// Usage: url := seedToRPC("127.0.0.1:46942")
+func seedToRPC(seed string) string {
+	if core.Contains(seed, ":46942") {
+		return "http://127.0.0.1:46941"
+	}
+	if core.Contains(seed, ":36942") {
+		return "http://127.0.0.1:36941"
+	}
+	return core.Sprintf("http://%s", seed)
+}
+
+// SyncStatus returns the current sync state.
+//
+// Usage: status := svc.SyncStatus()
+func (s *BlockchainService) SyncStatus() map[string]interface{} {
+	if s.chain == nil {
+		return map[string]interface{}{"synced": false, "height": 0}
+	}
+	h, _ := s.chain.Height()
+	return map[string]interface{}{
+		"synced":  true,
+		"height":  h,
+		"aliases": len(s.chain.GetAllAliases()),
+	}
+}

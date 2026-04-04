@@ -12,7 +12,7 @@ import (
 	"dappco.re/go/core/blockchain/types"
 )
 
-func TestCoinbaseTxEncodeDecode_Good(t *testing.T) {
+func TestTransaction_CoinbaseTxEncodeDecode_Good(t *testing.T) {
 	// Build a minimal v1 coinbase transaction.
 	tx := types.Transaction{
 		Version: 1,
@@ -74,7 +74,7 @@ func TestCoinbaseTxEncodeDecode_Good(t *testing.T) {
 	}
 }
 
-func TestFullTxRoundTrip_Good(t *testing.T) {
+func TestTransaction_FullTxRoundTrip_Good(t *testing.T) {
 	// Build a v1 coinbase transaction with empty signatures and attachment.
 	tx := types.Transaction{
 		Version: 1,
@@ -118,7 +118,7 @@ func TestFullTxRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestTransactionHash_Good(t *testing.T) {
+func TestTransaction_TransactionHash_Good(t *testing.T) {
 	// TransactionHash should equal TransactionPrefixHash for all versions.
 	// Confirmed from C++ source: get_transaction_hash delegates to
 	// get_transaction_prefix_hash for all transaction versions.
@@ -151,7 +151,7 @@ func TestTransactionHash_Good(t *testing.T) {
 	}
 }
 
-func TestTxInputToKeyRoundTrip_Good(t *testing.T) {
+func TestTransaction_TxInputToKeyRoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: 1,
 		Vin: []types.TxInput{types.TxInputToKey{
@@ -202,7 +202,7 @@ func TestTxInputToKeyRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestExtraVariantTags_Good(t *testing.T) {
+func TestTransaction_ExtraVariantTags_Good(t *testing.T) {
 	// Test that various extra variant tags decode and re-encode correctly.
 	tests := []struct {
 		name string
@@ -356,7 +356,7 @@ func TestExtraVariantTags_Good(t *testing.T) {
 	}
 }
 
-func TestTxWithSignaturesRoundTrip_Good(t *testing.T) {
+func TestTransaction_TxWithSignaturesRoundTrip_Good(t *testing.T) {
 	// Test v1 transaction with non-empty signatures.
 	sig := types.Signature{}
 	sig[0] = 0xAA
@@ -415,7 +415,7 @@ func TestTxWithSignaturesRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestRefByIDRoundTrip_Good(t *testing.T) {
+func TestTransaction_RefByIDRoundTrip_Good(t *testing.T) {
 	// Test TxOutRef with RefTypeByID tag.
 	tx := types.Transaction{
 		Version: 1,
@@ -468,7 +468,7 @@ func TestRefByIDRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestHTLCInputRoundTrip_Good(t *testing.T) {
+func TestTransaction_HTLCInputRoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -531,7 +531,7 @@ func TestHTLCInputRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestMultisigInputRoundTrip_Good(t *testing.T) {
+func TestTransaction_MultisigInputRoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin: []types.TxInput{
@@ -591,7 +591,7 @@ func TestMultisigInputRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestMultisigTargetV1RoundTrip_Good(t *testing.T) {
+func TestTransaction_MultisigTargetV1RoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
@@ -645,7 +645,7 @@ func TestMultisigTargetV1RoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestHTLCTargetV1RoundTrip_Good(t *testing.T) {
+func TestTransaction_HTLCTargetV1RoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPreHF4,
 		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
@@ -711,7 +711,7 @@ func TestHTLCTargetV1RoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestMultisigTargetV2RoundTrip_Good(t *testing.T) {
+func TestTransaction_MultisigTargetV2RoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPostHF4,
 		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},
@@ -765,7 +765,7 @@ func TestMultisigTargetV2RoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestHF1MixedTxRoundTrip_Good(t *testing.T) {
+func TestTransaction_HF1MixedTxRoundTrip_Good(t *testing.T) {
 	// Construct a v1 transaction with HTLC input, multisig input, multisig output,
 	// and HTLC output target -- covering all HF1 types in a single round-trip.
 	tx := types.Transaction{
@@ -922,7 +922,7 @@ func TestHF1MixedTxRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestHTLCTargetV2RoundTrip_Good(t *testing.T) {
+func TestTransaction_HTLCTargetV2RoundTrip_Good(t *testing.T) {
 	tx := types.Transaction{
 		Version: types.VersionPostHF4,
 		Vin:     []types.TxInput{types.TxInputGenesis{Height: 1}},

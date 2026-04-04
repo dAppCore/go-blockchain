@@ -9,7 +9,7 @@ import (
 	"dappco.re/go/core/blockchain/crypto"
 )
 
-func TestFastHash_Good_KnownVector(t *testing.T) {
+func TestCrypto_FastHash_KnownVector_Good(t *testing.T) {
 	// Empty input → known Keccak-256 hash.
 	input := []byte{}
 	expected := "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
@@ -20,7 +20,7 @@ func TestFastHash_Good_KnownVector(t *testing.T) {
 	}
 }
 
-func TestFastHash_Good_HelloWorld(t *testing.T) {
+func TestCrypto_FastHash_HelloWorld_Good(t *testing.T) {
 	input := []byte("Hello, World!")
 	got := crypto.FastHash(input)
 	var zero [32]byte
@@ -29,7 +29,7 @@ func TestFastHash_Good_HelloWorld(t *testing.T) {
 	}
 }
 
-func TestGenerateKeys_Good_Roundtrip(t *testing.T) {
+func TestCrypto_GenerateKeys_Roundtrip_Good(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
@@ -48,7 +48,7 @@ func TestGenerateKeys_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestCheckKey_Bad_Invalid(t *testing.T) {
+func TestCrypto_CheckKey_Invalid_Bad(t *testing.T) {
 	// A random 32-byte value is overwhelmingly unlikely to be a valid curve point.
 	bad := [32]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -59,7 +59,7 @@ func TestCheckKey_Bad_Invalid(t *testing.T) {
 	}
 }
 
-func TestGenerateKeys_Good_Unique(t *testing.T) {
+func TestCrypto_GenerateKeys_Unique_Good(t *testing.T) {
 	pub1, _, _ := crypto.GenerateKeys()
 	pub2, _, _ := crypto.GenerateKeys()
 	if pub1 == pub2 {
@@ -69,7 +69,7 @@ func TestGenerateKeys_Good_Unique(t *testing.T) {
 
 // ── Key Derivation ────────────────────────────────────────
 
-func TestKeyDerivation_Good_Roundtrip(t *testing.T) {
+func TestCrypto_KeyDerivation_Roundtrip_Good(t *testing.T) {
 	// Alice and Bob generate key pairs; shared derivation must match.
 	pubA, secA, err := crypto.GenerateKeys()
 	if err != nil {
@@ -94,7 +94,7 @@ func TestKeyDerivation_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestDerivePublicKey_Good_OutputScanning(t *testing.T) {
+func TestCrypto_DerivePublicKey_OutputScanning_Good(t *testing.T) {
 	// Simulate one-time address generation and scanning.
 	// Sender knows (txPub, recipientPub). Recipient knows (txPub, recipientSec).
 	recipientPub, recipientSec, err := crypto.GenerateKeys()
@@ -150,7 +150,7 @@ func TestDerivePublicKey_Good_OutputScanning(t *testing.T) {
 
 // ── Key Images ────────────────────────────────────────────
 
-func TestKeyImage_Good_Roundtrip(t *testing.T) {
+func TestCrypto_KeyImage_Roundtrip_Good(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
@@ -171,7 +171,7 @@ func TestKeyImage_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestKeyImage_Good_Deterministic(t *testing.T) {
+func TestCrypto_KeyImage_Deterministic_Good(t *testing.T) {
 	pub, sec, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
@@ -191,7 +191,7 @@ func TestKeyImage_Good_Deterministic(t *testing.T) {
 	}
 }
 
-func TestKeyImage_Bad_Invalid(t *testing.T) {
+func TestCrypto_KeyImage_Invalid_Bad(t *testing.T) {
 	// 0xFF...FF is not a valid curve point, so not a valid key image.
 	bad := [32]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -204,7 +204,7 @@ func TestKeyImage_Bad_Invalid(t *testing.T) {
 
 // ── Standard Signatures ──────────────────────────────────
 
-func TestSignature_Good_Roundtrip(t *testing.T) {
+func TestCrypto_Signature_Roundtrip_Good(t *testing.T) {
 	pub, sec, _ := crypto.GenerateKeys()
 
 	// Sign a message hash.
@@ -220,7 +220,7 @@ func TestSignature_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestSignature_Bad_WrongKey(t *testing.T) {
+func TestCrypto_Signature_WrongKey_Bad(t *testing.T) {
 	pub, sec, _ := crypto.GenerateKeys()
 	pub2, _, _ := crypto.GenerateKeys()
 
@@ -233,7 +233,7 @@ func TestSignature_Bad_WrongKey(t *testing.T) {
 	}
 }
 
-func TestSignature_Bad_WrongMessage(t *testing.T) {
+func TestCrypto_Signature_WrongMessage_Bad(t *testing.T) {
 	pub, sec, _ := crypto.GenerateKeys()
 
 	msg1 := crypto.FastHash([]byte("message 1"))
@@ -247,7 +247,7 @@ func TestSignature_Bad_WrongMessage(t *testing.T) {
 
 // ── Ring Signatures (NLSAG) ─────────────────────────────
 
-func TestRingSignature_Good_Roundtrip(t *testing.T) {
+func TestCrypto_RingSignature_Roundtrip_Good(t *testing.T) {
 	// Create a ring of 4 public keys. The real signer is at index 1.
 	ringSize := 4
 	realIndex := 1
@@ -278,7 +278,7 @@ func TestRingSignature_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestRingSignature_Bad_WrongMessage(t *testing.T) {
+func TestCrypto_RingSignature_WrongMessage_Bad(t *testing.T) {
 	pubs := make([][32]byte, 3)
 	var sec [32]byte
 	for i := range pubs {
@@ -301,7 +301,7 @@ func TestRingSignature_Bad_WrongMessage(t *testing.T) {
 
 // ── CLSAG ────────────────────────────────────────────────
 
-func TestCLSAG_GG_Good_Roundtrip(t *testing.T) {
+func TestCrypto_CLSAG_GG_Roundtrip_Good(t *testing.T) {
 	// CLSAG_GG is a 2-dimensional linkable ring signature:
 	//   Layer 0: stealth addresses (P_i), secret_x for real signer
 	//   Layer 1: commitment difference (A_i - pseudo_out), secret_f
@@ -365,7 +365,7 @@ func TestCLSAG_GG_Good_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestCLSAG_GG_Bad_WrongMessage(t *testing.T) {
+func TestCrypto_CLSAG_GG_WrongMessage_Bad(t *testing.T) {
 	ringSize := 3
 	realIndex := 0
 
@@ -399,14 +399,14 @@ func TestCLSAG_GG_Bad_WrongMessage(t *testing.T) {
 	}
 }
 
-func TestCLSAG_GGX_Good_SigSize(t *testing.T) {
+func TestCrypto_CLSAG_GGX_SigSize_Good(t *testing.T) {
 	// Verify sig size calculation is consistent.
 	if crypto.CLSAGGGXSigSize(4) != 32+4*64+64 {
 		t.Fatalf("GGX sig size for ring=4: got %d, want %d", crypto.CLSAGGGXSigSize(4), 32+4*64+64)
 	}
 }
 
-func TestCLSAG_GGXXG_Good_SigSize(t *testing.T) {
+func TestCrypto_CLSAG_GGXXG_SigSize_Good(t *testing.T) {
 	// Verify sig size calculation is consistent.
 	if crypto.CLSAGGGXXGSigSize(4) != 32+4*64+128 {
 		t.Fatalf("GGXXG sig size for ring=4: got %d, want %d", crypto.CLSAGGGXXGSigSize(4), 32+4*64+128)
@@ -415,14 +415,14 @@ func TestCLSAG_GGXXG_Good_SigSize(t *testing.T) {
 
 // ── Range Proofs (BPP — Bulletproofs++) ──────────────────
 
-func TestBPP_Bad_EmptyProof(t *testing.T) {
+func TestCrypto_BPP_EmptyProof_Bad(t *testing.T) {
 	commitment := [32]byte{0x01}
 	if crypto.VerifyBPP([]byte{}, [][32]byte{commitment}) {
 		t.Fatal("empty BPP proof should fail")
 	}
 }
 
-func TestBPP_Bad_GarbageProof(t *testing.T) {
+func TestCrypto_BPP_GarbageProof_Bad(t *testing.T) {
 	// Build a minimal valid-shaped proof: L(0) + R(0) + 6 * 32-byte fields.
 	proof := make([]byte, 0, 2+6*32)
 	proof = append(proof, 0x00) // varint 0: L length
@@ -435,7 +435,7 @@ func TestBPP_Bad_GarbageProof(t *testing.T) {
 	}
 }
 
-func TestBPP_Good_TestnetCoinbase101(t *testing.T) {
+func TestCrypto_BPP_TestnetCoinbase101_Good(t *testing.T) {
 	// Real BPP range proof from testnet block 101 (first post-HF4 coinbase).
 	// TX hash: 543bc3c29e9f4c5d1fc566be03fb4da1f2ce2d70d4312fdcc3e4eed7ca3b61e0
 	//
@@ -490,7 +490,7 @@ func TestBPP_Good_TestnetCoinbase101(t *testing.T) {
 	}
 }
 
-func TestBPP_Bad_TestnetWrongCommitment(t *testing.T) {
+func TestCrypto_BPP_TestnetWrongCommitment_Bad(t *testing.T) {
 	// Same proof as above but with corrupted commitment — must fail.
 	proofHex := "07" +
 		"47c3d2db565bf368c9879dd1b08899a5e69bc956bc0a89b0cb456a54e066aa85" +
@@ -531,7 +531,7 @@ func TestBPP_Bad_TestnetWrongCommitment(t *testing.T) {
 
 // ── Range Proofs (BPPE — Bulletproofs++ Enhanced) ────────
 
-func TestBPPE_Bad_EmptyProof(t *testing.T) {
+func TestCrypto_BPPE_EmptyProof_Bad(t *testing.T) {
 	// Empty proof must return false (not crash).
 	commitment := [32]byte{0x01}
 	if crypto.VerifyBPPE([]byte{}, [][32]byte{commitment}) {
@@ -539,7 +539,7 @@ func TestBPPE_Bad_EmptyProof(t *testing.T) {
 	}
 }
 
-func TestBPPE_Bad_GarbageProof(t *testing.T) {
+func TestCrypto_BPPE_GarbageProof_Bad(t *testing.T) {
 	// Garbage bytes should deserialise (valid varint + blobs) but fail verification.
 	// Build a minimal valid-shaped proof: L(0 entries) + R(0 entries) + 7 * 32-byte fields.
 	proof := make([]byte, 0, 2+7*32)
@@ -553,7 +553,7 @@ func TestBPPE_Bad_GarbageProof(t *testing.T) {
 	}
 }
 
-func TestBGE_Bad_EmptyProof(t *testing.T) {
+func TestCrypto_BGE_EmptyProof_Bad(t *testing.T) {
 	ctx := [32]byte{0x01}
 	ring := [][32]byte{{0x02}}
 	if crypto.VerifyBGE(ctx, ring, []byte{}) {
@@ -561,7 +561,7 @@ func TestBGE_Bad_EmptyProof(t *testing.T) {
 	}
 }
 
-func TestBGE_Bad_GarbageProof(t *testing.T) {
+func TestCrypto_BGE_GarbageProof_Bad(t *testing.T) {
 	// Build a minimal valid-shaped proof: A(32) + B(32) + Pk(0) + f(0) + y(32) + z(32).
 	proof := make([]byte, 0, 4*32+2)
 	proof = append(proof, make([]byte, 32)...) // A
@@ -578,7 +578,7 @@ func TestBGE_Bad_GarbageProof(t *testing.T) {
 	}
 }
 
-func TestZarcanum_Stub_NotImplemented(t *testing.T) {
+func TestCrypto_Zarcanum_Stub_NotImplemented_Bad(t *testing.T) {
 	// Zarcanum bridge API needs extending — verify it returns false.
 	hash := [32]byte{0x01}
 	if crypto.VerifyZarcanum(hash, []byte{0x00}) {

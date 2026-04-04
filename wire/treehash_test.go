@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestKeccak256_Good(t *testing.T) {
+func TestTreehash_Keccak256_Good(t *testing.T) {
 	// Empty input: well-known Keccak-256 of "" (pre-NIST).
 	got := Keccak256(nil)
 	want := "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
@@ -19,7 +19,7 @@ func TestKeccak256_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashSingle_Good(t *testing.T) {
+func TestTreehash_TreeHashSingle_Good(t *testing.T) {
 	var h [32]byte
 	h[0] = 0xAB
 	h[31] = 0xCD
@@ -29,7 +29,7 @@ func TestTreeHashSingle_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashPair_Good(t *testing.T) {
+func TestTreehash_TreeHashPair_Good(t *testing.T) {
 	var h0, h1 [32]byte
 	h0[0] = 0x01
 	h1[0] = 0x02
@@ -45,7 +45,7 @@ func TestTreeHashPair_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashThree_Good(t *testing.T) {
+func TestTreehash_TreeHashThree_Good(t *testing.T) {
 	var h0, h1, h2 [32]byte
 	h0[0] = 0xAA
 	h1[0] = 0xBB
@@ -71,7 +71,7 @@ func TestTreeHashThree_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashFour_Good(t *testing.T) {
+func TestTreehash_TreeHashFour_Good(t *testing.T) {
 	hashes := make([][32]byte, 4)
 	for i := range hashes {
 		hashes[i][0] = byte(i + 1)
@@ -101,7 +101,7 @@ func TestTreeHashFour_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashFive_Good(t *testing.T) {
+func TestTreehash_TreeHashFive_Good(t *testing.T) {
 	// 5 hashes exercises the iterative cnt > 2 loop.
 	hashes := make([][32]byte, 5)
 	for i := range hashes {
@@ -142,7 +142,7 @@ func TestTreeHashFive_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashEight_Good(t *testing.T) {
+func TestTreehash_TreeHashEight_Good(t *testing.T) {
 	// 8 hashes = perfect power of 2, exercises multiple loop iterations.
 	hashes := make([][32]byte, 8)
 	for i := range hashes {
@@ -163,7 +163,7 @@ func TestTreeHashEight_Good(t *testing.T) {
 	}
 }
 
-func TestTreeHashEmpty_Good(t *testing.T) {
+func TestTreehash_TreeHashEmpty_Good(t *testing.T) {
 	got := TreeHash(nil)
 	if got != ([32]byte{}) {
 		t.Errorf("TreeHash(nil) should be zero hash, got %x", got)

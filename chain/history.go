@@ -11,6 +11,7 @@ import "dappco.re/go/core/blockchain/types"
 // NOTIFY_REQUEST_CHAIN. Matches the C++ get_short_chain_history() algorithm:
 // first 10 block hashes from the tip, then exponentially larger steps back
 // to genesis.
+// Usage: value.SparseChainHistory(...)
 func (c *Chain) SparseChainHistory() ([]types.Hash, error) {
 	height, err := c.Height()
 	if err != nil {

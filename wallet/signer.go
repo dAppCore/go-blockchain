@@ -16,6 +16,7 @@ import (
 )
 
 // Signer produces signatures for transaction inputs.
+// Usage: var value wallet.Signer
 type Signer interface {
 	SignInput(prefixHash types.Hash, ephemeral KeyPair,
 		ring []types.PublicKey, realIndex int) ([]types.Signature, error)
@@ -23,11 +24,13 @@ type Signer interface {
 }
 
 // NLSAGSigner signs using NLSAG ring signatures (v0/v1 transactions).
+// Usage: var value wallet.NLSAGSigner
 type NLSAGSigner struct{}
 
 // SignInput generates a ring signature for a single transaction input. It
 // derives the key image from the ephemeral key pair, then produces one
 // signature element per ring member.
+// Usage: value.SignInput(...)
 func (s *NLSAGSigner) SignInput(prefixHash types.Hash, ephemeral KeyPair,
 	ring []types.PublicKey, realIndex int) ([]types.Signature, error) {
 
@@ -57,4 +60,5 @@ func (s *NLSAGSigner) SignInput(prefixHash types.Hash, ephemeral KeyPair,
 }
 
 // Version returns the transaction version this signer targets.
+// Usage: value.Version(...)
 func (s *NLSAGSigner) Version() uint64 { return 1 }

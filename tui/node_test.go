@@ -61,7 +61,7 @@ func seedChain(t *testing.T, n int) *chain.Chain {
 	return c
 }
 
-func TestNewNode_Good(t *testing.T) {
+func TestNode_NewNode_Good(t *testing.T) {
 	c := seedChain(t, 1)
 	n := NewNode(c)
 	if n == nil {
@@ -97,7 +97,7 @@ func TestNode_Status_Good(t *testing.T) {
 	}
 }
 
-func TestNode_Status_Empty(t *testing.T) {
+func TestNode_Status_Empty_Ugly(t *testing.T) {
 	c := seedChain(t, 0)
 	n := NewNode(c)
 

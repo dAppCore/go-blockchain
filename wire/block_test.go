@@ -24,7 +24,7 @@ func testnetGenesisHeader() types.BlockHeader {
 	}
 }
 
-func TestEncodeBlockHeader_Good(t *testing.T) {
+func TestBlock_EncodeBlockHeader_Good(t *testing.T) {
 	h := testnetGenesisHeader()
 
 	var buf bytes.Buffer
@@ -52,7 +52,7 @@ func TestEncodeBlockHeader_Good(t *testing.T) {
 	}
 }
 
-func TestBlockHeaderRoundTrip_Good(t *testing.T) {
+func TestBlock_BlockHeaderRoundTrip_Good(t *testing.T) {
 	h := testnetGenesisHeader()
 
 	var buf bytes.Buffer
@@ -88,7 +88,7 @@ func TestBlockHeaderRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestBlockRoundTrip_Good(t *testing.T) {
+func TestBlock_BlockRoundTrip_Good(t *testing.T) {
 	// Build the genesis block and round-trip it through EncodeBlock/DecodeBlock.
 	rawTx := testnetGenesisRawTx()
 	dec := NewDecoder(bytes.NewReader(rawTx))
@@ -134,7 +134,7 @@ func TestBlockRoundTrip_Good(t *testing.T) {
 	}
 }
 
-func TestBlockWithTxHashesRoundTrip_Good(t *testing.T) {
+func TestBlock_BlockWithTxHashesRoundTrip_Good(t *testing.T) {
 	block := types.Block{
 		BlockHeader: testnetGenesisHeader(),
 		MinerTx: types.Transaction{

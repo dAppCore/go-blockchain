@@ -10,6 +10,7 @@
 package config
 
 // HardFork describes a single hard fork activation point on the chain.
+// Usage: var value config.HardFork
 type HardFork struct {
 	// Version is the hardfork version number (0-6).
 	Version uint8
@@ -29,14 +30,22 @@ type HardFork struct {
 
 // Hardfork version constants, matching the C++ ZANO_HARDFORK_* identifiers.
 const (
-	HF0Initial   uint8 = 0
-	HF1          uint8 = 1
-	HF2          uint8 = 2
-	HF3          uint8 = 3
-	HF4Zarcanum  uint8 = 4
-	HF5          uint8 = 5
-	HF6          uint8 = 6
-	HFTotal      uint8 = 7
+	// Usage: value := config.HF0Initial
+	HF0Initial uint8 = 0
+	// Usage: value := config.HF1
+	HF1 uint8 = 1
+	// Usage: value := config.HF2
+	HF2 uint8 = 2
+	// Usage: value := config.HF3
+	HF3 uint8 = 3
+	// Usage: value := config.HF4Zarcanum
+	HF4Zarcanum uint8 = 4
+	// Usage: value := config.HF5
+	HF5 uint8 = 5
+	// Usage: value := config.HF6
+	HF6 uint8 = 6
+	// Usage: value := config.HFTotal
+	HFTotal uint8 = 7
 )
 
 // MainnetForks lists all hardfork activations for the Lethean mainnet.
@@ -44,6 +53,7 @@ const (
 // The fork activates at heights strictly greater than the listed height,
 // so Height=0 means active from genesis, and Height=10080 means active
 // from block 10081 onwards.
+// Usage: value := config.MainnetForks
 var MainnetForks = []HardFork{
 	{Version: HF0Initial, Height: 0, Mandatory: true, Description: "CryptoNote base, PoW+PoS hybrid"},
 	{Version: HF1, Height: 10080, Mandatory: true, Description: "New transaction types"},
@@ -55,6 +65,7 @@ var MainnetForks = []HardFork{
 }
 
 // TestnetForks lists all hardfork activations for the Lethean testnet.
+// Usage: value := config.TestnetForks
 var TestnetForks = []HardFork{
 	{Version: HF0Initial, Height: 0, Mandatory: true, Description: "CryptoNote base, PoW+PoS hybrid"},
 	{Version: HF1, Height: 0, Mandatory: true, Description: "New transaction types"},
@@ -71,6 +82,7 @@ var TestnetForks = []HardFork{
 //
 // A fork with Height=0 is active from genesis (height 0).
 // A fork with Height=N is active at heights > N.
+// Usage: config.VersionAtHeight(...)
 func VersionAtHeight(forks []HardFork, height uint64) uint8 {
 	var version uint8
 	for _, hf := range forks {
@@ -85,6 +97,7 @@ func VersionAtHeight(forks []HardFork, height uint64) uint8 {
 
 // IsHardForkActive reports whether the specified hardfork version is active
 // at the given block height.
+// Usage: config.IsHardForkActive(...)
 func IsHardForkActive(forks []HardFork, version uint8, height uint64) bool {
 	for _, hf := range forks {
 		if hf.Version == version {
@@ -97,6 +110,7 @@ func IsHardForkActive(forks []HardFork, version uint8, height uint64) bool {
 // HardforkActivationHeight returns the activation height for the given
 // hardfork version. The fork becomes active at heights strictly greater
 // than the returned value. Returns (0, false) if the version is not found.
+// Usage: config.HardforkActivationHeight(...)
 func HardforkActivationHeight(forks []HardFork, version uint8) (uint64, bool) {
 	for _, hf := range forks {
 		if hf.Version == version {

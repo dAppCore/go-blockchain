@@ -6,8 +6,7 @@
 package consensus
 
 import (
-	"fmt"
-
+	"dappco.re/go/core"
 	coreerr "dappco.re/go/core/log"
 
 	"dappco.re/go/core/blockchain/config"
@@ -16,6 +15,7 @@ import (
 
 // ValidateTransaction performs semantic validation on a regular (non-coinbase)
 // transaction. Checks are ordered to match the C++ validate_tx_semantic().
+// Usage: consensus.ValidateTransaction(...)
 func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.HardFork, height uint64) error {
 	hf4Active := config.IsHardForkActive(forks, config.HF4Zarcanum, height)
 
@@ -26,7 +26,7 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 
 	// 1. Blob size.
 	if uint64(len(txBlob)) >= config.MaxTransactionBlobSize {
-		return coreerr.E("ValidateTransaction", fmt.Sprintf("%d bytes", len(txBlob)), ErrTxTooLarge)
+		return coreerr.E("ValidateTransaction", core.Sprintf("%d bytes", len(txBlob)), ErrTxTooLarge)
 	}
 
 	// 2. Input count.
@@ -34,7 +34,7 @@ func ValidateTransaction(tx *types.Transaction, txBlob []byte, forks []config.Ha
 		return ErrNoInputs
 	}
 	if uint64(len(tx.Vin)) > config.TxMaxAllowedInputs {
-		return coreerr.E("ValidateTransaction", fmt.Sprintf("%d", len(tx.Vin)), ErrTooManyInputs)
+		return coreerr.E("ValidateTransaction", core.Sprintf("%d", len(tx.Vin)), ErrTooManyInputs)
 	}
 
 	hf1Active := config.IsHardForkActive(forks, config.HF1, height)
@@ -82,13 +82,13 @@ func checkTxVersion(tx *types.Transaction, forks []config.HardFork, height uint6
 
 	if hf5Active && tx.Version < types.VersionPostHF5 {
 		return coreerr.E("checkTxVersion",
-			fmt.Sprintf("version %d too low after HF5 at height %d", tx.Version, height),
+			core.Sprintf("version %d too low after HF5 at height %d", tx.Version, height),
 			ErrTxVersionInvalid)
 	}
 
 	if !hf5Active && tx.Version >= types.VersionPostHF5 {
 		return coreerr.E("checkTxVersion",
-			fmt.Sprintf("version %d not allowed before HF5 at height %d", tx.Version, height),
+			core.Sprintf("version %d not allowed before HF5 at height %d", tx.Version, height),
 			ErrTxVersionInvalid)
 	}
 
@@ -105,12 +105,12 @@ func checkInputTypes(tx *types.Transaction, hf1Active, hf4Active bool) error {
 		case types.TxInputHTLC, types.TxInputMultisig:
 			// HTLC and multisig inputs require at least HF1.
 			if !hf1Active {
-				return coreerr.E("checkInputTypes", fmt.Sprintf("tag %d pre-HF1", vin.InputType()), ErrInvalidInputType)
+				return coreerr.E("checkInputTypes", core.Sprintf("tag %d pre-HF1", vin.InputType()), ErrInvalidInputType)
 			}
 		default:
 			// Future types (ZC) — accept if HF4+.
 			if !hf4Active {
-				return coreerr.E("checkInputTypes", fmt.Sprintf("tag %d pre-HF4", vin.InputType()), ErrInvalidInputType)
+				return coreerr.E("checkInputTypes", core.Sprintf("tag %d pre-HF4", vin.InputType()), ErrInvalidInputType)
 			}
 		}
 	}
@@ -123,24 +123,24 @@ func checkOutputs(tx *types.Transaction, hf1Active, hf4Active bool) error {
 	}
 
 	if hf4Active && uint64(len(tx.Vout)) < config.TxMinAllowedOutputs {
-		return coreerr.E("checkOutputs", fmt.Sprintf("%d (min %d)", len(tx.Vout), config.TxMinAllowedOutputs), ErrTooFewOutputs)
+		return coreerr.E("checkOutputs", core.Sprintf("%d (min %d)", len(tx.Vout), config.TxMinAllowedOutputs), ErrTooFewOutputs)
 	}
 
 	if uint64(len(tx.Vout)) > config.TxMaxAllowedOutputs {
-		return coreerr.E("checkOutputs", fmt.Sprintf("%d", len(tx.Vout)), ErrTooManyOutputs)
+		return coreerr.E("checkOutputs", core.Sprintf("%d", len(tx.Vout)), ErrTooManyOutputs)
 	}
 
 	for i, vout := range tx.Vout {
 		switch o := vout.(type) {
 		case types.TxOutputBare:
 			if o.Amount == 0 {
-				return coreerr.E("checkOutputs", fmt.Sprintf("output %d has zero amount", i), ErrInvalidOutput)
+				return coreerr.E("checkOutputs", core.Sprintf("output %d has zero amount", i), ErrInvalidOutput)
 			}
 			// HTLC and Multisig output targets require at least HF1.
 			switch o.Target.(type) {
 			case types.TxOutHTLC, types.TxOutMultisig:
 				if !hf1Active {
-					return coreerr.E("checkOutputs", fmt.Sprintf("output %d: HTLC/multisig target pre-HF1", i), ErrInvalidOutput)
+					return coreerr.E("checkOutputs", core.Sprintf("output %d: HTLC/multisig target pre-HF1", i), ErrInvalidOutput)
 				}
 			}
 		case types.TxOutputZarcanum:
