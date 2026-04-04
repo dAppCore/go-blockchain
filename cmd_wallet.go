@@ -78,7 +78,7 @@ func newWalletSeedCmd(walletFile *string) *cobra.Command {
 
 func runWalletCreate(walletFile string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet.db")
 	}
 
 	if err := ensureDataDir(core.PathBase(walletFile)); err != nil {
@@ -114,7 +114,7 @@ func runWalletCreate(walletFile string) error {
 
 func runWalletAddress(walletFile string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet.db")
 	}
 
 	s, err := store.New(walletFile)
@@ -135,7 +135,7 @@ func runWalletAddress(walletFile string) error {
 
 func runWalletSeed(walletFile string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet.db")
 	}
 
 	s, err := store.New(walletFile)
@@ -175,7 +175,7 @@ func newWalletScanCmd(walletFile *string) *cobra.Command {
 
 func runWalletScan(walletFile, daemonURL string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet.db")
 	}
 
 	s, err := store.New(walletFile)
@@ -312,7 +312,7 @@ func newWalletRestoreCmd(walletFile *string) *cobra.Command {
 
 func runWalletRestore(walletFile, seed string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet-restored.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet-restored.db")
 	}
 
 	account, err := wallet.RestoreFromSeed(seed)
@@ -405,7 +405,7 @@ func newWalletInfoCmd(walletFile *string) *cobra.Command {
 
 func runWalletInfo(walletFile string) error {
 	if walletFile == "" {
-		walletFile = core.JoinPath(defaultDataDir(), "wallet.db")
+		walletFile = core.JoinPath(defaultChainDataDir(), "wallet.db")
 	}
 
 	s, err := store.New(walletFile)

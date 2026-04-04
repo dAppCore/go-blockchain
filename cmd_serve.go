@@ -59,7 +59,7 @@ func runServe(dataDir, seed string, testnet bool, rpcBind, rpcPort, walletRPC st
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
 	// Set genesis hash for testnet.
 	if testnet {
@@ -124,9 +124,9 @@ func rpcSyncLoop(ctx context.Context, c *chain.Chain, cfg *config.ChainConfig, f
 		Forks:            forks,
 	}
 
-	// Derive RPC URL from seed address (replace P2P port with RPC port).
+	// Derive the RPC URL from the seed address.
 	rpcURL := core.Sprintf("http://%s", seed)
-	// If seed has P2P port, swap to RPC.
+	// Swap the peer port for the RPC port when the seed uses a default network address.
 	if core.Contains(seed, ":46942") {
 		rpcURL = "http://127.0.0.1:46941"
 	} else if core.Contains(seed, ":36942") {

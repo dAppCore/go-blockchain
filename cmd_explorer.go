@@ -46,7 +46,7 @@ func runExplorer(dataDir, seed string, testnet bool) error {
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT)
 	defer cancel()

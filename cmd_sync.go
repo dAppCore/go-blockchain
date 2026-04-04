@@ -60,7 +60,7 @@ func runSyncForeground(dataDir, seed string, testnet bool) error {
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -100,7 +100,7 @@ func runSyncDaemon(dataDir, seed string, testnet bool) error {
 	defer s.Close()
 
 	c := chain.New(s)
-	cfg, forks := resolveConfig(testnet, &seed)
+	cfg, forks := resolveChainConfig(testnet, &seed)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

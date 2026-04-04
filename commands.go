@@ -30,7 +30,7 @@ func AddChainCommands(root *cobra.Command) {
 		Long:  "Manage the Lethean blockchain — sync, explore, and mine.",
 	}
 
-	chainCmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultDataDir(), "blockchain data directory")
+	chainCmd.PersistentFlags().StringVar(&dataDir, "data-dir", defaultChainDataDir(), "blockchain data directory")
 	chainCmd.PersistentFlags().StringVar(&seed, "seed", "seeds.lthn.io:36942", "seed peer address (host:port)")
 	chainCmd.PersistentFlags().BoolVar(&testnet, "testnet", false, "use testnet")
 
@@ -38,13 +38,13 @@ func AddChainCommands(root *cobra.Command) {
 		newExplorerCmd(&dataDir, &seed, &testnet),
 		newSyncCmd(&dataDir, &seed, &testnet),
 		newServeCmd(&dataDir, &seed, &testnet),
-		newStatusCmd(&dataDir, &seed, &testnet),
+		newStatusCmd(&seed),
 	)
 
 	root.AddCommand(chainCmd)
 }
 
-func resolveConfig(testnet bool, seed *string) (config.ChainConfig, []config.HardFork) {
+func resolveChainConfig(testnet bool, seed *string) (config.ChainConfig, []config.HardFork) {
 	if testnet {
 		if *seed == "seeds.lthn.io:36942" {
 			*seed = "localhost:46942"
@@ -54,7 +54,7 @@ func resolveConfig(testnet bool, seed *string) (config.ChainConfig, []config.Har
 	return config.Mainnet, config.MainnetForks
 }
 
-func defaultDataDir() string {
+func defaultChainDataDir() string {
 	home := core.Env("DIR_HOME")
 	if home == "" {
 		return ".lethean"

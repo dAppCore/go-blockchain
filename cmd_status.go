@@ -12,18 +12,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newStatusCmd(dataDir, seed *string, testnet *bool) *cobra.Command {
+func newStatusCmd(seed *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show chain and network status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(*seed, *testnet)
+			return runStatus(*seed)
 		},
 	}
 }
 
-func runStatus(seed string, testnet bool) error {
-	rpcURL := seedToRPC(seed, testnet)
+func runStatus(seed string) error {
+	rpcURL := seedToRPC(seed)
 	client := rpc.NewClient(rpcURL)
 
 	info, err := client.GetInfo()
