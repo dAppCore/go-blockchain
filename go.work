@@ -1,0 +1,12 @@
+go 1.26.0
+
+use (
+	./go
+	./external/go
+	./external/cli
+	./external/go-io/go
+	./external/go-log/go
+	./external/go-p2p/go
+	./external/go-process/go
+	./external/go-store
+)
